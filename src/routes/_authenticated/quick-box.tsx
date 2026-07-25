@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll } from "@/lib/fetch-all";
 import { Button } from "@/components/ui/button";
-import { Save, Search } from "lucide-react";
+import { Check, Save, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/quick-box")({
@@ -186,7 +186,8 @@ function QuickBoxPage() {
                       <td className="px-4 py-2 text-muted-foreground">{r.sku}</td>
                       <td className="px-4 py-2">
                         {added ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-medium">
+                            <Check className="h-3.5 w-3.5" />
                             {r.pack_size} pcs / box
                           </span>
                         ) : (
