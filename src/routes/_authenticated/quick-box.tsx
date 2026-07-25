@@ -125,14 +125,21 @@ function QuickBoxPage() {
             Search a product and set pieces per box quickly.
           </p>
         </div>
-        <Button
+        <div className="flex items-center gap-2">
+          {rows.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {rows.filter((r) => r.pack_size > 1).length} / {rows.length} added
+            </span>
+          )}
+          <Button
           onClick={() => saveAll.mutate()}
           disabled={pendingCount === 0 || saveAll.isPending}
           size="sm"
         >
           <Save className="h-4 w-4 mr-1" />
           Save all {pendingCount > 0 ? `(${pendingCount})` : ""}
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -153,21 +160,23 @@ function QuickBoxPage() {
               <tr>
                 <th className="text-left px-4 py-2">Product</th>
                 <th className="text-left px-4 py-2">SKU</th>
+                <th className="text-left px-4 py-2">Status</th>
                 <th className="text-left px-4 py-2 w-40">Pcs / box</th>
                 <th className="px-4 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No products</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No products</td></tr>
               ) : (
                 filtered.slice(0, 500).map((r) => {
                   const dirty = pending[r.variation_id] !== undefined
                     && Number(pending[r.variation_id]) !== r.pack_size;
+                  const added = r.pack_size > 1;
                   return (
-                    <tr key={r.variation_id} className="border-t border-border/60">
+                    <tr key={r.variation_id} className={`border-t border-border/60 ${added ? "bg-emerald-500/5" : ""}`}>
                       <td className="px-4 py-2">
                         <div className="font-medium">{r.product_name}</div>
                         {r.variation_name && (
@@ -175,6 +184,17 @@ function QuickBoxPage() {
                         )}
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{r.sku}</td>
+                      <td className="px-4 py-2">
+                        {added ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-medium">
+                            {r.pack_size} pcs / box
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-xs">
+                            Not set
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-2">
                         <input
                           type="number"
