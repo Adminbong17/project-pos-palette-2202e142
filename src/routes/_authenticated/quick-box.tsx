@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll } from "@/lib/fetch-all";
 import { Button } from "@/components/ui/button";
-import { Save, Search } from "lucide-react";
+import { Check, Save, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/quick-box")({
