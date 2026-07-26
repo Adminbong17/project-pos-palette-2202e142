@@ -19,6 +19,13 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
 
 const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 
+// Sections every signed-in user can always reach, regardless of role config.
+const ALWAYS_ALLOWED = ["quick-box"];
+
+function withAlways(list: string[]) {
+  return Array.from(new Set([...list, ...ALWAYS_ALLOWED]));
+}
+
 export function useAllowedSections() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
@@ -29,30 +36,30 @@ export function useAllowedSections() {
     queryFn: async () => {
       const { data: uid } = await supabase.auth.getUser();
       const userId = uid.user?.id;
-      if (!userId) return DEFAULT_SALESMAN;
+      if (!userId) return withAlways(DEFAULT_SALESMAN);
       const { data: ur } = await supabase
         .from("user_roles")
         .select("role_id, allowed_sections")
         .eq("user_id", userId)
         .eq("business_id", business!.id)
         .maybeSingle();
-      if (!ur) return DEFAULT_SALESMAN;
+      if (!ur) return withAlways(DEFAULT_SALESMAN);
       const userOverride = (ur as any).allowed_sections as string[] | null;
-      if (userOverride && userOverride.length) return userOverride;
+      if (userOverride && userOverride.length) return withAlways(userOverride);
       const { data: role } = await supabase
         .from("roles")
         .select("allowed_sections")
         .eq("id", ur.role_id)
         .maybeSingle();
       const list = (role as any)?.allowed_sections as string[] | null;
-      return list && list.length ? list : DEFAULT_SALESMAN;
+      return withAlways(list && list.length ? list : DEFAULT_SALESMAN);
     },
   });
 
   return {
     isAdmin,
     isLoading: roleLoading || (!isAdmin && q.isLoading),
-    sections: isAdmin ? null : (q.data ?? DEFAULT_SALESMAN),
+    sections: isAdmin ? null : (q.data ?? withAlways(DEFAULT_SALESMAN)),
   };
 }
 
