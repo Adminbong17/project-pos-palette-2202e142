@@ -69,8 +69,11 @@ const emptyLine = (): Line => ({
 const fmtDate = (d: string) => {
   if (!d) return "";
   const dt = new Date(d);
-  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+  if (isNaN(dt.getTime())) return "";
+  const p = dhakaParts(dt);
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
+
 
 /** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
 function dhakaParts(d: Date = new Date()) {
