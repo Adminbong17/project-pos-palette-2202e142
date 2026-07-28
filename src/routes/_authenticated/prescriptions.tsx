@@ -458,22 +458,33 @@ function PrescriptionsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label>Rx No</Label>
-              <Input value={form.rx_no} onChange={(e) => setForm({ ...form, rx_no: e.target.value })} placeholder="auto/optional" />
+              <Label>Rx No (auto)</Label>
+              <Input value={form.rx_no} readOnly className="bg-muted/50 font-mono text-xs" />
             </div>
             <div>
-              <Label>Date</Label>
+              <Label>Date (BD time)</Label>
               <Input type="datetime-local" value={form.rx_date} onChange={(e) => setForm({ ...form, rx_date: e.target.value })} />
             </div>
             <div>
               <Label>Doctor</Label>
-              <Input value={form.doctor_name} onChange={(e) => setForm({ ...form, doctor_name: e.target.value })} />
+              <Input
+                value={form.doctor_name}
+                readOnly
+                className="bg-muted/50"
+                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+              />
             </div>
             <div>
               <Label>Qualification</Label>
-              <Input value={form.doctor_qualification} onChange={(e) => setForm({ ...form, doctor_qualification: e.target.value })} placeholder="MBBS, FCPS…" />
+              <Input
+                value={form.doctor_qualification}
+                readOnly
+                className="bg-muted/50"
+                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+              />
             </div>
           </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
             <div className="md:col-span-2">
