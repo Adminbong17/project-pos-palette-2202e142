@@ -171,9 +171,9 @@ export function ProductForm({ productId }: Props) {
         enable_stock: enableStock,
         not_for_selling: notForSelling,
         description: description || null,
-        default_purchase_price: purchasePrice,
-        default_sell_price: mrp,
-        mrp: mrp,
+        default_purchase_price: Number(purchasePrice) || 0,
+        default_sell_price: Number(mrp) || 0,
+        mrp: Number(mrp) || 0,
         barcode: barcode || null,
         image: image || null,
       };
