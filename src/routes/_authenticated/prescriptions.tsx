@@ -585,9 +585,43 @@ function PrescriptionsPage() {
               </Select>
             </div>
             <div>
-              <Label>Vitals</Label>
-              <Input value={form.vitals} onChange={(e) => setForm({ ...form, vitals: e.target.value })} placeholder="BP, Wt, Temp…" />
+              <Label>Next Visit</Label>
+              <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
             </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <Label className="text-base">Patient Vitals</Label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {VITAL_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                  <div className="relative">
+                    <Input
+                      className="pr-14"
+                      inputMode={f.key === "bp" ? "text" : "decimal"}
+                      placeholder={f.placeholder}
+                      value={vitals[f.key]}
+                      onChange={(e) => setVitals({ ...vitals, [f.key]: e.target.value })}
+                    />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {f.unit}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div>
+                <Label className="text-xs text-muted-foreground">BMI (auto)</Label>
+                <div className="relative">
+                  <Input className="pr-16 bg-muted/50" readOnly value={bmi} placeholder="—" />
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    kg/m²
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
             <div>
               <Label>Next Visit</Label>
               <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
