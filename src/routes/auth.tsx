@@ -1,14 +1,17 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/dashboard" });
+    // getSession() reads the local session (no network round-trip) so the
+    // auth page paints instantly instead of waiting on the auth server.
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/dashboard" });
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
@@ -16,6 +19,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,11 +29,12 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: { first_name: name },
@@ -39,16 +44,23 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Account created. Signing in…");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
         if (error) throw error;
       }
-      navigate({ to: "/dashboard" });
+      // Drop any cached data from a previous session so the dashboard does not
+      // render stale rows (a common cause of the "hung" screen after login).
+      await qc.cancelQueries();
+      qc.clear();
+      navigate({ to: "/dashboard", replace: true });
     } catch (err: any) {
-      toast.error(err.message ?? "Authentication failed");
-    } finally {
+      toast.error(err?.message ?? "Authentication failed");
       setLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen grid place-items-center bg-background p-6">
