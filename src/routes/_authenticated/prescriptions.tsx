@@ -181,6 +181,8 @@ function PrescriptionsPage() {
     diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const bmi = calcBmi(vitals);
 
   // Doctor identity comes from the logged-in user's profile (set by admin).
   const me = useQuery({
