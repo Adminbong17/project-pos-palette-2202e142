@@ -270,6 +270,7 @@ function PrescriptionsPage() {
       diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
+    setVitals(emptyVitals());
   };
 
   const openNew = () => { resetForm(); setOpen(true); };
