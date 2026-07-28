@@ -78,8 +78,9 @@ export function ProductForm({ productId }: Props) {
   const [enableStock, setEnableStock] = useState(true);
   const [notForSelling, setNotForSelling] = useState(false);
   const [description, setDescription] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState<number>(0);
-  const [mrp, setMrp] = useState<number>(0);
+  const [purchasePrice, setPurchasePrice] = useState<string>("");
+  const [mrp, setMrp] = useState<string>("");
+  const [packSize, setPackSize] = useState<string>("");
   const [barcode, setBarcode] = useState<string>("");
   const [scanTarget, setScanTarget] = useState<null | { kind: "main" } | { kind: "variation"; idx: number }>(null);
   const [variations, setVariations] = useState<Variation[]>([
@@ -118,8 +119,10 @@ export function ProductForm({ productId }: Props) {
     setEnableStock(!!existing.enable_stock);
     setNotForSelling(!!existing.not_for_selling);
     setDescription(existing.description ?? "");
-    setPurchasePrice(Number(existing.default_purchase_price ?? 0));
-    setMrp(Number(existing.mrp ?? existing.default_sell_price ?? 0));
+    setPurchasePrice(existing.default_purchase_price != null ? String(existing.default_purchase_price) : "");
+    const mrpVal = existing.mrp ?? existing.default_sell_price;
+    setMrp(mrpVal != null ? String(mrpVal) : "");
+    setPackSize(existing.variations?.[0]?.pack_size != null ? String(existing.variations[0].pack_size) : "");
     setBarcode((existing as any).barcode ?? "");
     setImage((existing as any).image ?? "");
     if (existing.variations?.length) {
@@ -171,9 +174,9 @@ export function ProductForm({ productId }: Props) {
         enable_stock: enableStock,
         not_for_selling: notForSelling,
         description: description || null,
-        default_purchase_price: purchasePrice,
-        default_sell_price: mrp,
-        mrp: mrp,
+        default_purchase_price: Number(purchasePrice) || 0,
+        default_sell_price: Number(mrp) || 0,
+        mrp: Number(mrp) || 0,
         barcode: barcode || null,
         image: image || null,
       };
@@ -191,7 +194,7 @@ export function ProductForm({ productId }: Props) {
       // Variations
       const rows = showVariations
         ? variations
-        : [{ ...(variations[0] ?? { name: "DUMMY", sub_sku: "", barcode: "", pack_size: 1 }), name: "DUMMY", sub_sku: sku, barcode: barcode || "", default_purchase_price: purchasePrice, mrp: mrp, pack_size: variations[0]?.pack_size ?? 1 }];
+        : [{ ...(variations[0] ?? { name: "DUMMY", sub_sku: "", barcode: "", pack_size: 1 }), name: "DUMMY", sub_sku: sku, barcode: barcode || "", default_purchase_price: Number(purchasePrice) || 0, mrp: Number(mrp) || 0, pack_size: Math.max(1, Number(packSize) || 1) }];
       // delete removed
       if (productId) {
         const keepIds = rows.filter((v) => v.id).map((v) => v.id!);
@@ -305,11 +308,11 @@ export function ProductForm({ productId }: Props) {
           </label>
           <label className="block">
             <span className={labelCls}>Purchase price</span>
-            <input className={inputCls} type="number" step="any" value={purchasePrice} onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)} />
+            <input className={inputCls} type="number" step="any" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>MRP</span>
-            <input className={inputCls} type="number" step="any" value={mrp} onChange={(e) => setMrp(Number(e.target.value) || 0)} />
+            <input className={inputCls} type="number" step="any" value={mrp} onChange={(e) => setMrp(e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>Pcs per box</span>
@@ -318,11 +321,12 @@ export function ProductForm({ productId }: Props) {
               type="number"
               min="1"
               step="1"
-              value={variations[0]?.pack_size ?? 1}
-              onChange={(e) => updateVariation(0, { pack_size: Math.max(1, Number(e.target.value) || 1) })}
+              value={packSize}
+              onChange={(e) => setPackSize(e.target.value)}
               placeholder="1"
             />
           </label>
+
         </div>
         <div className="flex flex-wrap gap-6 pt-2">
           <label className="flex items-center gap-2 text-sm">
