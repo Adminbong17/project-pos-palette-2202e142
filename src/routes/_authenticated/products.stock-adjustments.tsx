@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { Eye, Plus, Printer, Trash2, X } from "lucide-react";
+import { Eye, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { fetchAll } from "@/lib/fetch-all";
 
@@ -28,6 +28,7 @@ function StockAdjustments() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [viewId, setViewId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<any | null>(null);
 
   const { data: rows = [] } = useQuery({
     queryKey: ["stock-adjustments", business?.id],
@@ -65,7 +66,14 @@ function StockAdjustments() {
         </button>
       </div>
 
-      {showForm && <AdjustmentForm onClose={() => setShowForm(false)} onSaved={() => qc.invalidateQueries({ queryKey: ["stock-adjustments"] })} />}
+      {(showForm || editRow) && (
+        <AdjustmentForm
+          key={editRow?.id ?? "new"}
+          editRow={editRow}
+          onClose={() => { setShowForm(false); setEditRow(null); }}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["stock-adjustments"] })}
+        />
+      )}
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
         <table className="w-full text-sm min-w-[800px]">
@@ -95,6 +103,9 @@ function StockAdjustments() {
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => setViewId(r.id)} title="View" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-muted/50">
                       <Eye className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => { setShowForm(false); setEditRow(r); }} title="Edit" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-muted/50">
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <PrintSizeButton label="" onPrint={(size) => printAdjustment(r.id, size)} />
                     <button
@@ -126,7 +137,7 @@ async function fetchAdjustmentDetail(id: string) {
   if (error) throw error;
   const { data: lines } = await supabase
     .from("stock_adjustment_lines")
-    .select("quantity, unit_price, product:products(name, sku), variation:variations(name, sub_sku)")
+    .select("product_id, variation_id, quantity, unit_price, product:products(name, sku), variation:variations(name, sub_sku)")
     .eq("stock_adjustment_id", id);
   return { header, lines: lines ?? [] };
 }
@@ -281,14 +292,33 @@ function escapeHtml(s: string) {
 }
 
 
-function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; onClose: () => void; onSaved: () => void }) {
   const { data: business } = useCurrentBusiness();
   const qc = useQueryClient();
-  const [locationId, setLocationId] = useState("");
-  const [type, setType] = useState<"normal" | "abnormal">("normal");
-  const [reason, setReason] = useState("");
+  const [locationId, setLocationId] = useState(editRow?.location_id ?? "");
+  const [type, setType] = useState<"normal" | "abnormal">((editRow?.adjustment_type as any) ?? "normal");
+  const [reason, setReason] = useState(editRow?.reason ?? "");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
+  const [loadedEdit, setLoadedEdit] = useState(!editRow);
+
+  useQuery({
+    queryKey: ["stock-adjustment-edit", editRow?.id],
+    enabled: !!editRow?.id,
+    queryFn: async () => {
+      const { lines: existing } = await fetchAdjustmentDetail(editRow.id);
+      setLines(
+        (existing as any[]).map((l) => ({
+          variation_id: l.variation_id ?? "",
+          product_id: l.product_id ?? "",
+          quantity: String(Number(l.quantity)),
+          unit_price: String(Number(l.unit_price)),
+        })),
+      );
+      setLoadedEdit(true);
+      return existing;
+    },
+  });
 
 
   const { data: locations = [] } = useQuery({
@@ -393,11 +423,16 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       const invalidLine = lines.find((line) => !line.product_id || !line.variation_id || !(Number(line.quantity) > 0));
       if (invalidLine) throw new Error("Select a product and enter a quantity greater than zero");
 
+      if (editRow?.id) {
+        const { error: delErr } = await supabase.rpc("delete_stock_adjustment", { _id: editRow.id });
+        if (delErr) throw delErr;
+      }
+
       const { error } = await supabase.rpc("create_stock_adjustment", {
         _payload: {
           business_id: business.id,
           location_id: locationId,
-          ref_no: `SA${Date.now().toString().slice(-8)}`,
+          ref_no: editRow?.ref_no ?? `SA${Date.now().toString().slice(-8)}`,
           adjustment_type: type,
           reason: reason || null,
           lines: lines.map((l) => ({ ...l, quantity: Number(l.quantity) || 0, unit_price: Number(l.unit_price) || 0 })),
@@ -406,7 +441,7 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Adjustment saved and stock updated");
+      toast.success(editRow?.id ? "Adjustment updated and stock re-applied" : "Adjustment saved and stock updated");
       qc.invalidateQueries();
       onSaved();
       onClose();
@@ -419,7 +454,8 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="rounded-2xl border border-border/60 bg-card p-5 space-y-4">
-      <h3 className="text-sm font-semibold">New Stock Adjustment</h3>
+      <h3 className="text-sm font-semibold">{editRow?.id ? `Edit Adjustment ${editRow.ref_no}` : "New Stock Adjustment"}</h3>
+      {!loadedEdit && <p className="text-xs text-muted-foreground">Loading lines…</p>}
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block">
           <span className={labelCls}>Location *</span>
@@ -511,8 +547,8 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
         <div className="text-sm">Total: <span className="font-semibold">{total.toFixed(2)}</span></div>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm">Cancel</button>
-          <button type="submit" disabled={save.isPending} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">
-            {save.isPending ? "Saving…" : "Save"}
+          <button type="submit" disabled={save.isPending || !loadedEdit} className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">
+            {save.isPending ? "Saving…" : editRow?.id ? "Update" : "Save"}
           </button>
         </div>
       </div>
