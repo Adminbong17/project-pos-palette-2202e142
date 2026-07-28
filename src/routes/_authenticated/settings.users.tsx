@@ -264,8 +264,11 @@ function UsersAndRoles() {
               <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No users yet.</td></tr>
             )}
             {members.map((m) => {
-              const isSalesman = m.roleName === "Salesman";
-              const effective = m.allowedSections ?? (isSalesman ? salesmanSections : []);
+              const isSalesman = !!m.roleName && m.roleName !== "Admin";
+              const roleDefaults =
+                m.roleName === "Doctor" ? ["prescriptions"] : salesmanSections;
+              const effective = m.allowedSections ?? (isSalesman ? roleDefaults : []);
+
               return (
                 <tr key={m.id} className="border-t border-border/60 align-top">
                   <td className="p-3">{m.name || "—"}</td>
