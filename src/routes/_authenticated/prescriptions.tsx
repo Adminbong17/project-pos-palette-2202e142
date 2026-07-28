@@ -30,7 +30,8 @@ export const Route = createFileRoute("/_authenticated/prescriptions")({
   component: PrescriptionsPage,
 });
 
-type Contact = { id: string; name: string; mobile: string | null };
+type CcOption = { id: string; name: string };
+type Cc = { name: string; days: string };
 type ProductOpt = { id: string; name: string; variation_id: string };
 type Line = {
   id?: string;
