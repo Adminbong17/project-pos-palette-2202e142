@@ -1,14 +1,17 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/dashboard" });
+    // getSession() reads the local session (no network round-trip) so the
+    // auth page paints instantly instead of waiting on the auth server.
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/dashboard" });
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
@@ -16,6 +19,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,11 +29,12 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: { first_name: name },
@@ -39,57 +44,73 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Account created. Signing in…");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
         if (error) throw error;
       }
-      navigate({ to: "/dashboard" });
+      // Drop any cached data from a previous session so the dashboard does not
+      // render stale rows (a common cause of the "hung" screen after login).
+      await qc.cancelQueries();
+      qc.clear();
+      navigate({ to: "/dashboard", replace: true });
     } catch (err: any) {
-      toast.error(err.message ?? "Authentication failed");
-    } finally {
+      toast.error(err?.message ?? "Authentication failed");
       setLoading(false);
     }
   }
 
+
+  const inputCls =
+    "w-full h-12 sm:h-11 rounded-lg border border-border bg-input px-3.5 text-base sm:text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+
   return (
-    <div className="min-h-screen grid place-items-center bg-background p-6">
-      <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-8 shadow-lg">
-        <h1 className="font-display text-2xl font-semibold">QweekPOS</h1>
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8 sm:p-6">
+      <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-5 shadow-lg sm:p-8">
+        <h1 className="font-display text-xl font-semibold sm:text-2xl">QweekPOS</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "signin" ? "Sign in to your account" : "Create a new account"}
         </p>
-        <form className="mt-6 space-y-4" onSubmit={submit}>
+        <form className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={submit}>
           {mode === "signup" && (
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
-              className="w-full h-10 rounded-lg border border-border bg-input px-3 text-sm"
+              autoComplete="name"
+              className={inputCls}
             />
           )}
           <input
             required
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full h-10 rounded-lg border border-border bg-input px-3 text-sm"
+            className={inputCls}
           />
           <div className="relative">
             <input
               required
               type={showPassword ? "text" : "password"}
               minLength={6}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full h-10 rounded-lg border border-border bg-input px-3 pr-10 text-sm"
+              className={`${inputCls} pr-12`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 flex items-center justify-center w-10 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -97,14 +118,22 @@ function AuthPage() {
           <button
             disabled={loading}
             type="submit"
-            className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60 sm:h-11"
           >
-            {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {loading
+              ? mode === "signin"
+                ? "Signing in…"
+                : "Creating account…"
+              : mode === "signin"
+                ? "Sign in"
+                : "Sign up"}
           </button>
         </form>
         <button
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          disabled={loading}
+          className="mt-4 w-full py-2 text-center text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
         >
           {mode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
         </button>
@@ -112,3 +141,4 @@ function AuthPage() {
     </div>
   );
 }
+
