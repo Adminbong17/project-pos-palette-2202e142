@@ -153,9 +153,76 @@ function QuickBoxPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+      {/* Mobile: 2-row card layout */}
+      <div className="sm:hidden space-y-2">
+        {isLoading ? (
+          <div className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-muted-foreground">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-muted-foreground">No products</div>
+        ) : (
+          filtered.slice(0, 500).map((r) => {
+            const dirty = pending[r.variation_id] !== undefined
+              && Number(pending[r.variation_id]) !== r.pack_size;
+            const added = r.pack_size > 1;
+            return (
+              <div
+                key={r.variation_id}
+                className={`rounded-xl border border-border/60 bg-card p-3 ${added ? "bg-emerald-500/5" : ""}`}
+              >
+                {/* Row 1: product info */}
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight break-words">{r.product_name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {r.sku && <span className="font-mono">{r.sku}</span>}
+                    {r.variation_name && <span>{r.variation_name}</span>}
+                    {added ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 font-medium">
+                        <Check className="h-3 w-3" />
+                        {r.pack_size} pcs / box
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">Not set</span>
+                    )}
+                  </div>
+                </div>
+                {/* Row 2: input + save */}
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    step="1"
+                    className={`${inputCls} flex-1`}
+                    placeholder="Pcs / box"
+                    value={pending[r.variation_id] ?? String(r.pack_size)}
+                    onChange={(e) => setPending((p) => ({ ...p, [r.variation_id]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                  />
+                  <Button
+                    size="sm"
+                    className="shrink-0"
+                    variant={dirty ? "default" : "outline"}
+                    disabled={!dirty || save.isPending}
+                    onClick={() => save.mutate(r)}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        )}
+        {filtered.length > 500 && (
+          <div className="px-1 py-2 text-xs text-muted-foreground">
+            Showing first 500 of {filtered.length}. Refine your search to see more.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden sm:block rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-2">Product</th>
