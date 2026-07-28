@@ -22,7 +22,14 @@ const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 // Sections every signed-in user can always reach, regardless of role config.
 const ALWAYS_ALLOWED = ["quick-box"];
 
+// A "doctor" only needs the prescription module — no POS/inventory extras.
+export function isPrescriptionOnly(list: string[] | null) {
+  if (!list) return false;
+  return list.includes("prescriptions") && list.every((k) => k === "prescriptions");
+}
+
 function withAlways(list: string[]) {
+  if (isPrescriptionOnly(list)) return ["prescriptions"];
   return Array.from(new Set([...list, ...ALWAYS_ALLOWED]));
 }
 
