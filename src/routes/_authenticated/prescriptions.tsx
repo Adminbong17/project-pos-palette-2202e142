@@ -210,6 +210,23 @@ function parseVitals(s: string | null | undefined): Vitals {
   return out;
 }
 
+/** Ordered vitals lines for printing: "1. Height: 65 in" / "N/A" when empty. */
+function vitalsLines(s: string | null | undefined): string[] {
+  const v = parseVitals(s);
+  const rows: { label: string; value: string }[] = [];
+  for (const f of VITAL_FIELDS) {
+    const val = (v[f.key] ?? "").trim();
+    rows.push({ label: f.label, value: val ? `${val} ${f.unit}` : "N/A" });
+    if (f.key === "weight") {
+      const bmi = calcBmi(v);
+      rows.push({ label: "BMI", value: bmi ? `${bmi} kg/m²` : "N/A" });
+    }
+  }
+  return rows.map((r, i) => `${i + 1}. ${r.label}: ${r.value}`);
+}
+
+
+
 
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
