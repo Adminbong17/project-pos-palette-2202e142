@@ -54,6 +54,8 @@ const sections = [
       { to: "/crm", label: "CRM", icon: HeartHandshake, enabled: true, key: "crm" },
       { to: "/hrm", label: "HRM", icon: Users, enabled: true, key: "hrm" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
+      { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
+
     ],
   },
   {
