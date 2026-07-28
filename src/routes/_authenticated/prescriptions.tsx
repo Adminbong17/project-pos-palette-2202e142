@@ -75,6 +75,51 @@ const fmtDate = (d: string) => {
   return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
 
+/** dd/mm/yyyy only (no time). */
+const fmtDay = (d: string) => {
+  if (!d) return "";
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "";
+  const p = dhakaParts(dt);
+  return `${p.day}/${p.month}/${p.year}`;
+};
+
+/** Add N days to a base date, returns YYYY-MM-DD. */
+function addDays(baseIsoOrLocal: string, days: number): string {
+  if (!days || days <= 0) return "";
+  const base = baseIsoOrLocal ? new Date(baseIsoOrLocal) : new Date();
+  if (isNaN(base.getTime())) return "";
+  const d = new Date(base.getTime() + days * 86400000);
+  const p = dhakaParts(d);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** Difference in whole days between two dates (for edit mode). */
+function diffDays(from: string, to: string): string {
+  if (!from || !to) return "";
+  const a = new Date(from), b = new Date(`${to}T00:00:00+06:00`);
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return "";
+  const n = Math.round((b.getTime() - a.getTime()) / 86400000);
+  return n > 0 ? String(n) : "";
+}
+
+/* ---------------- Chief complaints (C/C) ---------------- */
+const composeCc = (cc: Cc[]) =>
+  cc
+    .filter((c) => c.name.trim())
+    .map((c) => (c.days.trim() ? `${c.name.trim()} - ${c.days.trim()} days` : c.name.trim()))
+    .join(", ");
+
+function parseCc(s: string | null | undefined): Cc[] {
+  if (!s?.trim()) return [];
+  return s.split(",").map((chunk) => {
+    const m = chunk.trim().match(/^(.*?)\s*-\s*(\d+)\s*days?$/i);
+    return m ? { name: m[1].trim(), days: m[2] } : { name: chunk.trim(), days: "" };
+  }).filter((c) => c.name);
+}
+
 
 /** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
 function dhakaParts(d: Date = new Date()) {
