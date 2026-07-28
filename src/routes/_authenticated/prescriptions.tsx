@@ -392,10 +392,10 @@ function PrescriptionsPage() {
         doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
-        diagnosis: form.diagnosis.trim() || null,
+        diagnosis: composeCc(cc) || null,
         vitals: composeVitals(vitals) || null,
         advice: form.advice.trim() || null,
-        next_visit: form.next_visit || null,
+        next_visit: nextVisitDate || null,
         notes: form.notes.trim() || null,
       };
 
