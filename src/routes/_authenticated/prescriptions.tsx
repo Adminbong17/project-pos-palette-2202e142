@@ -566,7 +566,7 @@ function PrescriptionsPage() {
             <div class="sec-title">C/C</div>
             <div>${rx.diagnosis ? nl(rx.diagnosis) : "&nbsp;"}</div>
             <div class="sec-title">Vitals</div>
-            <div>${rx.vitals ? nl(rx.vitals) : "&nbsp;"}</div>
+            <div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
             <div class="sec-title">Investigation</div>
             <div>${investigation ? nl(investigation) : "&nbsp;"}</div>
           </div>
