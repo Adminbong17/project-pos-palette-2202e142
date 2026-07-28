@@ -132,6 +132,23 @@ function UsersAndRoles() {
     }
   }
 
+  async function setDoctorOnly(userId: string) {
+    if (!businessId) return;
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ allowed_sections: ["prescriptions"] })
+      .eq("user_id", userId)
+      .eq("business_id", businessId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Doctor mode enabled — only Prescriptions is visible");
+      qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["allowed-sections", businessId] });
+    }
+  }
+
+
+
   async function submitCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!businessId) return;
