@@ -30,7 +30,8 @@ export const Route = createFileRoute("/_authenticated/prescriptions")({
   component: PrescriptionsPage,
 });
 
-type Contact = { id: string; name: string; mobile: string | null };
+type CcOption = { id: string; name: string };
+type Cc = { name: string; days: string };
 type ProductOpt = { id: string; name: string; variation_id: string };
 type Line = {
   id?: string;
@@ -73,6 +74,51 @@ const fmtDate = (d: string) => {
   const p = dhakaParts(dt);
   return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
+
+/** dd/mm/yyyy only (no time). */
+const fmtDay = (d: string) => {
+  if (!d) return "";
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "";
+  const p = dhakaParts(dt);
+  return `${p.day}/${p.month}/${p.year}`;
+};
+
+/** Add N days to a base date, returns YYYY-MM-DD. */
+function addDays(baseIsoOrLocal: string, days: number): string {
+  if (!days || days <= 0) return "";
+  const base = baseIsoOrLocal ? new Date(baseIsoOrLocal) : new Date();
+  if (isNaN(base.getTime())) return "";
+  const d = new Date(base.getTime() + days * 86400000);
+  const p = dhakaParts(d);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** Difference in whole days between two dates (for edit mode). */
+function diffDays(from: string, to: string): string {
+  if (!from || !to) return "";
+  const a = new Date(from), b = new Date(`${to}T00:00:00+06:00`);
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return "";
+  const n = Math.round((b.getTime() - a.getTime()) / 86400000);
+  return n > 0 ? String(n) : "";
+}
+
+/* ---------------- Chief complaints (C/C) ---------------- */
+const composeCc = (cc: Cc[]) =>
+  cc
+    .filter((c) => c.name.trim())
+    .map((c) => (c.days.trim() ? `${c.name.trim()} - ${c.days.trim()} days` : c.name.trim()))
+    .join(", ");
+
+function parseCc(s: string | null | undefined): Cc[] {
+  if (!s?.trim()) return [];
+  return s.split(",").map((chunk) => {
+    const m = chunk.trim().match(/^(.*?)\s*-\s*(\d+)\s*days?$/i);
+    return m ? { name: m[1].trim(), days: m[2] } : { name: chunk.trim(), days: "" };
+  }).filter((c) => c.name);
+}
 
 
 /** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
@@ -182,7 +228,12 @@ function PrescriptionsPage() {
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const [cc, setCc] = useState<Cc[]>([]);
+  const [ccOpen, setCcOpen] = useState(false);
+  const [ccSearch, setCcSearch] = useState("");
+  const [nextDays, setNextDays] = useState("");
   const bmi = calcBmi(vitals);
+  const nextVisitDate = addDays(dhakaInputToIso(form.rx_date), Number(nextDays) || 0);
 
   // Doctor identity comes from the logged-in user's profile (set by admin).
   const me = useQuery({
@@ -225,19 +276,38 @@ function PrescriptionsPage() {
     },
   });
 
-  const contacts = useQuery({
-    queryKey: ["rx-contacts", businessId],
+  const ccOptions = useQuery({
+    queryKey: ["cc-options", businessId],
     enabled: !!businessId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("contacts")
-        .select("id, name, mobile")
+      const { data, error } = await supabase.from("chief_complaints")
+        .select("id, name")
         .eq("business_id", businessId!)
         .order("name")
         .limit(1000);
       if (error) throw error;
-      return (data ?? []) as Contact[];
+      return (data ?? []) as CcOption[];
     },
   });
+
+  const addCcOption = useMutation({
+    mutationFn: async (name: string) => {
+      if (!businessId) throw new Error("No business");
+      const { error } = await supabase.from("chief_complaints").insert({ business_id: businessId, name });
+      if (error && !`${error.message}`.includes("duplicate")) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
+  });
+
+  const addCc = (name: string) => {
+    const n = name.trim();
+    if (!n) return;
+    if (!cc.some((c) => c.name.toLowerCase() === n.toLowerCase())) setCc([...cc, { name: n, days: "" }]);
+    if (!(ccOptions.data ?? []).some((o) => o.name.toLowerCase() === n.toLowerCase())) addCcOption.mutate(n);
+    setCcSearch("");
+    setCcOpen(false);
+  };
+
 
   const products = useQuery({
     queryKey: ["rx-products", businessId],
@@ -271,6 +341,8 @@ function PrescriptionsPage() {
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
+    setCc([]);
+    setNextDays("");
   };
 
   const openNew = () => { resetForm(); setOpen(true); };
@@ -295,6 +367,9 @@ function PrescriptionsPage() {
       notes: rx.notes ?? "",
     });
     setVitals(parseVitals(rx.vitals));
+    setCc(parseCc(rx.diagnosis));
+    setNextDays(diffDays(rx.rx_date, rx.next_visit ?? ""));
+
     const { data } = await supabase.from("prescription_lines")
       .select("id, product_id, variation_id, medicine_name, dose, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
@@ -322,10 +397,10 @@ function PrescriptionsPage() {
         doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
-        diagnosis: form.diagnosis.trim() || null,
+        diagnosis: composeCc(cc) || null,
         vitals: composeVitals(vitals) || null,
         advice: form.advice.trim() || null,
-        next_visit: form.next_visit || null,
+        next_visit: nextVisitDate || null,
         notes: form.notes.trim() || null,
       };
 
@@ -435,12 +510,12 @@ function PrescriptionsPage() {
           <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
         ${rx.vitals ? `<div class="label">Vitals: ${esc(rx.vitals)}</div>` : ""}
-        ${rx.diagnosis ? `<div><span class="label">Diagnosis:</span> ${esc(rx.diagnosis)}</div>` : ""}
+        ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
       </div>
       <div><span class="rx-mark">℞</span></div>
       <div>${linesHtml}</div>
       ${rx.advice ? `<div class="box"><span class="label">Advice:</span><br>${esc(rx.advice).replace(/\n/g, "<br>")}</div>` : ""}
-      ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDate(rx.next_visit)}</div>` : ""}
+      ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDay(rx.next_visit)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${esc(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
     </div>
@@ -480,7 +555,7 @@ function PrescriptionsPage() {
               <TableHead>Patient</TableHead>
               <TableHead>Age / Sex</TableHead>
               <TableHead>Doctor</TableHead>
-              <TableHead>Diagnosis</TableHead>
+              <TableHead>C/C</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -573,21 +648,24 @@ function PrescriptionsPage() {
               <Input value={form.patient_phone} onChange={(e) => setForm({ ...form, patient_phone: e.target.value })} />
             </div>
             <div>
-              <Label>Link Contact (optional)</Label>
-              <Select value={form.contact_id || undefined} onValueChange={(v) => {
-                const c = contacts.data?.find((x) => x.id === v);
-                setForm({ ...form, contact_id: v, patient_name: form.patient_name || c?.name || "", patient_phone: form.patient_phone || c?.mobile || "" });
-              }}>
-                <SelectTrigger><SelectValue placeholder="No contact" /></SelectTrigger>
-                <SelectContent>
-                  {(contacts.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Next Visit (after days)</Label>
+              <div className="relative">
+                <Input
+                  className="pr-12"
+                  inputMode="numeric"
+                  placeholder="e.g. 7"
+                  value={nextDays}
+                  onChange={(e) => setNextDays(e.target.value.replace(/\D/g, ""))}
+                />
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  days
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {nextVisitDate ? `Next visit: ${fmtDay(nextVisitDate)}` : "Date will be calculated automatically"}
+              </p>
             </div>
-            <div>
-              <Label>Next Visit</Label>
-              <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
-            </div>
+
           </div>
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
@@ -622,10 +700,67 @@ function PrescriptionsPage() {
             </div>
           </div>
 
-          <div className="mt-2">
-            <Label>Diagnosis</Label>
-            <Textarea rows={2} value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} />
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base">C/C (Chief Complaints)</Label>
+              <Popover open={ccOpen} onOpenChange={setCcOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" /> Add C/C</Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[320px]" align="end">
+                  <Command>
+                    <CommandInput placeholder="Search or type C/C…" value={ccSearch} onValueChange={setCcSearch} />
+                    <CommandList>
+                      <CommandEmpty>
+                        <Button variant="ghost" size="sm" onClick={() => addCc(ccSearch)} disabled={!ccSearch.trim()}>
+                          Add “{ccSearch}”
+                        </Button>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {(ccOptions.data ?? []).map((o) => (
+                          <CommandItem key={o.id} value={o.name} onSelect={() => addCc(o.name)}>{o.name}</CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {cc.length === 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">No complaint added yet. Search an existing C/C or type a new one.</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {cc.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      className="flex-1"
+                      value={c.name}
+                      placeholder="Complaint"
+                      onChange={(e) => setCc(cc.map((x, ix) => (ix === i ? { ...x, name: e.target.value } : x)))}
+                    />
+                    <div className="relative w-32">
+                      <Input
+                        className="pr-12"
+                        inputMode="numeric"
+                        placeholder="Since"
+                        value={c.days}
+                        onChange={(e) =>
+                          setCc(cc.map((x, ix) => (ix === i ? { ...x, days: e.target.value.replace(/\D/g, "") } : x)))
+                        }
+                      />
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        days
+                      </span>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setCc(cc.filter((_, ix) => ix !== i))}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
 
           <div className="mt-3">
             <div className="flex items-center justify-between">

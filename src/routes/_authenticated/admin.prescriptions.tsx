@@ -69,6 +69,48 @@ function AdminPrescriptionsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [detail, setDetail] = useState<Rx | null>(null);
+  const [ccOpen, setCcOpen] = useState(false);
+  const [ccName, setCcName] = useState("");
+
+  const ccList = useQuery({
+    queryKey: ["cc-options", businessId],
+    enabled: !!businessId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chief_complaints")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const addCc = useMutation({
+    mutationFn: async (name: string) => {
+      const n = name.trim();
+      if (!n) throw new Error("Enter a complaint name");
+      const { error } = await supabase.from("chief_complaints").insert({ business_id: businessId!, name: n });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setCcName("");
+      toast.success("C/C added");
+      qc.invalidateQueries({ queryKey: ["cc-options", businessId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not add"),
+  });
+
+  const delCc = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("chief_complaints").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
+  });
+
 
   const list = useQuery({
     queryKey: ["admin-prescriptions", businessId],
@@ -154,10 +196,42 @@ function AdminPrescriptionsPage() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <header>
-        <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
-        <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
+          <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
+        </div>
+        <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
       </header>
+
+      <Dialog open={ccOpen} onOpenChange={setCcOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Chief Complaints (C/C)</DialogTitle></DialogHeader>
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. Fever"
+              value={ccName}
+              onChange={(e) => setCcName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addCc.mutate(ccName); }}
+            />
+            <Button onClick={() => addCc.mutate(ccName)} disabled={addCc.isPending}>Add</Button>
+          </div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {(ccList.data ?? []).map((c) => (
+              <div key={c.id} className="flex items-center justify-between rounded-md border border-border/60 px-2 py-1 text-sm">
+                <span>{c.name}</span>
+                <Button size="icon" variant="ghost" onClick={() => delCc.mutate(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            {!ccList.isLoading && (ccList.data ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No complaints yet — add some so doctors can search them.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
@@ -232,7 +306,7 @@ function AdminPrescriptionsPage() {
               <TableHead>Patient</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Doctor</TableHead>
-              <TableHead>Diagnosis</TableHead>
+              <TableHead>C/C</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -284,7 +358,7 @@ function AdminPrescriptionsPage() {
                 <Field label="Doctor" value={detail.doctor_name ?? "—"} />
                 <Field label="Age / Gender" value={[detail.patient_age, detail.patient_gender].filter(Boolean).join(" · ") || "—"} />
                 <Field label="Phone" value={detail.patient_phone ?? "—"} />
-                <Field label="Diagnosis" value={detail.diagnosis ?? "—"} />
+                <Field label="C/C" value={detail.diagnosis ?? "—"} />
                 <Field label="Vitals" value={detail.vitals ?? "—"} />
                 <Field label="Advice" value={detail.advice ?? "—"} />
                 <Field label="Next visit" value={detail.next_visit ?? "—"} />
