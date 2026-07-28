@@ -80,7 +80,7 @@ function UsersAndRoles() {
         .from("roles")
         .select("id, name, allowed_sections")
         .eq("business_id", businessId!)
-        .or("name.eq.Salesman,name.ilike.Admin%");
+        .or("name.eq.Salesman,name.eq.Doctor,name.ilike.Admin%");
       return (data ?? []).map((role) => ({
         ...role,
         name: role.name?.startsWith("Admin#") ? "Admin" : role.name,
