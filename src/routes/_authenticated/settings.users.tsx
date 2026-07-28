@@ -132,6 +132,23 @@ function UsersAndRoles() {
     }
   }
 
+  async function setDoctorOnly(userId: string) {
+    if (!businessId) return;
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ allowed_sections: ["prescriptions"] })
+      .eq("user_id", userId)
+      .eq("business_id", businessId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Doctor mode enabled — only Prescriptions is visible");
+      qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["allowed-sections", businessId] });
+    }
+  }
+
+
+
   async function submitCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!businessId) return;
@@ -183,7 +200,7 @@ function UsersAndRoles() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <div className="rounded-xl border border-border/60 bg-card p-4">
           <div className="flex items-center gap-2 text-sm font-medium"><ShieldCheck className="h-4 w-4 text-primary" /> Admin</div>
           <p className="text-xs text-muted-foreground mt-1">Full access to all sections.</p>
@@ -192,7 +209,12 @@ function UsersAndRoles() {
           <div className="flex items-center gap-2 text-sm font-medium"><ShoppingCart className="h-4 w-4 text-primary" /> Salesman</div>
           <p className="text-xs text-muted-foreground mt-1">Only the sections you enable below are visible.</p>
         </div>
+        <div className="rounded-xl border border-border/60 bg-card p-4">
+          <div className="flex items-center gap-2 text-sm font-medium"><ShoppingCart className="h-4 w-4 text-primary" /> Doctor</div>
+          <p className="text-xs text-muted-foreground mt-1">Prescriptions only — no POS, products or stock. Use the “Doctor only” button in the table.</p>
+        </div>
       </div>
+
 
       <div className="rounded-xl border border-border/60 bg-card p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -288,7 +310,16 @@ function UsersAndRoles() {
                             Reset
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setDoctorOnly(m.id)}
+                          className="text-xs px-2 py-1 rounded-md border border-dashed border-primary/50 text-primary"
+                          title="Prescriptions only (doctor mode)"
+                        >
+                          Doctor only
+                        </button>
                       </div>
+
                     ) : (
                       <span className="text-xs text-muted-foreground">All access</span>
                     )}
