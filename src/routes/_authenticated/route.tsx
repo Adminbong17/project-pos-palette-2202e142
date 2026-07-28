@@ -79,14 +79,16 @@ function AuthedLayout() {
                 <span className="text-muted-foreground">QweekPOS</span>
               </div>
             )}
-            <button
-              onClick={() => navigate({ to: "/pos" })}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-              title="Open POS"
-            >
-              <ShoppingCart className="h-3.5 w-3.5" />
-              POS
-            </button>
+            {canUsePos && (
+              <button
+                onClick={() => navigate({ to: "/pos" })}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                title="Open POS"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                POS
+              </button>
+            )}
             <button
               onClick={signOut}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:text-foreground"
