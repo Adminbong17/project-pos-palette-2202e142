@@ -228,7 +228,12 @@ function PrescriptionsPage() {
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const [cc, setCc] = useState<Cc[]>([]);
+  const [ccOpen, setCcOpen] = useState(false);
+  const [ccSearch, setCcSearch] = useState("");
+  const [nextDays, setNextDays] = useState("");
   const bmi = calcBmi(vitals);
+  const nextVisitDate = addDays(dhakaInputToIso(form.rx_date), Number(nextDays) || 0);
 
   // Doctor identity comes from the logged-in user's profile (set by admin).
   const me = useQuery({
