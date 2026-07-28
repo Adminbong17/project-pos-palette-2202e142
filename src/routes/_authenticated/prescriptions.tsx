@@ -692,10 +692,67 @@ function PrescriptionsPage() {
             </div>
           </div>
 
-          <div className="mt-2">
-            <Label>Diagnosis</Label>
-            <Textarea rows={2} value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} />
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base">C/C (Chief Complaints)</Label>
+              <Popover open={ccOpen} onOpenChange={setCcOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" /> Add C/C</Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[320px]" align="end">
+                  <Command>
+                    <CommandInput placeholder="Search or type C/C…" value={ccSearch} onValueChange={setCcSearch} />
+                    <CommandList>
+                      <CommandEmpty>
+                        <Button variant="ghost" size="sm" onClick={() => addCc(ccSearch)} disabled={!ccSearch.trim()}>
+                          Add “{ccSearch}”
+                        </Button>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {(ccOptions.data ?? []).map((o) => (
+                          <CommandItem key={o.id} value={o.name} onSelect={() => addCc(o.name)}>{o.name}</CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {cc.length === 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">No complaint added yet. Search an existing C/C or type a new one.</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {cc.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      className="flex-1"
+                      value={c.name}
+                      placeholder="Complaint"
+                      onChange={(e) => setCc(cc.map((x, ix) => (ix === i ? { ...x, name: e.target.value } : x)))}
+                    />
+                    <div className="relative w-32">
+                      <Input
+                        className="pr-12"
+                        inputMode="numeric"
+                        placeholder="Since"
+                        value={c.days}
+                        onChange={(e) =>
+                          setCc(cc.map((x, ix) => (ix === i ? { ...x, days: e.target.value.replace(/\D/g, "") } : x)))
+                        }
+                      />
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        days
+                      </span>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setCc(cc.filter((_, ix) => ix !== i))}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
 
           <div className="mt-3">
             <div className="flex items-center justify-between">
