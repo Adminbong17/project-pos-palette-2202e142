@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/prescriptions")({
 
 type CcOption = { id: string; name: string };
 type Cc = { name: string; days: string };
-type ProductOpt = { id: string; name: string; variation_id: string };
+type ProductOpt = { id: string; name: string; variation_id: string | null };
 type Line = {
   id?: string;
   product_id: string | null;
@@ -332,7 +332,7 @@ function PrescriptionsPage() {
       }
       const opts: ProductOpt[] = [];
       for (const p of rows) {
-        opts.push({ id: p.id, name: p.name, variation_id: firstVariationByProduct.get(p.id) ?? "" });
+        opts.push({ id: p.id, name: p.name, variation_id: firstVariationByProduct.get(p.id) ?? null });
       }
       return opts;
     },
