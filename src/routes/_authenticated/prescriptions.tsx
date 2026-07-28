@@ -110,6 +110,61 @@ function genRxNo(d: Date = new Date()) {
   return `${p.day}${p.month}${p.year}-${suffix}`;
 }
 
+/* ---------------- Vitals ---------------- */
+type VitalKey = "height" | "weight" | "temp" | "bp" | "pulse" | "spo2" | "rbs";
+type Vitals = Record<VitalKey, string>;
+
+const VITAL_FIELDS: { key: VitalKey; label: string; unit: string; placeholder: string }[] = [
+  { key: "height", label: "Height", unit: "in", placeholder: "e.g. 65" },
+  { key: "weight", label: "Weight", unit: "kg", placeholder: "e.g. 60" },
+  { key: "temp", label: "Temp", unit: "°C", placeholder: "e.g. 37" },
+  { key: "bp", label: "BP", unit: "mmHg", placeholder: "e.g. 120/80" },
+  { key: "pulse", label: "Pulse", unit: "bpm", placeholder: "e.g. 78" },
+  { key: "spo2", label: "SpO₂", unit: "%", placeholder: "e.g. 98" },
+  { key: "rbs", label: "RBS", unit: "mmol/L", placeholder: "e.g. 6.5" },
+];
+
+const emptyVitals = (): Vitals => ({ height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "", rbs: "" });
+
+/** BMI from height (inches) and weight (kg). */
+function calcBmi(v: Vitals): string {
+  const inches = parseFloat(v.height);
+  const kg = parseFloat(v.weight);
+  if (!inches || !kg || inches <= 0 || kg <= 0) return "";
+  const m = inches * 0.0254;
+  return (kg / (m * m)).toFixed(1);
+}
+
+/** Compose to a single readable string stored in prescriptions.vitals */
+function composeVitals(v: Vitals): string {
+  const parts: string[] = [];
+  for (const f of VITAL_FIELDS) {
+    const val = (v[f.key] ?? "").trim();
+    if (val) parts.push(`${f.label}: ${val} ${f.unit}`);
+    if (f.key === "weight") {
+      const bmi = calcBmi(v);
+      if (bmi) parts.push(`BMI: ${bmi} kg/m²`);
+    }
+  }
+  return parts.join(", ");
+}
+
+/** Parse back a composed vitals string into fields. */
+function parseVitals(s: string | null | undefined): Vitals {
+  const out = emptyVitals();
+  if (!s) return out;
+  for (const chunk of s.split(",")) {
+    const [rawLabel, ...rest] = chunk.split(":");
+    if (!rest.length) continue;
+    const label = rawLabel.trim().toLowerCase();
+    const f = VITAL_FIELDS.find((x) => x.label.toLowerCase() === label);
+    if (!f) continue;
+    out[f.key] = rest.join(":").replace(f.unit, "").trim();
+  }
+  return out;
+}
+
+
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
