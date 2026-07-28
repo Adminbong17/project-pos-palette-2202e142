@@ -859,7 +859,13 @@ function MedicineRow({ line, products, onChange, onRemove }: {
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
+  const [pSearch, setPSearch] = useState("");
   const selected = useMemo(() => products.find((p) => p.id === line.product_id), [products, line.product_id]);
+  const filtered = useMemo(() => {
+    const q = pSearch.trim().toLowerCase();
+    const src = q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
+    return src.slice(0, 300);
+  }, [products, pSearch]);
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
       <div className="md:col-span-4">
@@ -871,14 +877,15 @@ function MedicineRow({ line, products, onChange, onRemove }: {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="p-0 w-[360px]" align="start">
-            <Command>
-              <CommandInput placeholder="Search products…" />
+            <Command shouldFilter={false}>
+              <CommandInput placeholder={`Search ${products.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
               <CommandList>
                 <CommandEmpty>No products.</CommandEmpty>
                 <CommandGroup>
-                  {products.slice(0, 200).map((p) => (
-                    <CommandItem key={p.id} value={p.name} onSelect={() => {
+                  {filtered.map((p) => (
+                    <CommandItem key={p.id} value={p.id} onSelect={() => {
                       onChange({ product_id: p.id, variation_id: p.variation_id, medicine_name: p.name });
+                      setPSearch("");
                       setPOpen(false);
                     }}>{p.name}</CommandItem>
                   ))}
