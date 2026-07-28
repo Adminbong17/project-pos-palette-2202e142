@@ -341,6 +341,8 @@ function PrescriptionsPage() {
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
+    setCc([]);
+    setNextDays("");
   };
 
   const openNew = () => { resetForm(); setOpen(true); };
@@ -365,6 +367,9 @@ function PrescriptionsPage() {
       notes: rx.notes ?? "",
     });
     setVitals(parseVitals(rx.vitals));
+    setCc(parseCc(rx.diagnosis));
+    setNextDays(diffDays(rx.rx_date, rx.next_visit ?? ""));
+
     const { data } = await supabase.from("prescription_lines")
       .select("id, product_id, variation_id, medicine_name, dose, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
