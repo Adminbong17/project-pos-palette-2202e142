@@ -1694,6 +1694,7 @@ export type Database = {
           doctor_name: string | null
           doctor_qualification: string | null
           id: string
+          investigation: string | null
           location_id: string | null
           next_visit: string | null
           notes: string | null
@@ -1717,6 +1718,7 @@ export type Database = {
           doctor_name?: string | null
           doctor_qualification?: string | null
           id?: string
+          investigation?: string | null
           location_id?: string | null
           next_visit?: string | null
           notes?: string | null
@@ -1740,6 +1742,7 @@ export type Database = {
           doctor_name?: string | null
           doctor_qualification?: string | null
           id?: string
+          investigation?: string | null
           location_id?: string | null
           next_visit?: string | null
           notes?: string | null
@@ -2276,6 +2279,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rx_frequencies: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       selling_price_groups: {
         Row: {
