@@ -201,6 +201,7 @@ function ProfitReportPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
+              <TableHead>Invoice No</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Revenue</TableHead>
               <TableHead className="text-right">Cost</TableHead>
@@ -210,11 +211,14 @@ function ProfitReportPage() {
           </TableHeader>
           <TableBody>
             {profit.rows.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No sales in this period.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">No sales in this period.</TableCell></TableRow>
             )}
             {profit.rows.map((r) => (
               <TableRow key={r.pid}>
                 <TableCell className="font-medium">{r.name}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground max-w-[220px]">
+                  {r.invoices.join(", ")}
+                </TableCell>
                 <TableCell className="text-right">{r.qty}</TableCell>
                 <TableCell className="text-right">{fmt(r.revenue)}</TableCell>
                 <TableCell className="text-right text-muted-foreground">{fmt(r.cost)}</TableCell>
