@@ -191,7 +191,7 @@ export function ProductForm({ productId }: Props) {
       // Variations
       const rows = showVariations
         ? variations
-        : [{ ...(variations[0] ?? { name: "DUMMY", sub_sku: "", barcode: "", pack_size: 1 }), name: "DUMMY", sub_sku: sku, barcode: barcode || "", default_purchase_price: purchasePrice, mrp: mrp, pack_size: variations[0]?.pack_size ?? 1 }];
+        : [{ ...(variations[0] ?? { name: "DUMMY", sub_sku: "", barcode: "", pack_size: 1 }), name: "DUMMY", sub_sku: sku, barcode: barcode || "", default_purchase_price: Number(purchasePrice) || 0, mrp: Number(mrp) || 0, pack_size: Math.max(1, Number(packSize) || 1) }];
       // delete removed
       if (productId) {
         const keepIds = rows.filter((v) => v.id).map((v) => v.id!);
