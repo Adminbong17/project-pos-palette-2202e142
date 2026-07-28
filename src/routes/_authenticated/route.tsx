@@ -27,7 +27,11 @@ function AuthedLayout() {
   
   const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
-  const isHome = pathname === "/dashboard";
+  const canUsePos = isAdmin || !allowed || allowed.includes("pos");
+  const homePath = isAdmin || !allowed || allowed.includes("dashboard")
+    ? "/dashboard"
+    : `/${allowed[0] ?? "pos"}`;
+  const isHome = pathname === homePath;
 
   if (!roleLoading && !sectionsLoading && !isAdmin && !isPathAllowed(pathname, allowed)) {
     const first = allowed && allowed.length ? allowed[0] : "pos";
@@ -45,8 +49,8 @@ function AuthedLayout() {
     // Prefer going up one path segment so Back always lands somewhere sensible,
     // regardless of browser history state (which may point to /auth or be empty).
     const clean = pathname.replace(/\/+$/, "");
-    const parent = clean.substring(0, clean.lastIndexOf("/")) || "/dashboard";
-    const target = parent === "/" ? "/dashboard" : parent;
+    const parent = clean.substring(0, clean.lastIndexOf("/")) || homePath;
+    const target = parent === "/" ? homePath : parent;
     navigate({ to: target as any });
   }
 
