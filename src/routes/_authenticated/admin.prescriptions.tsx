@@ -196,10 +196,42 @@ function AdminPrescriptionsPage() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <header>
-        <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
-        <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
+          <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
+        </div>
+        <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
       </header>
+
+      <Dialog open={ccOpen} onOpenChange={setCcOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Chief Complaints (C/C)</DialogTitle></DialogHeader>
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. Fever"
+              value={ccName}
+              onChange={(e) => setCcName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addCc.mutate(ccName); }}
+            />
+            <Button onClick={() => addCc.mutate(ccName)} disabled={addCc.isPending}>Add</Button>
+          </div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {(ccList.data ?? []).map((c) => (
+              <div key={c.id} className="flex items-center justify-between rounded-md border border-border/60 px-2 py-1 text-sm">
+                <span>{c.name}</span>
+                <Button size="icon" variant="ghost" onClick={() => delCc.mutate(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            {!ccList.isLoading && (ccList.data ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No complaints yet — add some so doctors can search them.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
