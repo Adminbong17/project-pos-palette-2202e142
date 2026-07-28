@@ -47,8 +47,16 @@ type Rx = {
 const fmtDate = (d: string) => {
   if (!d) return "";
   const dt = new Date(d);
-  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+  if (isNaN(dt.getTime())) return "";
+  const p: Record<string, string> = {};
+  for (const part of new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(dt)) p[part.type] = part.value;
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
+
 
 function AdminPrescriptionsPage() {
   const { data: business } = useCurrentBusiness();

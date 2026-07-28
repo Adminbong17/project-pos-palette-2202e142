@@ -1936,6 +1936,8 @@ export type Database = {
         Row: {
           created_at: string
           current_business_id: string | null
+          doctor_name: string | null
+          doctor_qualification: string | null
           email: string | null
           first_name: string | null
           id: string
@@ -1947,6 +1949,8 @@ export type Database = {
         Insert: {
           created_at?: string
           current_business_id?: string | null
+          doctor_name?: string | null
+          doctor_qualification?: string | null
           email?: string | null
           first_name?: string | null
           id: string
@@ -1958,6 +1962,8 @@ export type Database = {
         Update: {
           created_at?: string
           current_business_id?: string | null
+          doctor_name?: string | null
+          doctor_qualification?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
@@ -3168,6 +3174,10 @@ export type Database = {
       approve_business_request: {
         Args: { _id: string; _notes?: string }
         Returns: string
+      }
+      can_manage_member_profile: {
+        Args: { _manager: string; _target: string }
+        Returns: boolean
       }
       complete_production_order: {
         Args: { _id: string; _payload: Json }

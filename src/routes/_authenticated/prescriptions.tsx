@@ -69,8 +69,46 @@ const emptyLine = (): Line => ({
 const fmtDate = (d: string) => {
   if (!d) return "";
   const dt = new Date(d);
-  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+  if (isNaN(dt.getTime())) return "";
+  const p = dhakaParts(dt);
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
+
+
+/** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
+function dhakaParts(d: Date = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const p: Record<string, string> = {};
+  for (const part of fmt.formatToParts(d)) p[part.type] = part.value;
+  return p;
+}
+
+/** "YYYY-MM-DDTHH:mm" in Bangladesh time, for datetime-local inputs. */
+function dhakaLocalInput(d: Date = new Date()) {
+  const p = dhakaParts(d);
+  return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
+}
+
+/** Convert a Bangladesh-local "YYYY-MM-DDTHH:mm" string to a real UTC ISO string. */
+function dhakaInputToIso(local: string) {
+  if (!local) return new Date().toISOString();
+  // Bangladesh is a fixed UTC+06:00 offset (no DST).
+  const iso = new Date(`${local}:00+06:00`);
+  return isNaN(iso.getTime()) ? new Date(local).toISOString() : iso.toISOString();
+}
+
+/** DDMMYYYY-XXXXXX (6 random uppercase letters) */
+function genRxNo(d: Date = new Date()) {
+  const p = dhakaParts(d);
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let suffix = "";
+  for (let i = 0; i < 6; i++) suffix += letters[Math.floor(Math.random() * 26)];
+  return `${p.day}${p.month}${p.year}-${suffix}`;
+}
 
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
@@ -81,13 +119,36 @@ function PrescriptionsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Rx | null>(null);
   const [form, setForm] = useState({
-    rx_no: "", rx_date: new Date().toISOString().slice(0, 16),
+    rx_no: "", rx_date: dhakaLocalInput(),
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", contact_id: "",
     doctor_name: "", doctor_qualification: "",
     diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
+
+  // Doctor identity comes from the logged-in user's profile (set by admin).
+  const me = useQuery({
+    queryKey: ["my-doctor-profile"],
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("doctor_name, doctor_qualification, first_name, last_name")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!data) return null;
+      return {
+        doctor_name:
+          (data as any).doctor_name?.trim() ||
+          [data.first_name, data.last_name].filter(Boolean).join(" "),
+        doctor_qualification: ((data as any).doctor_qualification ?? "").trim(),
+      };
+    },
+  });
+
 
   const list = useQuery({
     queryKey: ["prescriptions", businessId, search],
@@ -144,10 +205,11 @@ function PrescriptionsPage() {
   const resetForm = () => {
     setEditing(null);
     setForm({
-      rx_no: "", rx_date: new Date().toISOString().slice(0, 16),
+      rx_no: genRxNo(), rx_date: dhakaLocalInput(),
       patient_name: "", patient_age: "", patient_gender: "",
       patient_phone: "", contact_id: "",
-      doctor_name: "", doctor_qualification: "",
+      doctor_name: me.data?.doctor_name ?? "",
+      doctor_qualification: me.data?.doctor_qualification ?? "",
       diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
@@ -158,8 +220,9 @@ function PrescriptionsPage() {
   const openEdit = async (rx: Rx) => {
     setEditing(rx);
     setForm({
-      rx_no: rx.rx_no ?? "",
-      rx_date: rx.rx_date ? new Date(rx.rx_date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+      rx_no: rx.rx_no ?? genRxNo(),
+      rx_date: rx.rx_date ? dhakaLocalInput(new Date(rx.rx_date)) : dhakaLocalInput(),
+
       patient_name: rx.patient_name ?? "",
       patient_age: rx.patient_age ?? "",
       patient_gender: rx.patient_gender ?? "",
@@ -190,15 +253,16 @@ function PrescriptionsPage() {
 
       const payload = {
         business_id: businessId,
-        rx_no: form.rx_no.trim() || null,
-        rx_date: new Date(form.rx_date).toISOString(),
+        rx_no: form.rx_no.trim() || genRxNo(),
+        rx_date: dhakaInputToIso(form.rx_date),
         patient_name: form.patient_name.trim(),
         patient_age: form.patient_age.trim() || null,
         patient_gender: form.patient_gender || null,
         patient_phone: form.patient_phone.trim() || null,
         contact_id: form.contact_id || null,
-        doctor_name: form.doctor_name.trim() || null,
-        doctor_qualification: form.doctor_qualification.trim() || null,
+        doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
+        doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
+
         diagnosis: form.diagnosis.trim() || null,
         vitals: form.vitals.trim() || null,
         advice: form.advice.trim() || null,
@@ -397,22 +461,33 @@ function PrescriptionsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label>Rx No</Label>
-              <Input value={form.rx_no} onChange={(e) => setForm({ ...form, rx_no: e.target.value })} placeholder="auto/optional" />
+              <Label>Rx No (auto)</Label>
+              <Input value={form.rx_no} readOnly className="bg-muted/50 font-mono text-xs" />
             </div>
             <div>
-              <Label>Date</Label>
+              <Label>Date (BD time)</Label>
               <Input type="datetime-local" value={form.rx_date} onChange={(e) => setForm({ ...form, rx_date: e.target.value })} />
             </div>
             <div>
               <Label>Doctor</Label>
-              <Input value={form.doctor_name} onChange={(e) => setForm({ ...form, doctor_name: e.target.value })} />
+              <Input
+                value={form.doctor_name}
+                readOnly
+                className="bg-muted/50"
+                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+              />
             </div>
             <div>
               <Label>Qualification</Label>
-              <Input value={form.doctor_qualification} onChange={(e) => setForm({ ...form, doctor_qualification: e.target.value })} placeholder="MBBS, FCPS…" />
+              <Input
+                value={form.doctor_qualification}
+                readOnly
+                className="bg-muted/50"
+                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+              />
             </div>
           </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
             <div className="md:col-span-2">

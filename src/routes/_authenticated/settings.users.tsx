@@ -52,7 +52,7 @@ function UsersAndRoles() {
       const userIds = (bus ?? []).map((b) => b.user_id);
       if (!userIds.length) return [];
       const [{ data: profiles }, { data: userRoles }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("id, email, first_name, last_name").in("id", userIds),
+        supabase.from("profiles").select("id, email, first_name, last_name, doctor_name, doctor_qualification").in("id", userIds),
         supabase.from("user_roles").select("user_id, role_id, allowed_sections").eq("business_id", businessId!).in("user_id", userIds),
         supabase.from("roles").select("id, name").eq("business_id", businessId!),
       ]);
@@ -67,6 +67,8 @@ function UsersAndRoles() {
           roleId: ur?.role_id ?? null,
           roleName: ur?.role_id ? roleById.get(ur.role_id) ?? null : null,
           allowedSections: ((ur as any)?.allowed_sections as string[] | null) ?? null,
+          doctorName: ((p as any).doctor_name as string | null) ?? "",
+          doctorQualification: ((p as any).doctor_qualification as string | null) ?? "",
         };
       });
     },
@@ -148,6 +150,19 @@ function UsersAndRoles() {
   }
 
 
+
+  async function saveDoctorIdentity(userId: string, doctor_name: string, doctor_qualification: string) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ doctor_name: doctor_name.trim() || null, doctor_qualification: doctor_qualification.trim() || null } as any)
+      .eq("id", userId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Doctor details saved");
+      qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["my-doctor-profile"] });
+    }
+  }
 
   async function submitCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -253,15 +268,16 @@ function UsersAndRoles() {
               <th className="text-left p-3">User</th>
               <th className="text-left p-3">Email</th>
               <th className="text-left p-3">Role</th>
+              <th className="text-left p-3">Doctor name / qualification</th>
               <th className="text-left p-3">Sections (Salesman only)</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Loading…</td></tr>
+              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Loading…</td></tr>
             )}
             {!isLoading && members.length === 0 && (
-              <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No users yet.</td></tr>
+              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No users yet.</td></tr>
             )}
             {members.map((m) => {
               const isSalesman = !!m.roleName && m.roleName !== "Admin";
@@ -284,6 +300,13 @@ function UsersAndRoles() {
                         <option key={r.id} value={r.id}>{r.name}</option>
                       ))}
                     </select>
+                  </td>
+                  <td className="p-3">
+                    <DoctorIdentityCell
+                      name={m.doctorName}
+                      qualification={m.doctorQualification}
+                      onSave={(n, q) => saveDoctorIdentity(m.id, n, q)}
+                    />
                   </td>
                   <td className="p-3">
                     {isSalesman ? (
@@ -400,6 +423,35 @@ function UsersAndRoles() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function DoctorIdentityCell({
+  name,
+  qualification,
+  onSave,
+}: {
+  name: string;
+  qualification: string;
+  onSave: (name: string, qualification: string) => void;
+}) {
+  const [n, setN] = useState(name);
+  const [q, setQ] = useState(qualification);
+  const dirty = n !== name || q !== qualification;
+  return (
+    <div className="flex flex-col gap-1.5 min-w-[200px]">
+      <Input className="h-8" value={n} onChange={(e) => setN(e.target.value)} placeholder="Dr. name" />
+      <Input className="h-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="MBBS, FCPS…" />
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 self-start text-xs"
+        disabled={!dirty}
+        onClick={() => onSave(n, q)}
+      >
+        Save
+      </Button>
     </div>
   );
 }
