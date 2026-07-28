@@ -202,10 +202,11 @@ function PrescriptionsPage() {
   const resetForm = () => {
     setEditing(null);
     setForm({
-      rx_no: "", rx_date: new Date().toISOString().slice(0, 16),
+      rx_no: genRxNo(), rx_date: dhakaLocalInput(),
       patient_name: "", patient_age: "", patient_gender: "",
       patient_phone: "", contact_id: "",
-      doctor_name: "", doctor_qualification: "",
+      doctor_name: me.data?.doctor_name ?? "",
+      doctor_qualification: me.data?.doctor_qualification ?? "",
       diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
@@ -216,8 +217,9 @@ function PrescriptionsPage() {
   const openEdit = async (rx: Rx) => {
     setEditing(rx);
     setForm({
-      rx_no: rx.rx_no ?? "",
-      rx_date: rx.rx_date ? new Date(rx.rx_date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+      rx_no: rx.rx_no ?? genRxNo(),
+      rx_date: rx.rx_date ? dhakaLocalInput(new Date(rx.rx_date)) : dhakaLocalInput(),
+
       patient_name: rx.patient_name ?? "",
       patient_age: rx.patient_age ?? "",
       patient_gender: rx.patient_gender ?? "",
