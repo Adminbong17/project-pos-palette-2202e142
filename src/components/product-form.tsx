@@ -78,8 +78,9 @@ export function ProductForm({ productId }: Props) {
   const [enableStock, setEnableStock] = useState(true);
   const [notForSelling, setNotForSelling] = useState(false);
   const [description, setDescription] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState<number>(0);
-  const [mrp, setMrp] = useState<number>(0);
+  const [purchasePrice, setPurchasePrice] = useState<string>("");
+  const [mrp, setMrp] = useState<string>("");
+  const [packSize, setPackSize] = useState<string>("");
   const [barcode, setBarcode] = useState<string>("");
   const [scanTarget, setScanTarget] = useState<null | { kind: "main" } | { kind: "variation"; idx: number }>(null);
   const [variations, setVariations] = useState<Variation[]>([
