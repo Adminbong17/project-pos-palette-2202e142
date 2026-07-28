@@ -36,7 +36,7 @@ function UsersAndRoles() {
     password: "",
     first_name: "",
     last_name: "",
-    role: "Salesman" as "Admin" | "Salesman",
+    role: "Salesman" as "Admin" | "Salesman" | "Doctor",
   });
   const [saving, setSaving] = useState(false);
 
@@ -80,7 +80,7 @@ function UsersAndRoles() {
         .from("roles")
         .select("id, name, allowed_sections")
         .eq("business_id", businessId!)
-        .or("name.eq.Salesman,name.ilike.Admin%");
+        .or("name.eq.Salesman,name.eq.Doctor,name.ilike.Admin%");
       return (data ?? []).map((role) => ({
         ...role,
         name: role.name?.startsWith("Admin#") ? "Admin" : role.name,
@@ -264,8 +264,11 @@ function UsersAndRoles() {
               <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No users yet.</td></tr>
             )}
             {members.map((m) => {
-              const isSalesman = m.roleName === "Salesman";
-              const effective = m.allowedSections ?? (isSalesman ? salesmanSections : []);
+              const isSalesman = !!m.roleName && m.roleName !== "Admin";
+              const roleDefaults =
+                m.roleName === "Doctor" ? ["prescriptions"] : salesmanSections;
+              const effective = m.allowedSections ?? (isSalesman ? roleDefaults : []);
+
               return (
                 <tr key={m.id} className="border-t border-border/60 align-top">
                   <td className="p-3">{m.name || "—"}</td>
@@ -377,12 +380,14 @@ function UsersAndRoles() {
               <Label>Role *</Label>
               <select
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as "Admin" | "Salesman" })}
+                onChange={(e) => setForm({ ...form, role: e.target.value as "Admin" | "Salesman" | "Doctor" })}
                 className="h-9 w-full rounded-md border border-border bg-input px-2 text-sm"
               >
                 <option value="Salesman">Salesman</option>
+                <option value="Doctor">Doctor (Prescriptions only)</option>
                 <option value="Admin">Admin</option>
               </select>
+
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
