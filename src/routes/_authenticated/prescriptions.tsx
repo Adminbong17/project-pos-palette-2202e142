@@ -467,70 +467,147 @@ function PrescriptionsPage() {
       .eq("prescription_id", rx.id)
       .order("sort_order");
     const rxLines = (linesData ?? []) as Line[];
+    let investigation = "";
+    try {
+      const { data: inv } = await supabase.from("prescriptions" as any)
+        .select("investigation").eq("id", rx.id).maybeSingle();
+      investigation = (inv as any)?.investigation ?? "";
+    } catch { /* column may not exist */ }
+
     const biz = business as any;
     const bizName = biz?.name ?? "";
     const bizAddr = biz?.address ?? "";
     const bizPhone = biz?.mobile ?? "";
 
-    const widthCss = size === "A4" ? "210mm" : size === "80mm" ? "80mm" : "58mm";
-    const pageCss = size === "A4" ? "A4" : `${size} auto`;
-    const padCss = size === "A4" ? "16mm" : "4mm";
-    const fs = size === "58mm" ? "10px" : size === "80mm" ? "11px" : "12px";
+    const esc = (s: string) => String(s).replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]!));
+    const nl = (s: string) => esc(s).replace(/\n/g, "<br>");
+    const nextVisitTxt = rx.next_visit
+      ? (() => {
+        const d = diffDays(rx.rx_date, rx.next_visit!);
+        return d ? `${d} days later (${fmtDay(rx.next_visit!)})` : fmtDay(rx.next_visit!);
+      })()
+      : "";
 
-    const esc = (s: string) => s.replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]!));
-    const linesHtml = rxLines.length
-      ? rxLines.map((l, i) => `
-        <div style="margin:6px 0;padding:4px 0;border-bottom:1px dashed #999;">
-          <div style="font-weight:bold;">${i + 1}. ${esc(l.medicine_name)}${l.quantity ? ` &nbsp;<span style="font-weight:normal;">(Qty: ${l.quantity})</span>` : ""}</div>
-          ${l.dose ? `<div>Dose: ${esc(l.dose)}</div>` : ""}
-          ${l.frequency ? `<div>Frequency: ${esc(l.frequency)}</div>` : ""}
-          ${l.duration ? `<div>Duration: ${esc(l.duration)}</div>` : ""}
-          ${l.instructions ? `<div><em>${esc(l.instructions)}</em></div>` : ""}
-        </div>`).join("")
-      : "<div>No medicines</div>";
-
-    const styles = `
-      @page { size: ${pageCss}; margin: 0; }
-      html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: ${fs}; }
-      .page { width: ${widthCss}; padding: ${padCss}; box-sizing: border-box; background:#fff; }
-      h1,h2,h3,p { margin: 2px 0; }
-      .center { text-align: center; }
-      .row { display: flex; justify-content: space-between; gap: 8px; }
-      .header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
-      .rx-mark { font-size: 22px; font-weight: bold; margin-right: 6px; }
-      .box { border: 1px solid #999; padding: 6px; margin: 6px 0; border-radius: 4px; }
-      .label { color: #444; font-size: 0.9em; }
-      .footer { margin-top: 14px; border-top: 1px dashed #666; padding-top: 6px; text-align: center; font-size: 0.85em; }`;
-
-    const body = `
-    <div class="page">
+    const headerHtml = `
       <div class="header center">
         <h2>${esc(bizName)}</h2>
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
         ${rx.doctor_name ? `<div style="margin-top:4px;"><strong>Dr. ${esc(rx.doctor_name)}</strong>${rx.doctor_qualification ? ` — ${esc(rx.doctor_qualification)}` : ""}</div>` : ""}
-      </div>
+      </div>`;
+
+    const metaHtml = `
       <div class="row">
         <div><span class="label">Rx No:</span> ${esc(rx.rx_no ?? "—")}</div>
         <div><span class="label">Date:</span> ${fmtDate(rx.rx_date)}</div>
       </div>
-      <div class="box">
+      <div class="pbox">
         <div class="row"><div><strong>${esc(rx.patient_name)}</strong></div>
           <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
-        ${rx.vitals ? `<div class="label">Vitals: ${esc(rx.vitals)}</div>` : ""}
-        ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
-      </div>
-      <div><span class="rx-mark">℞</span></div>
-      <div>${linesHtml}</div>
-      ${rx.advice ? `<div class="box"><span class="label">Advice:</span><br>${esc(rx.advice).replace(/\n/g, "<br>")}</div>` : ""}
-      ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDay(rx.next_visit)}</div>` : ""}
-      ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${esc(rx.notes)}</div>` : ""}
+      </div>`;
+
+    const medsHtml = rxLines.length
+      ? rxLines.map((l, i) => `
+        <div class="med">
+          <div class="med-name">${i + 1}. ${esc(l.medicine_name)}${l.quantity ? ` &nbsp;<span class="qty">(Qty: ${l.quantity})</span>` : ""}</div>
+          <div class="med-sub">${[l.frequency, l.duration].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
+          ${l.instructions ? `<div class="med-sub"><em>${esc(l.instructions)}</em></div>` : ""}
+        </div>`).join("")
+      : `<div class="label">No medicines</div>`;
+
+    if (size === "A4") {
+      const styles = `
+        @page { size: A4; margin: 0; }
+        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
+        .page { width:210mm; min-height:297mm; padding:12mm 10mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
+        h2 { margin:2px 0; font-size:18px; }
+        .center { text-align:center; }
+        .row { display:flex; justify-content:space-between; gap:8px; }
+        .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
+        .label { color:#444; font-size:0.9em; }
+        .pbox { border:1px solid #999; padding:6px; margin:6px 0 8px; border-radius:4px; }
+        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:180mm; }
+        .left { width:40%; padding:6px 8px 6px 0; border-right:1.5px solid #000; box-sizing:border-box; }
+        .right { width:60%; padding:6px 0 6px 10px; box-sizing:border-box; display:flex; flex-direction:column; }
+        .sec-title { font-weight:bold; text-decoration:underline; margin:8px 0 4px; }
+        .rx-area { flex:0 0 70%; }
+        .adv-area { flex:0 0 30%; border-top:1px dashed #666; padding-top:6px; }
+        .rx-mark { font-size:24px; font-weight:bold; }
+        .med { margin:0 0 6px; }
+        .med-name { font-weight:bold; }
+        .med-sub { padding-left:14px; }
+        .qty { font-weight:normal; }
+        .sign { margin-top:10px; text-align:right; }`;
+
+      const body = `
+      <div class="page">
+        ${headerHtml}
+        ${metaHtml}
+        <div class="split">
+          <div class="left">
+            <div class="sec-title">C/C</div>
+            <div>${rx.diagnosis ? nl(rx.diagnosis) : "&nbsp;"}</div>
+            <div class="sec-title">Vitals</div>
+            <div>${rx.vitals ? nl(rx.vitals) : "&nbsp;"}</div>
+            <div class="sec-title">Investigation</div>
+            <div>${investigation ? nl(investigation) : "&nbsp;"}</div>
+          </div>
+          <div class="right">
+            <div class="rx-area">
+              <div class="rx-mark">℞</div>
+              ${medsHtml}
+            </div>
+            <div class="adv-area">
+              <div class="sec-title" style="margin-top:0;">Advice</div>
+              <div>${rx.advice ? nl(rx.advice) : "&nbsp;"}</div>
+              ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
+              ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
+              <div class="sign">Doctor's signature: ______________________</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+      return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
+    }
+
+    const widthCss = size === "80mm" ? "80mm" : "58mm";
+    const fs = size === "58mm" ? "10px" : "11px";
+    const styles = `
+      @page { size: ${size} auto; margin: 0; }
+      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:${fs}; }
+      .page { width:${widthCss}; padding:4mm; box-sizing:border-box; background:#fff; }
+      h2 { margin:2px 0; font-size:14px; }
+      .center { text-align:center; }
+      .row { display:flex; justify-content:space-between; gap:8px; }
+      .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
+      .label { color:#444; font-size:0.9em; }
+      .pbox { border:1px solid #999; padding:6px; margin:6px 0; border-radius:4px; }
+      .med { margin:4px 0; padding-bottom:4px; border-bottom:1px dashed #999; }
+      .med-name { font-weight:bold; }
+      .med-sub { padding-left:10px; }
+      .rx-mark { font-size:18px; font-weight:bold; }
+      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }`;
+
+    const body = `
+    <div class="page">
+      ${headerHtml}
+      ${metaHtml}
+      ${rx.vitals ? `<div class="label">Vitals: ${esc(rx.vitals)}</div>` : ""}
+      ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
+      ${investigation ? `<div><span class="label">Investigation:</span> ${nl(investigation)}</div>` : ""}
+      <div class="rx-mark">℞</div>
+      ${medsHtml}
+      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span><br>${nl(rx.advice)}</div>` : ""}
+      ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
+      ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
     </div>`;
 
     return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
   };
+
 
   const printRx = async (rx: Rx, size: PrintSize) => {
     const { styles, body, title } = await buildRxHtml(rx, size);
