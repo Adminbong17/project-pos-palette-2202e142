@@ -630,7 +630,7 @@ function PrescriptionsPage() {
       // Render inside an isolated iframe so the app's Tailwind theme
       // (which uses oklch() colors html2canvas can't parse) never applies.
       frame = document.createElement("iframe");
-      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:820px;height:1200px;border:0;background:#fff;";
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:820px;height:1300px;border:0;background:#fff;";
       document.body.appendChild(frame);
       const doc = frame.contentDocument!;
       doc.open();
