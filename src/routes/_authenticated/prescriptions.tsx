@@ -621,6 +621,9 @@ function PrescriptionsPage() {
                 <TableCell className="text-right">
                   <div className="inline-flex items-center gap-2">
                     <PrintSizeButton onPrint={(s) => printRx(rx, s)} label="Print" />
+                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => savePdf(rx)}>
+                      <FileText className="h-3.5 w-3.5" /> PDF
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={() => openEdit(rx)}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this prescription?")) del.mutate(rx.id); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
