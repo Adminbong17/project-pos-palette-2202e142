@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/products/stock-adjustments
   component: StockAdjustments,
 });
 
-type Line = { variation_id: string; product_id: string; quantity: number; unit_price: number };
+type Line = { variation_id: string; product_id: string; quantity: number | string; unit_price: number | string };
 type ProductPick = {
   productId: string;
   variationId: string;
@@ -315,7 +315,7 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   });
 
   function addLine() {
-    setLines((l) => [...l, { variation_id: "", product_id: "", quantity: 1, unit_price: 0 }]);
+    setLines((l) => [...l, { variation_id: "", product_id: "", quantity: "", unit_price: "" }]);
   }
   function updateLine(idx: number, patch: Partial<Line>) {
     setLines((l) => l.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
@@ -327,7 +327,7 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     for (const p of products) {
       const v = (p as any).variations?.find((v: any) => v.id === variationId);
       if (v) {
-        updateLine(idx, { variation_id: variationId, product_id: p.id, unit_price: Number(v.default_purchase_price ?? 0) });
+        updateLine(idx, { variation_id: variationId, product_id: p.id, unit_price: v.default_purchase_price ? String(v.default_purchase_price) : "" });
         return;
       }
     }
@@ -374,15 +374,15 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
         {
           variation_id: item.variationId,
           product_id: item.productId,
-          quantity: 1,
-          unit_price: item.purchasePrice,
+          quantity: "",
+          unit_price: item.purchasePrice ? String(item.purchasePrice) : "",
         },
       ];
     });
     setSearch("");
   }
 
-  const total = lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
+  const total = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -390,7 +390,7 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       if (!locationId) throw new Error("Pick a location");
       if (lines.length === 0) throw new Error("Add at least one line");
 
-      const invalidLine = lines.find((line) => !line.product_id || !line.variation_id || !Number.isFinite(line.quantity) || line.quantity <= 0);
+      const invalidLine = lines.find((line) => !line.product_id || !line.variation_id || !(Number(line.quantity) > 0));
       if (invalidLine) throw new Error("Select a product and enter a quantity greater than zero");
 
       const { error } = await supabase.rpc("create_stock_adjustment", {
@@ -400,7 +400,7 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
           ref_no: `SA${Date.now().toString().slice(-8)}`,
           adjustment_type: type,
           reason: reason || null,
-          lines,
+          lines: lines.map((l) => ({ ...l, quantity: Number(l.quantity) || 0, unit_price: Number(l.unit_price) || 0 })),
         },
       });
       if (error) throw error;
@@ -494,11 +494,11 @@ function AdjustmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             </label>
             <label className="block sm:col-span-2">
               <span className={labelCls}>Qty</span>
-              <input className={inputCls} type="number" step="any" value={l.quantity} onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })} />
+              <input className={inputCls} type="number" step="any" value={l.quantity} placeholder="0" onChange={(e) => updateLine(idx, { quantity: e.target.value })} />
             </label>
             <label className="block sm:col-span-3">
               <span className={labelCls}>Unit price</span>
-              <input className={inputCls} type="number" step="any" value={l.unit_price} onChange={(e) => updateLine(idx, { unit_price: Number(e.target.value) })} />
+              <input className={inputCls} type="number" step="any" value={l.unit_price} placeholder="0.00" onChange={(e) => updateLine(idx, { unit_price: e.target.value })} />
             </label>
             <button type="button" onClick={() => removeLine(idx)} className="sm:col-span-1 inline-flex h-9 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10">
               <Trash2 className="h-4 w-4" />
