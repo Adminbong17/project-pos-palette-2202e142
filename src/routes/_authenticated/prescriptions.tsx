@@ -72,6 +72,41 @@ const fmtDate = (d: string) => {
   return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
 };
 
+/** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
+function dhakaParts(d: Date = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const p: Record<string, string> = {};
+  for (const part of fmt.formatToParts(d)) p[part.type] = part.value;
+  return p;
+}
+
+/** "YYYY-MM-DDTHH:mm" in Bangladesh time, for datetime-local inputs. */
+function dhakaLocalInput(d: Date = new Date()) {
+  const p = dhakaParts(d);
+  return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
+}
+
+/** Convert a Bangladesh-local "YYYY-MM-DDTHH:mm" string to a real UTC ISO string. */
+function dhakaInputToIso(local: string) {
+  if (!local) return new Date().toISOString();
+  // Bangladesh is a fixed UTC+06:00 offset (no DST).
+  const iso = new Date(`${local}:00+06:00`);
+  return isNaN(iso.getTime()) ? new Date(local).toISOString() : iso.toISOString();
+}
+
+/** DDMMYYYY-XXXXXX (6 random uppercase letters) */
+function genRxNo(d: Date = new Date()) {
+  const p = dhakaParts(d);
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let suffix = "";
+  for (let i = 0; i < 6; i++) suffix += letters[Math.floor(Math.random() * 26)];
+  return `${p.day}${p.month}${p.year}-${suffix}`;
+}
+
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
@@ -81,13 +116,36 @@ function PrescriptionsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Rx | null>(null);
   const [form, setForm] = useState({
-    rx_no: "", rx_date: new Date().toISOString().slice(0, 16),
+    rx_no: "", rx_date: dhakaLocalInput(),
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", contact_id: "",
     doctor_name: "", doctor_qualification: "",
     diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
+
+  // Doctor identity comes from the logged-in user's profile (set by admin).
+  const me = useQuery({
+    queryKey: ["my-doctor-profile"],
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("doctor_name, doctor_qualification, first_name, last_name")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!data) return null;
+      return {
+        doctor_name:
+          (data as any).doctor_name?.trim() ||
+          [data.first_name, data.last_name].filter(Boolean).join(" "),
+        doctor_qualification: ((data as any).doctor_qualification ?? "").trim(),
+      };
+    },
+  });
+
 
   const list = useQuery({
     queryKey: ["prescriptions", businessId, search],
