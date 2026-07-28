@@ -305,11 +305,11 @@ export function ProductForm({ productId }: Props) {
           </label>
           <label className="block">
             <span className={labelCls}>Purchase price</span>
-            <input className={inputCls} type="number" step="any" value={purchasePrice} onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)} />
+            <input className={inputCls} type="number" step="any" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>MRP</span>
-            <input className={inputCls} type="number" step="any" value={mrp} onChange={(e) => setMrp(Number(e.target.value) || 0)} />
+            <input className={inputCls} type="number" step="any" value={mrp} onChange={(e) => setMrp(e.target.value)} />
           </label>
           <label className="block">
             <span className={labelCls}>Pcs per box</span>
@@ -318,11 +318,12 @@ export function ProductForm({ productId }: Props) {
               type="number"
               min="1"
               step="1"
-              value={variations[0]?.pack_size ?? 1}
-              onChange={(e) => updateVariation(0, { pack_size: Math.max(1, Number(e.target.value) || 1) })}
+              value={packSize}
+              onChange={(e) => setPackSize(e.target.value)}
               placeholder="1"
             />
           </label>
+
         </div>
         <div className="flex flex-wrap gap-6 pt-2">
           <label className="flex items-center gap-2 text-sm">
