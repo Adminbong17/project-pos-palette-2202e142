@@ -124,6 +124,7 @@ function ProfitReportPage() {
     }
     const rows = [...map.entries()].map(([pid, v]) => ({
       pid, name: nameById.get(pid) || "—",
+      invoices: [...v.invoices],
       qty: v.qty, revenue: v.revenue, cost: v.cost,
       profit: v.revenue - v.cost,
       margin: v.revenue > 0 ? ((v.revenue - v.cost) / v.revenue) * 100 : 0,
