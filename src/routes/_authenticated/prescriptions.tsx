@@ -643,21 +643,24 @@ function PrescriptionsPage() {
               <Input value={form.patient_phone} onChange={(e) => setForm({ ...form, patient_phone: e.target.value })} />
             </div>
             <div>
-              <Label>Link Contact (optional)</Label>
-              <Select value={form.contact_id || undefined} onValueChange={(v) => {
-                const c = contacts.data?.find((x) => x.id === v);
-                setForm({ ...form, contact_id: v, patient_name: form.patient_name || c?.name || "", patient_phone: form.patient_phone || c?.mobile || "" });
-              }}>
-                <SelectTrigger><SelectValue placeholder="No contact" /></SelectTrigger>
-                <SelectContent>
-                  {(contacts.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Next Visit (after days)</Label>
+              <div className="relative">
+                <Input
+                  className="pr-12"
+                  inputMode="numeric"
+                  placeholder="e.g. 7"
+                  value={nextDays}
+                  onChange={(e) => setNextDays(e.target.value.replace(/\D/g, ""))}
+                />
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  days
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {nextVisitDate ? `Next visit: ${fmtDay(nextVisitDate)}` : "Date will be calculated automatically"}
+              </p>
             </div>
-            <div>
-              <Label>Next Visit</Label>
-              <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
-            </div>
+
           </div>
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
