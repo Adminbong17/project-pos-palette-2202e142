@@ -377,12 +377,14 @@ function UsersAndRoles() {
               <Label>Role *</Label>
               <select
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as "Admin" | "Salesman" })}
+                onChange={(e) => setForm({ ...form, role: e.target.value as "Admin" | "Salesman" | "Doctor" })}
                 className="h-9 w-full rounded-md border border-border bg-input px-2 text-sm"
               >
                 <option value="Salesman">Salesman</option>
+                <option value="Doctor">Doctor (Prescriptions only)</option>
                 <option value="Admin">Admin</option>
               </select>
+
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
