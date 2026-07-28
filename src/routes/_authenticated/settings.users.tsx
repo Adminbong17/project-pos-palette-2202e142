@@ -310,7 +310,16 @@ function UsersAndRoles() {
                             Reset
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setDoctorOnly(m.id)}
+                          className="text-xs px-2 py-1 rounded-md border border-dashed border-primary/50 text-primary"
+                          title="Prescriptions only (doctor mode)"
+                        >
+                          Doctor only
+                        </button>
                       </div>
+
                     ) : (
                       <span className="text-xs text-muted-foreground">All access</span>
                     )}
