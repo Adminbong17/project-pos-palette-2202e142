@@ -69,6 +69,48 @@ function AdminPrescriptionsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [detail, setDetail] = useState<Rx | null>(null);
+  const [ccOpen, setCcOpen] = useState(false);
+  const [ccName, setCcName] = useState("");
+
+  const ccList = useQuery({
+    queryKey: ["cc-options", businessId],
+    enabled: !!businessId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chief_complaints")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const addCc = useMutation({
+    mutationFn: async (name: string) => {
+      const n = name.trim();
+      if (!n) throw new Error("Enter a complaint name");
+      const { error } = await supabase.from("chief_complaints").insert({ business_id: businessId!, name: n });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setCcName("");
+      toast.success("C/C added");
+      qc.invalidateQueries({ queryKey: ["cc-options", businessId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not add"),
+  });
+
+  const delCc = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("chief_complaints").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
+  });
+
 
   const list = useQuery({
     queryKey: ["admin-prescriptions", businessId],
