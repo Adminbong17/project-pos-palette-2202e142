@@ -306,7 +306,7 @@ function AdminPrescriptionsPage() {
               <TableHead>Patient</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Doctor</TableHead>
-              <TableHead>Diagnosis</TableHead>
+              <TableHead>C/C</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -358,7 +358,7 @@ function AdminPrescriptionsPage() {
                 <Field label="Doctor" value={detail.doctor_name ?? "—"} />
                 <Field label="Age / Gender" value={[detail.patient_age, detail.patient_gender].filter(Boolean).join(" · ") || "—"} />
                 <Field label="Phone" value={detail.patient_phone ?? "—"} />
-                <Field label="Diagnosis" value={detail.diagnosis ?? "—"} />
+                <Field label="C/C" value={detail.diagnosis ?? "—"} />
                 <Field label="Vitals" value={detail.vitals ?? "—"} />
                 <Field label="Advice" value={detail.advice ?? "—"} />
                 <Field label="Next visit" value={detail.next_visit ?? "—"} />
