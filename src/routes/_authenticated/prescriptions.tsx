@@ -323,7 +323,7 @@ function PrescriptionsPage() {
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
         diagnosis: form.diagnosis.trim() || null,
-        vitals: form.vitals.trim() || null,
+        vitals: composeVitals(vitals) || null,
         advice: form.advice.trim() || null,
         next_visit: form.next_visit || null,
         notes: form.notes.trim() || null,
