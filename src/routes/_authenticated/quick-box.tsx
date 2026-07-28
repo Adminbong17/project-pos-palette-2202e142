@@ -161,7 +161,7 @@ function QuickBoxPage() {
           <div className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-muted-foreground">No products</div>
         ) : (
           filtered.slice(0, 500).map((r) => {
-            const dirty = pending[r.variation_id] !== undefined
+            const dirty = (pending[r.variation_id] ?? "") !== ""
               && Number(pending[r.variation_id]) !== r.pack_size;
             const added = r.pack_size > 1;
             return (
@@ -194,7 +194,7 @@ function QuickBoxPage() {
                     step="1"
                     className={`${inputCls} flex-1`}
                     placeholder="Pcs / box"
-                    value={pending[r.variation_id] ?? String(r.pack_size)}
+                    value={pending[r.variation_id] ?? (r.pack_size > 1 ? String(r.pack_size) : "")}
                     onChange={(e) => setPending((p) => ({ ...p, [r.variation_id]: e.target.value }))}
                     onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
                   />
@@ -239,7 +239,7 @@ function QuickBoxPage() {
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No products</td></tr>
               ) : (
                 filtered.slice(0, 500).map((r) => {
-                  const dirty = pending[r.variation_id] !== undefined
+                  const dirty = (pending[r.variation_id] ?? "") !== ""
                     && Number(pending[r.variation_id]) !== r.pack_size;
                   const added = r.pack_size > 1;
                   return (
@@ -269,7 +269,7 @@ function QuickBoxPage() {
                           min="1"
                           step="1"
                           className={inputCls}
-                          value={pending[r.variation_id] ?? String(r.pack_size)}
+                          value={pending[r.variation_id] ?? (r.pack_size > 1 ? String(r.pack_size) : "")}
                           onChange={(e) =>
                             setPending((p) => ({ ...p, [r.variation_id]: e.target.value }))
                           }
