@@ -110,6 +110,61 @@ function genRxNo(d: Date = new Date()) {
   return `${p.day}${p.month}${p.year}-${suffix}`;
 }
 
+/* ---------------- Vitals ---------------- */
+type VitalKey = "height" | "weight" | "temp" | "bp" | "pulse" | "spo2" | "rbs";
+type Vitals = Record<VitalKey, string>;
+
+const VITAL_FIELDS: { key: VitalKey; label: string; unit: string; placeholder: string }[] = [
+  { key: "height", label: "Height", unit: "in", placeholder: "e.g. 65" },
+  { key: "weight", label: "Weight", unit: "kg", placeholder: "e.g. 60" },
+  { key: "temp", label: "Temp", unit: "°C", placeholder: "e.g. 37" },
+  { key: "bp", label: "BP", unit: "mmHg", placeholder: "e.g. 120/80" },
+  { key: "pulse", label: "Pulse", unit: "bpm", placeholder: "e.g. 78" },
+  { key: "spo2", label: "SpO₂", unit: "%", placeholder: "e.g. 98" },
+  { key: "rbs", label: "RBS", unit: "mmol/L", placeholder: "e.g. 6.5" },
+];
+
+const emptyVitals = (): Vitals => ({ height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "", rbs: "" });
+
+/** BMI from height (inches) and weight (kg). */
+function calcBmi(v: Vitals): string {
+  const inches = parseFloat(v.height);
+  const kg = parseFloat(v.weight);
+  if (!inches || !kg || inches <= 0 || kg <= 0) return "";
+  const m = inches * 0.0254;
+  return (kg / (m * m)).toFixed(1);
+}
+
+/** Compose to a single readable string stored in prescriptions.vitals */
+function composeVitals(v: Vitals): string {
+  const parts: string[] = [];
+  for (const f of VITAL_FIELDS) {
+    const val = (v[f.key] ?? "").trim();
+    if (val) parts.push(`${f.label}: ${val} ${f.unit}`);
+    if (f.key === "weight") {
+      const bmi = calcBmi(v);
+      if (bmi) parts.push(`BMI: ${bmi} kg/m²`);
+    }
+  }
+  return parts.join(", ");
+}
+
+/** Parse back a composed vitals string into fields. */
+function parseVitals(s: string | null | undefined): Vitals {
+  const out = emptyVitals();
+  if (!s) return out;
+  for (const chunk of s.split(",")) {
+    const [rawLabel, ...rest] = chunk.split(":");
+    if (!rest.length) continue;
+    const label = rawLabel.trim().toLowerCase();
+    const f = VITAL_FIELDS.find((x) => x.label.toLowerCase() === label);
+    if (!f) continue;
+    out[f.key] = rest.join(":").replace(f.unit, "").trim();
+  }
+  return out;
+}
+
+
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
@@ -126,6 +181,8 @@ function PrescriptionsPage() {
     diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const bmi = calcBmi(vitals);
 
   // Doctor identity comes from the logged-in user's profile (set by admin).
   const me = useQuery({
@@ -213,6 +270,7 @@ function PrescriptionsPage() {
       diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
+    setVitals(emptyVitals());
   };
 
   const openNew = () => { resetForm(); setOpen(true); };
@@ -236,6 +294,7 @@ function PrescriptionsPage() {
       next_visit: rx.next_visit ?? "",
       notes: rx.notes ?? "",
     });
+    setVitals(parseVitals(rx.vitals));
     const { data } = await supabase.from("prescription_lines")
       .select("id, product_id, variation_id, medicine_name, dose, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
@@ -264,7 +323,7 @@ function PrescriptionsPage() {
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
         diagnosis: form.diagnosis.trim() || null,
-        vitals: form.vitals.trim() || null,
+        vitals: composeVitals(vitals) || null,
         advice: form.advice.trim() || null,
         next_visit: form.next_visit || null,
         notes: form.notes.trim() || null,
@@ -526,12 +585,40 @@ function PrescriptionsPage() {
               </Select>
             </div>
             <div>
-              <Label>Vitals</Label>
-              <Input value={form.vitals} onChange={(e) => setForm({ ...form, vitals: e.target.value })} placeholder="BP, Wt, Temp…" />
-            </div>
-            <div>
               <Label>Next Visit</Label>
               <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <Label className="text-base">Patient Vitals</Label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {VITAL_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                  <div className="relative">
+                    <Input
+                      className="pr-14"
+                      inputMode={f.key === "bp" ? "text" : "decimal"}
+                      placeholder={f.placeholder}
+                      value={vitals[f.key]}
+                      onChange={(e) => setVitals({ ...vitals, [f.key]: e.target.value })}
+                    />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {f.unit}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div>
+                <Label className="text-xs text-muted-foreground">BMI (auto)</Label>
+                <div className="relative">
+                  <Input className="pr-16 bg-muted/50" readOnly value={bmi} placeholder="—" />
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    kg/m²
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
