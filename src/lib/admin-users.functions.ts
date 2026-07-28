@@ -93,15 +93,34 @@ export const createBusinessUser = createServerFn({ method: "POST" })
       );
     if (buErr) throw new Error(buErr.message);
 
-    // Look up role id
+    // Look up role id (create the Doctor role on demand)
     const { data: roleRow, error: roleErr } = await supabaseAdmin
       .from("roles")
       .select("id")
       .eq("business_id", data.business_id)
-      .ilike("name", data.role === "Admin" ? "Admin%" : "Salesman")
+      .ilike(
+        "name",
+        data.role === "Admin" ? "Admin%" : data.role === "Doctor" ? "Doctor" : "Salesman",
+      )
       .maybeSingle();
     if (roleErr) throw new Error(roleErr.message);
-    if (!roleRow) throw new Error(`Role ${data.role} not found`);
+
+    let roleId = roleRow?.id ?? null;
+    if (!roleId && data.role === "Doctor") {
+      const { data: newRole, error: nrErr } = await supabaseAdmin
+        .from("roles")
+        .insert({
+          business_id: data.business_id,
+          name: "Doctor",
+          is_default: false,
+          allowed_sections: ["prescriptions"],
+        })
+        .select("id")
+        .single();
+      if (nrErr) throw new Error(nrErr.message);
+      roleId = newRole.id;
+    }
+    if (!roleId) throw new Error(`Role ${data.role} not found`);
 
     // Replace existing role assignment
     await supabaseAdmin
@@ -114,10 +133,12 @@ export const createBusinessUser = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({
         user_id: newUserId,
-        role_id: roleRow.id,
+        role_id: roleId,
         business_id: data.business_id,
+        allowed_sections: data.role === "Doctor" ? ["prescriptions"] : null,
       });
     if (urErr) throw new Error(urErr.message);
+
 
     return { user_id: newUserId, created_by: userId };
   });
