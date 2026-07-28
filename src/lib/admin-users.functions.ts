@@ -7,7 +7,7 @@ type CreateUserInput = {
   password: string;
   first_name?: string;
   last_name?: string;
-  role: "Admin" | "Salesman";
+  role: "Admin" | "Salesman" | "Doctor";
 };
 
 export const createBusinessUser = createServerFn({ method: "POST" })
@@ -17,10 +17,11 @@ export const createBusinessUser = createServerFn({ method: "POST" })
     if (!data?.email) throw new Error("email required");
     if (!data?.password || data.password.length < 6)
       throw new Error("password must be at least 6 chars");
-    if (data.role !== "Admin" && data.role !== "Salesman")
-      throw new Error("role must be Admin or Salesman");
+    if (!["Admin", "Salesman", "Doctor"].includes(data.role))
+      throw new Error("role must be Admin, Salesman or Doctor");
     return data;
   })
+
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
