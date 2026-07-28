@@ -622,12 +622,6 @@ function PrescriptionsPage() {
             </div>
           </div>
 
-            <div>
-              <Label>Next Visit</Label>
-              <Input type="date" value={form.next_visit} onChange={(e) => setForm({ ...form, next_visit: e.target.value })} />
-            </div>
-          </div>
-
           <div className="mt-2">
             <Label>Diagnosis</Label>
             <Textarea rows={2} value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} />
