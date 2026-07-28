@@ -36,7 +36,7 @@ function UsersAndRoles() {
     password: "",
     first_name: "",
     last_name: "",
-    role: "Salesman" as "Admin" | "Salesman",
+    role: "Salesman" as "Admin" | "Salesman" | "Doctor",
   });
   const [saving, setSaving] = useState(false);
 
