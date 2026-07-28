@@ -118,8 +118,10 @@ export function ProductForm({ productId }: Props) {
     setEnableStock(!!existing.enable_stock);
     setNotForSelling(!!existing.not_for_selling);
     setDescription(existing.description ?? "");
-    setPurchasePrice(Number(existing.default_purchase_price ?? 0));
-    setMrp(Number(existing.mrp ?? existing.default_sell_price ?? 0));
+    setPurchasePrice(existing.default_purchase_price != null ? String(existing.default_purchase_price) : "");
+    const mrpVal = existing.mrp ?? existing.default_sell_price;
+    setMrp(mrpVal != null ? String(mrpVal) : "");
+    setPackSize(existing.variations?.[0]?.pack_size != null ? String(existing.variations[0].pack_size) : "");
     setBarcode((existing as any).barcode ?? "");
     setImage((existing as any).image ?? "");
     if (existing.variations?.length) {
