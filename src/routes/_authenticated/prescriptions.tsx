@@ -452,7 +452,7 @@ function PrescriptionsPage() {
     onError: (e: any) => toast.error(e.message ?? "Failed to delete"),
   });
 
-  const printRx = async (rx: Rx, size: PrintSize) => {
+  const buildRxHtml = async (rx: Rx, size: PrintSize) => {
     const { data: linesData } = await supabase.from("prescription_lines")
       .select("medicine_name, dose, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
@@ -480,11 +480,10 @@ function PrescriptionsPage() {
         </div>`).join("")
       : "<div>No medicines</div>";
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Rx ${esc(rx.rx_no ?? "")}</title>
-    <style>
+    const styles = `
       @page { size: ${pageCss}; margin: 0; }
       html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: ${fs}; }
-      .page { width: ${widthCss}; padding: ${padCss}; box-sizing: border-box; }
+      .page { width: ${widthCss}; padding: ${padCss}; box-sizing: border-box; background:#fff; }
       h1,h2,h3,p { margin: 2px 0; }
       .center { text-align: center; }
       .row { display: flex; justify-content: space-between; gap: 8px; }
@@ -492,8 +491,9 @@ function PrescriptionsPage() {
       .rx-mark { font-size: 22px; font-weight: bold; margin-right: 6px; }
       .box { border: 1px solid #999; padding: 6px; margin: 6px 0; border-radius: 4px; }
       .label { color: #444; font-size: 0.9em; }
-      .footer { margin-top: 14px; border-top: 1px dashed #666; padding-top: 6px; text-align: center; font-size: 0.85em; }
-    </style></head><body>
+      .footer { margin-top: 14px; border-top: 1px dashed #666; padding-top: 6px; text-align: center; font-size: 0.85em; }`;
+
+    const body = `
     <div class="page">
       <div class="header center">
         <h2>${esc(bizName)}</h2>
@@ -518,7 +518,15 @@ function PrescriptionsPage() {
       ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDay(rx.next_visit)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${esc(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
-    </div>
+    </div>`;
+
+    return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
+  };
+
+  const printRx = async (rx: Rx, size: PrintSize) => {
+    const { styles, body, title } = await buildRxHtml(rx, size);
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+    <style>${styles}</style></head><body>${body}
     <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),200);}</script>
     </body></html>`;
 
@@ -526,6 +534,44 @@ function PrescriptionsPage() {
     if (!w) { toast.error("Popup blocked"); return; }
     w.document.open(); w.document.write(html); w.document.close();
   };
+
+  const savePdf = async (rx: Rx) => {
+    const t = toast.loading("Generating PDF…");
+    try {
+      const { styles, body } = await buildRxHtml(rx, "A4");
+      const host = document.createElement("div");
+      host.style.cssText = "position:fixed;left:-10000px;top:0;background:#fff;";
+      host.innerHTML = `<style>${styles}</style>${body}`;
+      document.body.appendChild(host);
+      const target = host.querySelector(".page") as HTMLElement;
+
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#ffffff" });
+      host.remove();
+
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pw = 210, ph = 297;
+      const imgH = (canvas.height * pw) / canvas.width;
+      const img = canvas.toDataURL("image/jpeg", 0.95);
+      let remaining = imgH, pos = 0;
+      pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
+      remaining -= ph;
+      while (remaining > 0) {
+        pos -= ph;
+        pdf.addPage();
+        pdf.addImage(img, "JPEG", 0, pos, pw, imgH);
+        remaining -= ph;
+      }
+      pdf.save(`Rx-${(rx.rx_no ?? rx.id).replace(/[^\w-]/g, "")}.pdf`);
+      toast.success("PDF saved", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to make PDF", { id: t });
+    }
+  };
+
 
   const updateLine = (i: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
