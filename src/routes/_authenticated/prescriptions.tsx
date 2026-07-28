@@ -6,7 +6,7 @@ import { Plus, Trash2, Pencil, Search, FileText, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
-import { fetchAll } from "@/lib/fetch-all";
+import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/prescriptions")({
 
 type CcOption = { id: string; name: string };
 type Cc = { name: string; days: string };
-type ProductOpt = { id: string; name: string; variation_id: string };
+type ProductOpt = { id: string; name: string; variation_id: string | null };
 type Line = {
   id?: string;
   product_id: string | null;
@@ -315,15 +315,24 @@ function PrescriptionsPage() {
     queryFn: async () => {
       const rows = await fetchAll<any>(() =>
         supabase.from("products")
-          .select("id, name, variations(id)")
+          .select("id, name")
           .eq("business_id", businessId!)
           .eq("is_inactive", false)
           .order("name"),
       );
+      const variationRows = rows.length
+        ? await fetchAllIn<any>(
+          (ids) => supabase.from("variations").select("id, product_id").in("product_id", ids).order("created_at"),
+          rows.map((p) => p.id),
+        )
+        : [];
+      const firstVariationByProduct = new Map<string, string>();
+      for (const v of variationRows) {
+        if (!firstVariationByProduct.has(v.product_id)) firstVariationByProduct.set(v.product_id, v.id);
+      }
       const opts: ProductOpt[] = [];
       for (const p of rows) {
-        const v = (p.variations ?? [])[0];
-        if (v) opts.push({ id: p.id, name: p.name, variation_id: v.id });
+        opts.push({ id: p.id, name: p.name, variation_id: firstVariationByProduct.get(p.id) ?? null });
       }
       return opts;
     },
@@ -883,8 +892,7 @@ function MedicineRow({ line, products, onChange, onRemove }: {
   const selected = useMemo(() => products.find((p) => p.id === line.product_id), [products, line.product_id]);
   const filtered = useMemo(() => {
     const q = pSearch.trim().toLowerCase();
-    const src = q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
-    return src.slice(0, 300);
+    return q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
   }, [products, pSearch]);
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
