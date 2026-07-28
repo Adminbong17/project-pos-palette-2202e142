@@ -104,10 +104,12 @@ function ProfitReportPage() {
     const varCostById = new Map(variations.map((v: any) => [v.id, Number(v.default_purchase_price || 0)]));
     const productCostFallback = new Map(products.map((p: any) => [p.id, Number(p.default_purchase_price || 0)]));
     const nameById = new Map(products.map((p: any) => [p.id, p.name]));
-    const map = new Map<string, { qty: number; revenue: number; cost: number }>();
+    const invoiceNoById = new Map((sales as any[]).map((s) => [s.id, s.invoice_no ?? s.ref_no ?? "—"]));
+    const map = new Map<string, { qty: number; revenue: number; cost: number; invoices: Set<string> }>();
     const byInvoice = new Map<string, { revenue: number; cost: number }>();
     for (const l of sellLines as any[]) {
-      const cur = map.get(l.product_id) || { qty: 0, revenue: 0, cost: 0 };
+      const cur = map.get(l.product_id) || { qty: 0, revenue: 0, cost: 0, invoices: new Set<string>() };
+      cur.invoices.add(String(invoiceNoById.get(l.transaction_id) ?? "—"));
       const qty = Number(l.quantity || 0);
       const unitCost = varCostById.has(l.variation_id)
         ? Number(varCostById.get(l.variation_id) || 0)
