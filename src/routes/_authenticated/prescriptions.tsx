@@ -537,20 +537,37 @@ function PrescriptionsPage() {
 
   const savePdf = async (rx: Rx) => {
     const t = toast.loading("Generating PDF…");
+    let frame: HTMLIFrameElement | null = null;
     try {
       const { styles, body } = await buildRxHtml(rx, "A4");
-      const host = document.createElement("div");
-      host.style.cssText = "position:fixed;left:-10000px;top:0;background:#fff;";
-      host.innerHTML = `<style>${styles}</style>${body}`;
-      document.body.appendChild(host);
-      const target = host.querySelector(".page") as HTMLElement;
+
+      // Render inside an isolated iframe so the app's Tailwind theme
+      // (which uses oklch() colors html2canvas can't parse) never applies.
+      frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:820px;height:1200px;border:0;background:#fff;";
+      document.body.appendChild(frame);
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>
+        *{color:#000;}
+        html,body{margin:0;padding:0;background:#fff;}
+        ${styles}
+      </style></head><body>${body}</body></html>`);
+      doc.close();
+      await new Promise((r) => setTimeout(r, 120));
+
+      const target = doc.querySelector(".page") as HTMLElement;
 
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf"),
       ]);
-      const canvas = await html2canvas(target, { scale: 2, backgroundColor: "#ffffff" });
-      host.remove();
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+      });
 
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       const pw = 210, ph = 297;
@@ -569,8 +586,11 @@ function PrescriptionsPage() {
       toast.success("PDF saved", { id: t });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to make PDF", { id: t });
+    } finally {
+      frame?.remove();
     }
   };
+
 
 
   const updateLine = (i: number, patch: Partial<Line>) =>
