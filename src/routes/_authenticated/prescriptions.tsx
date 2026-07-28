@@ -611,7 +611,7 @@ function PrescriptionsPage() {
     <div class="page">
       ${headerHtml}
       ${metaHtml}
-      ${rx.vitals ? `<div class="label">Vitals: ${esc(rx.vitals)}</div>` : ""}
+      <div class="label">Vitals:</div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}
       ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
       ${investigation ? `<div><span class="label">Investigation:</span> ${nl(investigation)}</div>` : ""}
       <div class="rx-mark">℞</div>
