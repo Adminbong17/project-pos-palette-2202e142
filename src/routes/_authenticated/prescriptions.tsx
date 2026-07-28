@@ -271,19 +271,38 @@ function PrescriptionsPage() {
     },
   });
 
-  const contacts = useQuery({
-    queryKey: ["rx-contacts", businessId],
+  const ccOptions = useQuery({
+    queryKey: ["cc-options", businessId],
     enabled: !!businessId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("contacts")
-        .select("id, name, mobile")
+      const { data, error } = await supabase.from("chief_complaints")
+        .select("id, name")
         .eq("business_id", businessId!)
         .order("name")
         .limit(1000);
       if (error) throw error;
-      return (data ?? []) as Contact[];
+      return (data ?? []) as CcOption[];
     },
   });
+
+  const addCcOption = useMutation({
+    mutationFn: async (name: string) => {
+      if (!businessId) throw new Error("No business");
+      const { error } = await supabase.from("chief_complaints").insert({ business_id: businessId, name });
+      if (error && !`${error.message}`.includes("duplicate")) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
+  });
+
+  const addCc = (name: string) => {
+    const n = name.trim();
+    if (!n) return;
+    if (!cc.some((c) => c.name.toLowerCase() === n.toLowerCase())) setCc([...cc, { name: n, days: "" }]);
+    if (!(ccOptions.data ?? []).some((o) => o.name.toLowerCase() === n.toLowerCase())) addCcOption.mutate(n);
+    setCcSearch("");
+    setCcOpen(false);
+  };
+
 
   const products = useQuery({
     queryKey: ["rx-products", businessId],
