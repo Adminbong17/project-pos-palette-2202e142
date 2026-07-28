@@ -250,15 +250,16 @@ function PrescriptionsPage() {
 
       const payload = {
         business_id: businessId,
-        rx_no: form.rx_no.trim() || null,
-        rx_date: new Date(form.rx_date).toISOString(),
+        rx_no: form.rx_no.trim() || genRxNo(),
+        rx_date: dhakaInputToIso(form.rx_date),
         patient_name: form.patient_name.trim(),
         patient_age: form.patient_age.trim() || null,
         patient_gender: form.patient_gender || null,
         patient_phone: form.patient_phone.trim() || null,
         contact_id: form.contact_id || null,
-        doctor_name: form.doctor_name.trim() || null,
-        doctor_qualification: form.doctor_qualification.trim() || null,
+        doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
+        doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
+
         diagnosis: form.diagnosis.trim() || null,
         vitals: form.vitals.trim() || null,
         advice: form.advice.trim() || null,
