@@ -510,12 +510,12 @@ function PrescriptionsPage() {
           <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
         ${rx.vitals ? `<div class="label">Vitals: ${esc(rx.vitals)}</div>` : ""}
-        ${rx.diagnosis ? `<div><span class="label">Diagnosis:</span> ${esc(rx.diagnosis)}</div>` : ""}
+        ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
       </div>
       <div><span class="rx-mark">℞</span></div>
       <div>${linesHtml}</div>
       ${rx.advice ? `<div class="box"><span class="label">Advice:</span><br>${esc(rx.advice).replace(/\n/g, "<br>")}</div>` : ""}
-      ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDate(rx.next_visit)}</div>` : ""}
+      ${rx.next_visit ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${fmtDay(rx.next_visit)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${esc(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
     </div>
@@ -555,7 +555,7 @@ function PrescriptionsPage() {
               <TableHead>Patient</TableHead>
               <TableHead>Age / Sex</TableHead>
               <TableHead>Doctor</TableHead>
-              <TableHead>Diagnosis</TableHead>
+              <TableHead>C/C</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
