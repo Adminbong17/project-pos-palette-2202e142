@@ -290,6 +290,8 @@ function PrescriptionsPage() {
       doctor_qualification: rx.doctor_qualification ?? "",
       diagnosis: rx.diagnosis ?? "",
       vitals: rx.vitals ?? "",
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+
       advice: rx.advice ?? "",
       next_visit: rx.next_visit ?? "",
       notes: rx.notes ?? "",
