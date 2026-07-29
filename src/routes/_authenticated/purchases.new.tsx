@@ -206,6 +206,25 @@ function NewPurchasePage() {
     [lines],
   );
 
+  const totalPcs = useMemo(
+    () =>
+      lines.reduce((s, l) => {
+        const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
+        return s + Number(l.quantity || 0) * (l.unit === "box" ? ps : 1);
+      }, 0),
+    [lines],
+  );
+
+  const vatAmount = useMemo(() => {
+    const v = Number(vatValue || 0);
+    if (!v) return 0;
+    return vatMode === "percent" ? (total * v) / 100 : v;
+  }, [vatValue, vatMode, total]);
+
+  const vatPerPcs = totalPcs > 0 ? vatAmount / totalPcs : 0;
+  const grandTotal = total + vatAmount;
+
+
   const save = useMutation({
     mutationFn: async () => {
       if (!business) throw new Error("No business");
