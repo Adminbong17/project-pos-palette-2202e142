@@ -41,6 +41,8 @@ function EditPurchasePage() {
   const [notes, setNotes] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
+  const [vatValue, setVatValue] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
