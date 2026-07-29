@@ -1235,6 +1235,11 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
                   </CommandGroup>
                 )}
                 {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
+                {filtered.length >= 50 && (
+                  <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
+                    Showing first 50 — keep typing to narrow.
+                  </div>
+                )}
                 <CommandGroup>
                   {filtered.map((p) => (
                     <CommandItem key={p.id} value={p.id} onSelect={() => {
