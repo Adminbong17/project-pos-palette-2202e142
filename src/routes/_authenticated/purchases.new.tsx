@@ -45,13 +45,15 @@ function NewPurchasePage() {
   const [notes, setNotes] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
+  const [vatValue, setVatValue] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
 
   // Auto-save this purchase draft (power cut / accidental close safe).
   const { clearDraft: clearPurchaseDraft } = useAutosaveDraft(
     business?.id ? `purchase-new:${business.id}` : null,
-    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, lines },
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, lines },
     (d) => {
       if (d.locationId) setLocationId(d.locationId);
       if (d.supplierName) setSupplierName(d.supplierName);
