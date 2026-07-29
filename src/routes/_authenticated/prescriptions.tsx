@@ -478,6 +478,17 @@ function PrescriptionsPage() {
 
   const openNew = () => { resetForm(); setOpen(true); };
 
+  // Saved vitals load asynchronously — keep them present as defaults on a new Rx.
+  useEffect(() => {
+    if (!open || editing || myVitals.items.length === 0) return;
+    setExtraVitals((prev) => {
+      const missing = myVitals.items
+        .filter((v) => !prev.some((p) => p.name.toLowerCase() === v.name.toLowerCase()))
+        .map((v) => ({ name: v.name, value: "" }));
+      return missing.length ? [...prev, ...missing] : prev;
+    });
+  }, [open, editing, myVitals.items]);
+
   const openEdit = async (rx: Rx) => {
     setEditing(rx);
     setForm({
