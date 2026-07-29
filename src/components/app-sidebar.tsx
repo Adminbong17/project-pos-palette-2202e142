@@ -41,7 +41,7 @@ const sections = [
     label: "Reports",
     items: [
       { to: "/reports", label: "All Reports", icon: BarChart3, enabled: true, key: "reports" },
-      { to: "/reports/profit", label: "Profit Report", icon: Wallet, enabled: true, key: "reports" },
+      { to: "/reports/profit", label: "Profit Report", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/reports/inventory-movement", label: "Inventory Movement", icon: Boxes, enabled: true, key: "reports" },
     ],
   },

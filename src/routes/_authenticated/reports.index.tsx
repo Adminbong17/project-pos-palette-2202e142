@@ -202,7 +202,7 @@ function ReportsPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Link
+        {isAdmin && <Link
           to="/reports/analytics"
           className="flex items-center justify-between rounded-2xl border border-border/60 bg-card p-5 hover:bg-accent transition"
         >
@@ -216,8 +216,8 @@ function ReportsPage() {
             </div>
           </div>
           <span className="text-xs text-muted-foreground">Open</span>
-        </Link>
-        <Link
+        </Link>}
+        {isAdmin && <Link
           to="/reports/profit"
           className="flex items-center justify-between rounded-2xl border border-border/60 bg-card p-5 hover:bg-accent transition"
         >
@@ -231,7 +231,7 @@ function ReportsPage() {
             </div>
           </div>
           <span className="text-xs text-muted-foreground">Open</span>
-        </Link>
+        </Link>}
         <Link
           to="/reports/inventory-movement"
           className="flex items-center justify-between rounded-2xl border border-border/60 bg-card p-5 hover:bg-accent transition"
