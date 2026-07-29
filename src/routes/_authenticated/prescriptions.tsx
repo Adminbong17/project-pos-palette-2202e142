@@ -181,8 +181,10 @@ function calcBmi(v: Vitals): string {
   return (kg / (m * m)).toFixed(1);
 }
 
+export type ExtraVital = { name: string; value: string };
+
 /** Compose to a single readable string stored in prescriptions.vitals */
-function composeVitals(v: Vitals): string {
+function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
   const parts: string[] = [];
   for (const f of VITAL_FIELDS) {
     const val = (v[f.key] ?? "").trim();
@@ -191,6 +193,11 @@ function composeVitals(v: Vitals): string {
       const bmi = calcBmi(v);
       if (bmi) parts.push(`BMI: ${bmi} kg/m²`);
     }
+  }
+  for (const e of extras) {
+    const n = (e.name ?? "").trim();
+    const val = (e.value ?? "").trim();
+    if (n && val) parts.push(`${n}: ${val}`);
   }
   return parts.join(", ");
 }
@@ -210,6 +217,21 @@ function parseVitals(s: string | null | undefined): Vitals {
   return out;
 }
 
+/** Custom (doctor-added) vitals found in a composed vitals string. */
+function parseExtraVitals(s: string | null | undefined): ExtraVital[] {
+  if (!s) return [];
+  const known = new Set([...VITAL_FIELDS.map((f) => f.label.toLowerCase()), "bmi"]);
+  const out: ExtraVital[] = [];
+  for (const chunk of s.split(",")) {
+    const [rawLabel, ...rest] = chunk.split(":");
+    if (!rest.length) continue;
+    const label = rawLabel.trim();
+    if (!label || known.has(label.toLowerCase())) continue;
+    out.push({ name: label, value: rest.join(":").trim() });
+  }
+  return out;
+}
+
 /** Ordered vitals lines for printing: "1. Height: 65 in" / "N/A" when empty. */
 function vitalsLines(s: string | null | undefined): string[] {
   const v = parseVitals(s);
@@ -222,8 +244,12 @@ function vitalsLines(s: string | null | undefined): string[] {
       rows.push({ label: "BMI", value: bmi ? `${bmi} kg/m²` : "N/A" });
     }
   }
+  for (const e of parseExtraVitals(s)) {
+    rows.push({ label: e.name, value: e.value || "N/A" });
+  }
   return rows.map((r, i) => `${i + 1}. ${r.label}: ${r.value}`);
 }
+
 
 
 
