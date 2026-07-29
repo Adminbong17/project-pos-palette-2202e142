@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll } from "@/lib/fetch-all";
 import {
   BarChart3, TrendingUp, Package, Users, Receipt, Wallet, Boxes, AlertTriangle,
@@ -25,6 +26,7 @@ function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); re
 function ReportsPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
+  const { isAdmin } = useCurrentRole();
 
   const [range, setRange] = useState<"today" | "7d" | "30d" | "all" | "custom">("30d");
   const [customFrom, setCustomFrom] = useState<string>("");
