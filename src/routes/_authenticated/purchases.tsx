@@ -54,6 +54,19 @@ function PurchasesList() {
     },
   });
 
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc("delete_purchase" as any, { _id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Purchase deleted and stock reverted");
+      qc.invalidateQueries({ queryKey: ["purchases"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
+  });
+
   const fmt = (n: number) =>
     new Intl.NumberFormat(undefined, { style: "currency", currency: "BDT", maximumFractionDigits: 2 }).format(n || 0);
 
