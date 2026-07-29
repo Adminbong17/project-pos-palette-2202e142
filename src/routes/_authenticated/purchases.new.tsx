@@ -212,6 +212,14 @@ function NewPurchasePage() {
       if (!locationId) throw new Error("Select a location");
       if (lines.length === 0) throw new Error("Add at least one product");
 
+      // Make sure the login session is still valid — an expired session makes
+      // every write fail with a row-level-security error.
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) throw new Error("Session expired — please log in again and retry.");
+      }
+
       // Ensure a contact row exists for the chosen supplier name so it shows up in the list
       let contactId: string | null = null;
       const name = supplierName.trim();
@@ -231,10 +239,23 @@ function NewPurchasePage() {
             .insert({ business_id: business.id, name, type: "supplier" })
             .select("id")
             .single();
-          if (insErr) throw insErr;
-          contactId = inserted.id;
+          if (insErr) {
+            // Fall back to any existing contact with this name (maybe a customer),
+            // otherwise save the purchase without linking a supplier record.
+            const { data: any1 } = await supabase
+              .from("contacts")
+              .select("id")
+              .eq("business_id", business.id)
+              .ilike("name", name)
+              .maybeSingle();
+            contactId = any1?.id ?? null;
+            if (!contactId) toast.warning("Supplier could not be saved, purchase saved without supplier link.");
+          } else {
+            contactId = inserted.id;
+          }
         }
       }
+
 
       // Persist any changed pack_size values back to variations
       const packUpdates = lines
