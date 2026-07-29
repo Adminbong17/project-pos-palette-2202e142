@@ -152,6 +152,9 @@ function ProfitReportPage() {
     return { rows, invoiceRows, totalRevenue, totalCost, grossProfit, netProfit, totalDiscount };
   }, [sellLines, products, variations, sales]);
 
+  if (!roleLoading && !isAdmin) {
+    return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
+  }
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

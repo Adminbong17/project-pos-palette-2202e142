@@ -180,6 +180,9 @@ function AnalyticsPage() {
     { label: "Total Transactions", value: m.txCount, icon: ArrowLeftRight, tint: "bg-cyan-500/15 text-cyan-400" },
   ];
 
+  if (!roleLoading && !isAdmin) {
+    return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
+  }
   return (
     <div className="space-y-6 p-6">
       <div>
