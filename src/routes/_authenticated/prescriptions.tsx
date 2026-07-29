@@ -694,7 +694,8 @@ function PrescriptionsPage() {
         @page { size: A4; margin: 0; }
         html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
         .page { width:210mm; min-height:297mm; padding:12mm 10mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
-        h2 { margin:2px 0; font-size:18px; }
+        h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
+        .desig { font-size:13px; margin-bottom:3px; }
         .center { text-align:center; }
         .row { display:flex; justify-content:space-between; gap:8px; }
         .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
