@@ -135,7 +135,7 @@ function AdminPrescriptionsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("prescription_lines")
-        .select("id, medicine_name, dose, frequency, duration, instructions, quantity")
+        .select("id, medicine_name, frequency, duration, instructions, quantity")
         .eq("prescription_id", detail!.id);
       if (error) throw error;
       return data ?? [];
@@ -368,7 +368,6 @@ function AdminPrescriptionsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Medicine</TableHead>
-                      <TableHead>Dose</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
@@ -378,14 +377,13 @@ function AdminPrescriptionsPage() {
                     {(lines.data ?? []).map((l: any) => (
                       <TableRow key={l.id}>
                         <TableCell>{l.medicine_name}</TableCell>
-                        <TableCell>{l.dose || "—"}</TableCell>
                         <TableCell>{l.frequency || "—"}</TableCell>
                         <TableCell>{l.duration || "—"}</TableCell>
                         <TableCell className="text-right">{l.quantity}</TableCell>
                       </TableRow>
                     ))}
                     {!lines.isLoading && (lines.data ?? []).length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No medicines</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No medicines</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

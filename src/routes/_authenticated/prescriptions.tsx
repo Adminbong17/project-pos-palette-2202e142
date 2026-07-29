@@ -38,7 +38,6 @@ type Line = {
   product_id: string | null;
   variation_id: string | null;
   medicine_name: string;
-  dose: string;
   frequency: string;
   duration: string;
   instructions: string;
@@ -64,7 +63,7 @@ type Rx = {
 
 const emptyLine = (): Line => ({
   product_id: null, variation_id: null, medicine_name: "",
-  dose: "", frequency: "", duration: "", instructions: "", quantity: 1,
+  frequency: "", duration: "", instructions: "", quantity: 1,
 });
 
 const fmtDate = (d: string) => {
@@ -397,7 +396,7 @@ function PrescriptionsPage() {
     setNextDays(diffDays(rx.rx_date, rx.next_visit ?? ""));
 
     const { data } = await supabase.from("prescription_lines")
-      .select("id, product_id, variation_id, medicine_name, dose, frequency, duration, instructions, quantity")
+      .select("id, product_id, variation_id, medicine_name, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
       .order("sort_order");
     setLines(((data ?? []) as Line[]).length ? (data as Line[]) : [emptyLine()]);
@@ -445,7 +444,7 @@ function PrescriptionsPage() {
         product_id: l.product_id,
         variation_id: l.variation_id,
         medicine_name: l.medicine_name.trim(),
-        dose: l.dose.trim() || null,
+        dose: null,
         frequency: l.frequency.trim() || null,
         duration: l.duration.trim() || null,
         instructions: l.instructions.trim() || null,
@@ -480,7 +479,7 @@ function PrescriptionsPage() {
 
   const buildRxHtml = async (rx: Rx, size: PrintSize) => {
     const { data: linesData } = await supabase.from("prescription_lines")
-      .select("medicine_name, dose, frequency, duration, instructions, quantity")
+      .select("medicine_name, frequency, duration, instructions, quantity")
       .eq("prescription_id", rx.id)
       .order("sort_order");
     const rxLines = (linesData ?? []) as Line[];
@@ -1019,9 +1018,7 @@ function MedicineRow({ line, products, onChange, onRemove }: {
         <Input className="mt-1 h-8" placeholder="Medicine name" value={line.medicine_name}
           onChange={(e) => onChange({ medicine_name: e.target.value })} />
       </div>
-      <Input className="md:col-span-2 h-9" placeholder="Dose (e.g. 500mg)" value={line.dose}
-        onChange={(e) => onChange({ dose: e.target.value })} />
-      <Input className="md:col-span-2 h-9" placeholder="Freq (1+0+1)" value={line.frequency}
+      <Input className="md:col-span-4 h-9" placeholder="Freq (1+0+1)" value={line.frequency}
         onChange={(e) => onChange({ frequency: e.target.value })} />
       <Input className="md:col-span-2 h-9" placeholder="Duration (7 days)" value={line.duration}
         onChange={(e) => onChange({ duration: e.target.value })} />
