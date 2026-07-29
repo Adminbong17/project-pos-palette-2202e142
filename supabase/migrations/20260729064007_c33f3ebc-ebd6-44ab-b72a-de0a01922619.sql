@@ -1,0 +1,2 @@
+ALTER TABLE public.rx_presets DROP CONSTRAINT IF EXISTS rx_presets_kind_check;
+ALTER TABLE public.rx_presets ADD CONSTRAINT rx_presets_kind_check CHECK (kind IN ('cc','vital','investigation','frequency','advice','instruction','medicine'));

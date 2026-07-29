@@ -794,16 +794,27 @@ function PrescriptionsPage() {
 
       const target = doc.querySelector(".page") as HTMLElement;
 
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
+      let html2canvas: any, jsPDF: any;
+      try {
+        const mods = await Promise.all([import("html2canvas"), import("jspdf")]);
+        html2canvas = (mods[0] as any).default;
+        jsPDF = (mods[1] as any).jsPDF;
+      } catch {
+        // App was updated after this tab loaded, so the PDF chunk URL is gone.
+        // Fall back to the browser's own "Save as PDF" print dialog.
+        frame?.remove();
+        frame = null;
+        toast.info("Use “Save as PDF” in the print dialog", { id: t });
+        await printRx(rx, "A4");
+        return;
+      }
       const canvas = await html2canvas(target, {
         scale: 2,
         backgroundColor: "#ffffff",
         windowWidth: target.scrollWidth,
         windowHeight: target.scrollHeight,
       });
+
 
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       const pw = 210, ph = 297;
