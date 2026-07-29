@@ -1238,7 +1238,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
       </div>
       <div className="md:col-span-4 flex items-start gap-1">
         <Input className="h-9 flex-1" placeholder="Freq (1+0+1)" value={line.frequency}
-          onChange={(e) => onChange({ frequency: e.target.value })} />
+          onChange={(e) => onChange(withAutoQty(line, { frequency: e.target.value }))} />
         <RxPresetCombo
           triggerLabel="…"
           placeholder="Search or type frequency…"
@@ -1246,13 +1246,14 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
           options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
           onAdd={(n) => myFreqs.add(n)}
           onRemove={(id) => myFreqs.remove(id)}
-          onPick={(n) => onChange({ frequency: n })}
+          onPick={(n) => onChange(withAutoQty(line, { frequency: n }))}
         />
       </div>
       <Input className="md:col-span-2 h-9" placeholder="Duration (7 days)" value={line.duration}
-        onChange={(e) => onChange({ duration: e.target.value })} />
+        onChange={(e) => onChange(withAutoQty(line, { duration: e.target.value }))} />
       <Input className="md:col-span-1 h-9" type="number" min={0} step="0.01" placeholder="Qty" value={line.quantity}
         onChange={(e) => onChange({ quantity: Number(e.target.value) })} />
+
       <Button className="md:col-span-1 h-9" size="icon" variant="ghost" onClick={onRemove}>
         <X className="h-4 w-4 text-destructive" />
       </Button>
