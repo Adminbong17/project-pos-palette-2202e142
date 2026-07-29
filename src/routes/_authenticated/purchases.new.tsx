@@ -45,13 +45,15 @@ function NewPurchasePage() {
   const [notes, setNotes] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
+  const [vatValue, setVatValue] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
 
   // Auto-save this purchase draft (power cut / accidental close safe).
   const { clearDraft: clearPurchaseDraft } = useAutosaveDraft(
     business?.id ? `purchase-new:${business.id}` : null,
-    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, lines },
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, lines },
     (d) => {
       if (d.locationId) setLocationId(d.locationId);
       if (d.supplierName) setSupplierName(d.supplierName);
@@ -61,6 +63,8 @@ function NewPurchasePage() {
       if (d.notes) setNotes(d.notes);
       if (d.amountPaid) setAmountPaid(d.amountPaid);
       if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.vatMode) setVatMode(d.vatMode);
+      if (d.vatValue) setVatValue(d.vatValue);
       if (d.lines?.length) setLines(d.lines);
     },
     { isEmpty: (d) => !d.lines?.length && !d.supplierName && !d.refNo && !d.notes, restoreMessage: "Unsaved purchase restored" },
@@ -206,6 +210,25 @@ function NewPurchasePage() {
     [lines],
   );
 
+  const totalPcs = useMemo(
+    () =>
+      lines.reduce((s, l) => {
+        const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
+        return s + Number(l.quantity || 0) * (l.unit === "box" ? ps : 1);
+      }, 0),
+    [lines],
+  );
+
+  const vatAmount = useMemo(() => {
+    const v = Number(vatValue || 0);
+    if (!v) return 0;
+    return vatMode === "percent" ? (total * v) / 100 : v;
+  }, [vatValue, vatMode, total]);
+
+  const vatPerPcs = totalPcs > 0 ? vatAmount / totalPcs : 0;
+  const grandTotal = total + vatAmount;
+
+
   const save = useMutation({
     mutationFn: async () => {
       if (!business) throw new Error("No business");
@@ -315,11 +338,12 @@ function NewPurchasePage() {
           lines: lines.map((l) => {
             const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
             const mult = l.unit === "box" ? ps : 1;
+            const perPcs = (mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price)) + vatPerPcs;
             return {
               product_id: l.product_id,
               variation_id: l.variation_id,
               quantity: Number(l.quantity) * mult,
-              purchase_price: mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price),
+              purchase_price: perPcs,
               expire_date: l.expire_date || null,
             };
           }),
@@ -610,15 +634,48 @@ function NewPurchasePage() {
 
           )}
           {lines.length > 0 && (
-            <div className="flex items-center justify-between text-sm border-t pt-2 font-semibold">
-              <span>Total</span>
-              <span>{fmt(total)}</span>
+            <div className="space-y-1 border-t pt-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{fmt(total)}</span>
+              </div>
+              {vatAmount > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span>{fmt(vatAmount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>VAT per pcs (added to purchase price)</span>
+                    <span>{fmt(vatPerPcs)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between font-semibold">
+                <span>Total</span>
+                <span>{fmt(grandTotal)}</span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+        <label className="block">
+          <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
+          <div className="flex gap-2">
+            <input type="number" step="any" placeholder="0.00" className={inputCls} value={vatValue} onChange={(e) => setVatValue(e.target.value)} />
+            <select className="h-9 rounded-lg border border-border bg-input px-2 text-sm" value={vatMode} onChange={(e) => setVatMode(e.target.value as any)}>
+              <option value="amount">৳</option>
+              <option value="percent">%</option>
+            </select>
+          </div>
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            {vatAmount > 0 && totalPcs > 0
+              ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
+              : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
+          </span>
+        </label>
         <label className="block">
           <span className={labelCls}>Amount paid</span>
           <input type="number" step="any" placeholder="0.00" className={inputCls} value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
@@ -635,9 +692,10 @@ function NewPurchasePage() {
         </label>
         <div className="text-sm self-end">
           <div className="text-muted-foreground text-xs">Due</div>
-          <div className="font-semibold">{fmt(Math.max(0, total - Number(amountPaid || 0)))}</div>
+          <div className="font-semibold">{fmt(Math.max(0, grandTotal - Number(amountPaid || 0)))}</div>
         </div>
       </div>
+
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => navigate({ to: "/purchases" })}>Cancel</Button>
