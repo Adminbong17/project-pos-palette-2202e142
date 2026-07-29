@@ -36,6 +36,7 @@ type RangeKey = "today" | "7d" | "30d" | "all" | "custom";
 
 function SalesPage() {
   const { data: business } = useCurrentBusiness();
+  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const qc = useQueryClient();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");

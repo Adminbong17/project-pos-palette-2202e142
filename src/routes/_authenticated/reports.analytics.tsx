@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import {
   Briefcase, PackageOpen, ShoppingCart, TrendingUp, Coins, HandCoins,
@@ -21,6 +22,7 @@ function monthsAgo(n: number) { const d = startOfDay(new Date()); d.setMonth(d.g
 
 function AnalyticsPage() {
   const { data: business } = useCurrentBusiness();
+  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const businessId = business?.id;
   const currency = "BDT";
 
