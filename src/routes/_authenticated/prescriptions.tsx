@@ -721,11 +721,11 @@ function PrescriptionsPage() {
         <div class="split">
           <div class="left">
             <div class="sec-title">C/C</div>
-            <div>${rx.diagnosis ? nl(rx.diagnosis) : "&nbsp;"}</div>
+            <div>${numbered(rx.diagnosis) || "&nbsp;"}</div>
             <div class="sec-title">Vitals</div>
             <div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
             <div class="sec-title">Investigation</div>
-            <div>${investigation ? nl(investigation) : "&nbsp;"}</div>
+            <div>${numbered(investigation) || "&nbsp;"}</div>
           </div>
           <div class="right">
             <div class="rx-area">
