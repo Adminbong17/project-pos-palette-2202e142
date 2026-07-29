@@ -44,6 +44,7 @@ function EditPurchasePage() {
   const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
   const [vatValue, setVatValue] = useState("");
   const [vatPercent, setVatPercent] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -215,7 +216,8 @@ function EditPurchasePage() {
   const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
   const withVatPerPcs = (basePerPcs: number) => basePerPcs * (1 + vatPct / 100) + vatPerPcs;
 
-  const grandTotal = total + vatAmount;
+  const discount = Math.max(0, Number(discountAmount || 0));
+  const grandTotal = Math.max(0, total + vatAmount - discount);
 
 
   const save = useMutation({
@@ -305,6 +307,7 @@ function EditPurchasePage() {
           additional_notes: notes || null,
           amount_paid: Number(amountPaid || 0),
           payment_method: paymentMethod,
+          discount_amount: discount,
           lines: lines.map((l) => {
             const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
             const mult = l.unit === "box" ? ps : 1;
@@ -513,6 +516,11 @@ function EditPurchasePage() {
                   </div>
                 </>
               )}
+              {discount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Discount</span><span>- {fmt(discount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between font-semibold">
                 <span>Total</span><span>{fmt(grandTotal)}</span>
               </div>
@@ -538,6 +546,11 @@ function EditPurchasePage() {
                 ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
                 : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
           </span>
+        </label>
+        <label className="block">
+          <span className={labelCls}>Discount (৳)</span>
+          <input type="number" step="any" placeholder="0.00" className={inputCls} value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} />
+          <span className="mt-1 block text-[11px] text-muted-foreground">সাব-টোটাল থেকে বাদ যাবে — purchase price-এ কোনো প্রভাব পড়বে না</span>
         </label>
         <label className="block">
           <span className={labelCls}>Amount paid</span>
