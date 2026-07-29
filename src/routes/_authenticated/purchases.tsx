@@ -1,10 +1,11 @@
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { Plus, Truck, Eye, Pencil } from "lucide-react";
+import { Plus, Truck, Eye, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/purchases")({
   component: PurchasesPage,
@@ -51,6 +52,19 @@ function PurchasesList() {
       if (error) throw error;
       return (data ?? []) as unknown as PurchaseRow[];
     },
+  });
+
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc("delete_purchase" as any, { _id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Purchase deleted and stock reverted");
+      qc.invalidateQueries({ queryKey: ["purchases"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
   const fmt = (n: number) =>
@@ -112,6 +126,16 @@ function PurchasesList() {
                       <div className="inline-flex gap-1">
                         <Button asChild size="sm" variant="ghost"><Link to="/purchases/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link></Button>
                         <Button asChild size="sm" variant="ghost"><Link to="/purchases/$id/edit" params={{ id: r.id }}><Pencil className="h-4 w-4" /></Link></Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={del.isPending}
+                          onClick={() => {
+                            if (confirm("Delete this purchase? Stock will be reduced accordingly.")) del.mutate(r.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
