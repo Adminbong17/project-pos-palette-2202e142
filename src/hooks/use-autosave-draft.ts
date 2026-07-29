@@ -38,8 +38,13 @@ export function useAutosaveDraft<T>(
   isEmptyRef.current = isEmpty;
   const readyRef = useRef(false);
   const restoredForKey = useRef<string | null>(null);
+  // After a successful save we clear the draft. Any pending debounce / unmount
+  // flush would immediately write it back and the next mount would show
+  // "Unsaved work restored". Block writes for a short window after clearing.
+  const blockUntilRef = useRef(0);
 
   const clearDraft = useCallback(() => {
+    blockUntilRef.current = Date.now() + 2000;
     if (!storageKey || typeof window === "undefined") return;
     try {
       window.localStorage.removeItem(storageKey);
@@ -50,6 +55,7 @@ export function useAutosaveDraft<T>(
 
   const flush = useCallback(() => {
     if (!storageKey || typeof window === "undefined" || !readyRef.current) return;
+    if (Date.now() < blockUntilRef.current) return;
     try {
       const current = dataRef.current;
       if (isEmptyRef.current?.(current)) {
@@ -64,6 +70,7 @@ export function useAutosaveDraft<T>(
       /* quota / private mode — ignore */
     }
   }, [storageKey]);
+
 
   // Restore once per key
   useEffect(() => {
