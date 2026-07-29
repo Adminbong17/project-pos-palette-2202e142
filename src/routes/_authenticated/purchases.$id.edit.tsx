@@ -110,7 +110,7 @@ function EditPurchasePage() {
         if (data?.name) setSupplierName(data.name);
       });
     }
-  }, [existing, loaded]);
+  }, [existing, fetchingExisting, loaded]);
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["purchase-product-search", business?.id, search],
