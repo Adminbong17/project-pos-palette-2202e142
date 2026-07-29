@@ -8,6 +8,7 @@ export type PresetKind =
   | "investigation"
   | "frequency"
   | "advice"
+  | "instruction"
   | "medicine";
 
 export type Preset = { id: string; name: string };

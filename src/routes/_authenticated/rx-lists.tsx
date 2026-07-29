@@ -25,6 +25,7 @@ const KINDS: { kind: PresetKind; title: string; hint: string }[] = [
   { kind: "investigation", title: "Investigations", hint: "e.g. CBC, X-ray Chest P/A" },
   { kind: "frequency", title: "Frequencies", hint: "e.g. 1+0+1, 1+1+1 after meal" },
   { kind: "advice", title: "Advice", hint: "e.g. Plenty of water, Rest" },
+  { kind: "instruction", title: "Rx Instructions", hint: "e.g. After meal, Before sleep" },
   { kind: "medicine", title: "My Medicines", hint: "Private list — not added to products" },
 ];
 
