@@ -196,6 +196,12 @@ function EditPurchasePage() {
       if (!locationId) throw new Error("Select a location");
       if (lines.length === 0) throw new Error("Add at least one product");
 
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) throw new Error("Session expired — please log in again and retry.");
+      }
+
       let contactId: string | null = null;
       const name = supplierName.trim();
       if (name && business) {
@@ -214,10 +220,21 @@ function EditPurchasePage() {
             .insert({ business_id: business.id, name, type: "supplier" })
             .select("id")
             .single();
-          if (insErr) throw insErr;
-          contactId = inserted.id;
+          if (insErr) {
+            const { data: any1 } = await supabase
+              .from("contacts")
+              .select("id")
+              .eq("business_id", business.id)
+              .ilike("name", name)
+              .maybeSingle();
+            contactId = any1?.id ?? null;
+            if (!contactId) toast.warning("Supplier could not be saved, purchase saved without supplier link.");
+          } else {
+            contactId = inserted.id;
+          }
         }
       }
+
 
       // Persist any changed pack_size values back to variations
 
