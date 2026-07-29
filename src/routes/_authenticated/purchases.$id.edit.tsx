@@ -280,11 +280,12 @@ function EditPurchasePage() {
           lines: lines.map((l) => {
             const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
             const mult = l.unit === "box" ? ps : 1;
+            const perPcs = (mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price)) + vatPerPcs;
             return {
               product_id: l.product_id,
               variation_id: l.variation_id,
               quantity: Number(l.quantity) * mult,
-              purchase_price: mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price),
+              purchase_price: perPcs,
               expire_date: l.expire_date || null,
             };
           }),
