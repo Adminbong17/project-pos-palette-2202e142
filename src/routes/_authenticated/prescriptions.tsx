@@ -996,28 +996,14 @@ function PrescriptionsPage() {
           <div className="mt-3 rounded-xl border border-border/60 p-3">
             <div className="flex items-center justify-between">
               <Label className="text-base">C/C (Chief Complaints)</Label>
-              <Popover open={ccOpen} onOpenChange={setCcOpen}>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" /> Add C/C</Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-[320px]" align="end">
-                  <Command>
-                    <CommandInput placeholder="Search or type C/C…" value={ccSearch} onValueChange={setCcSearch} />
-                    <CommandList>
-                      <CommandEmpty>
-                        <Button variant="ghost" size="sm" onClick={() => addCc(ccSearch)} disabled={!ccSearch.trim()}>
-                          Add “{ccSearch}”
-                        </Button>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {(ccOptions.data ?? []).map((o) => (
-                          <CommandItem key={o.id} value={o.name} onSelect={() => addCc(o.name)}>{o.name}</CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <RxPresetCombo
+                triggerLabel="Add C/C"
+                placeholder="Search or type C/C…"
+                options={ccPickList}
+                onAdd={(n) => myCc.add(n)}
+                onRemove={(id) => myCc.remove(id)}
+                onPick={(n) => addCc(n)}
+              />
             </div>
             {cc.length === 0 ? (
               <p className="mt-2 text-xs text-muted-foreground">No complaint added yet. Search an existing C/C or type a new one.</p>
