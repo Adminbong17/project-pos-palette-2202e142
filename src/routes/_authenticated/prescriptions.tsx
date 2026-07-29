@@ -674,11 +674,17 @@ function PrescriptionsPage() {
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
       </div>`;
 
+    const numbered = (s?: string | null) => {
+      const items = serialItems(s);
+      if (!items.length) return "";
+      return items.map((x, i) => `<div>${i + 1}. ${esc(x)}</div>`).join("");
+    };
+
     const medsHtml = rxLines.length
       ? rxLines.map((l, i) => `
         <div class="med">
           <div class="med-name">${i + 1}. ${esc(l.medicine_name)}${l.quantity ? ` &nbsp;<span class="qty">(Qty: ${l.quantity})</span>` : ""}</div>
-          <div class="med-sub">${[l.frequency, l.duration].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
+          <div class="med-sub">${[l.frequency, fmtDuration(l.duration)].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
           ${l.instructions ? `<div class="med-sub"><em>${esc(l.instructions)}</em></div>` : ""}
         </div>`).join("")
       : `<div class="label">No medicines</div>`;
