@@ -465,13 +465,20 @@ function PrescriptionsPage() {
       doctor_qualification: rx.doctor_qualification ?? "",
       diagnosis: rx.diagnosis ?? "",
       vitals: rx.vitals ?? "",
+      investigation: "",
       advice: rx.advice ?? "",
       next_visit: rx.next_visit ?? "",
       notes: rx.notes ?? "",
     });
     setVitals(parseVitals(rx.vitals));
+    setExtraVitals(parseExtraVitals(rx.vitals));
     setCc(parseCc(rx.diagnosis));
     setNextDays(diffDays(rx.rx_date, rx.next_visit ?? ""));
+
+    const { data: invRow } = await supabase.from("prescriptions")
+      .select("investigation").eq("id", rx.id).maybeSingle();
+    if (invRow) setForm((f) => ({ ...f, investigation: (invRow as any).investigation ?? "" }));
+
 
     const { data } = await supabase.from("prescription_lines")
       .select("id, product_id, variation_id, medicine_name, frequency, duration, instructions, quantity")
