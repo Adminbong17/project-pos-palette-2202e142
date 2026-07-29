@@ -63,6 +63,8 @@ function NewPurchasePage() {
       if (d.notes) setNotes(d.notes);
       if (d.amountPaid) setAmountPaid(d.amountPaid);
       if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.vatMode) setVatMode(d.vatMode);
+      if (d.vatValue) setVatValue(d.vatValue);
       if (d.lines?.length) setLines(d.lines);
     },
     { isEmpty: (d) => !d.lines?.length && !d.supplierName && !d.refNo && !d.notes, restoreMessage: "Unsaved purchase restored" },
