@@ -57,8 +57,10 @@ function EditPurchasePage() {
     },
   });
 
-  const { data: existing } = useQuery({
+  const { data: existing, isFetching: fetchingExisting } = useQuery({
     queryKey: ["purchase-edit", id],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data: tx } = await supabase.from("transactions").select("*").eq("id", id).maybeSingle();
       const { data: ls } = await supabase
@@ -71,7 +73,8 @@ function EditPurchasePage() {
 
 
   useEffect(() => {
-    if (!existing?.tx || loaded) return;
+    if (!existing?.tx || fetchingExisting || loaded) return;
+
     const t: any = existing.tx;
     setLocationId(t.location_id ?? "");
     setRefNo(t.ref_no ?? "");
@@ -107,7 +110,7 @@ function EditPurchasePage() {
         if (data?.name) setSupplierName(data.name);
       });
     }
-  }, [existing, loaded]);
+  }, [existing, fetchingExisting, loaded]);
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["purchase-product-search", business?.id, search],
