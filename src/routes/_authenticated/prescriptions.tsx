@@ -267,22 +267,33 @@ function PrescriptionsPage() {
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", contact_id: "",
     doctor_name: "", doctor_qualification: "",
-    diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
+    diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const [extraVitals, setExtraVitals] = useState<ExtraVital[]>([]);
   const [cc, setCc] = useState<Cc[]>([]);
   const [ccOpen, setCcOpen] = useState(false);
   const [ccSearch, setCcSearch] = useState("");
   const [nextDays, setNextDays] = useState("");
+
+  // Doctor's own saved lists (private to the logged-in doctor).
+  const myCc = useRxPresets("cc", businessId);
+  const myVitals = useRxPresets("vital", businessId);
+  const myInvestigations = useRxPresets("investigation", businessId);
+  const myFreqs = useRxPresets("frequency", businessId);
+  const myAdvice = useRxPresets("advice", businessId);
+  const myMedicines = useRxPresets("medicine", businessId);
+
   // Auto-save the prescription being written (power cut safe).
   const { clearDraft: clearRxDraft } = useAutosaveDraft(
     businessId ? `prescription:${businessId}` : null,
-    { form, lines, vitals, cc, nextDays },
+    { form, lines, vitals, extraVitals, cc, nextDays },
     (d) => {
       if (d.form) setForm((f) => ({ ...f, ...d.form }));
       if (d.lines?.length) setLines(d.lines);
       if (d.vitals) setVitals(d.vitals);
+      if (d.extraVitals?.length) setExtraVitals(d.extraVitals);
       if (d.cc?.length) setCc(d.cc);
       if (d.nextDays) setNextDays(d.nextDays);
     },
@@ -295,6 +306,7 @@ function PrescriptionsPage() {
       restoreMessage: "Unsaved prescription restored",
     },
   );
+
 
   const bmi = calcBmi(vitals);
   const nextVisitDate = addDays(dhakaInputToIso(form.rx_date), Number(nextDays) || 0);
