@@ -270,6 +270,28 @@ function EditPurchasePage() {
         await supabase.from("variations").update({ pack_size: u.ps }).eq("id", u.id);
       }
 
+      // Sync per-piece purchase price (VAT included) back to variations/products
+      const seenVariations = new Set<string>();
+      const seenProducts = new Set<string>();
+      for (const l of lines) {
+        const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
+        const mult = l.unit === "box" ? ps : 1;
+        const basePerPcs = Number(l.purchase_price || 0) / (mult || 1);
+        const perPcsPrice = basePerPcs > 0 ? basePerPcs * (1 + vatPct / 100) + vatPerPcs : 0;
+        if (perPcsPrice <= 0) continue;
+        if (!seenVariations.has(l.variation_id)) {
+          seenVariations.add(l.variation_id);
+          await supabase
+            .from("variations")
+            .update({ default_purchase_price: perPcsPrice, dpp_inc_tax: perPcsPrice })
+            .eq("id", l.variation_id);
+        }
+        if (!seenProducts.has(l.product_id)) {
+          seenProducts.add(l.product_id);
+          await supabase.from("products").update({ default_purchase_price: perPcsPrice }).eq("id", l.product_id);
+        }
+      }
+
       const { data, error } = await supabase.rpc("update_purchase" as any, {
         _id: id,
         _payload: {
