@@ -320,6 +320,7 @@ function PrescriptionsPage() {
   const myFreqs = useRxPresets("frequency", businessId);
   const myAdvice = useRxPresets("advice", businessId);
   const myMedicines = useRxPresets("medicine", businessId);
+  const myInstructions = useRxPresets("instruction", businessId);
 
   // Auto-save the prescription being written (power cut safe).
   const { clearDraft: clearRxDraft } = useAutosaveDraft(
@@ -1128,6 +1129,7 @@ function PrescriptionsPage() {
                   products={products.data ?? []}
                   myMedicines={myMedicines}
                   myFreqs={myFreqs}
+                  myInstructions={myInstructions}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
                 />
@@ -1177,9 +1179,9 @@ type PresetApi = {
   remove: (id: string) => void;
 };
 
-function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove }: {
+function MedicineRow({ line, products, myMedicines, myFreqs, myInstructions, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
-  myMedicines: PresetApi; myFreqs: PresetApi;
+  myMedicines: PresetApi; myFreqs: PresetApi; myInstructions: PresetApi;
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
@@ -1282,8 +1284,19 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
       <Button className="md:col-span-1 h-9" size="icon" variant="ghost" onClick={onRemove}>
         <X className="h-4 w-4 text-destructive" />
       </Button>
-      <Input className="md:col-span-12 h-8 text-xs" placeholder="Instructions (after meal, etc.)" value={line.instructions}
-        onChange={(e) => onChange({ instructions: e.target.value })} />
+      <div className="md:col-span-12 flex items-start gap-1">
+        <Input className="h-8 text-xs flex-1" placeholder="Instructions (after meal, etc.)" value={line.instructions}
+          onChange={(e) => onChange({ instructions: e.target.value })} />
+        <RxPresetCombo
+          triggerLabel="…"
+          placeholder="Search or type instruction…"
+          width={280}
+          options={myInstructions.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          onAdd={(n) => myInstructions.add(n)}
+          onRemove={(id) => myInstructions.remove(id)}
+          onPick={(n) => onChange({ instructions: n })}
+        />
+      </div>
     </div>
   );
 }
