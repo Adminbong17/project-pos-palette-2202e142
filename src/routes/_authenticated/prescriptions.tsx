@@ -122,6 +122,23 @@ function parseCc(s: string | null | undefined): Cc[] {
   }).filter((c) => c.name);
 }
 
+/** "7" -> "7 days"; leaves "7 days" / "2 weeks" untouched. */
+function fmtDuration(d?: string | null): string {
+  const s = (d ?? "").trim();
+  if (!s) return "";
+  return /^\d+(\.\d+)?$/.test(s) ? `${s} days` : s;
+}
+
+/** Split a free-text block into serial items (newline or comma separated). */
+function serialItems(s?: string | null): string[] {
+  return (s ?? "")
+    .split(/\r?\n|,/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+
+
 
 /** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
 function dhakaParts(d: Date = new Date()) {
