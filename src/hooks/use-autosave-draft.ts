@@ -67,7 +67,12 @@ export function useAutosaveDraft<T>(
 
   // Restore once per key
   useEffect(() => {
-    if (!storageKey || !enabled || typeof window === "undefined") return;
+    if (!enabled) {
+      readyRef.current = false;
+      restoredForKey.current = null;
+      return;
+    }
+    if (!storageKey || typeof window === "undefined") return;
     if (restoredForKey.current === storageKey) return;
     restoredForKey.current = storageKey;
     try {

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Search, FileText, X } from "lucide-react";
@@ -248,6 +249,27 @@ function PrescriptionsPage() {
   const [ccOpen, setCcOpen] = useState(false);
   const [ccSearch, setCcSearch] = useState("");
   const [nextDays, setNextDays] = useState("");
+  // Auto-save the prescription being written (power cut safe).
+  const { clearDraft: clearRxDraft } = useAutosaveDraft(
+    businessId ? `prescription:${businessId}` : null,
+    { form, lines, vitals, cc, nextDays },
+    (d) => {
+      if (d.form) setForm((f) => ({ ...f, ...d.form }));
+      if (d.lines?.length) setLines(d.lines);
+      if (d.vitals) setVitals(d.vitals);
+      if (d.cc?.length) setCc(d.cc);
+      if (d.nextDays) setNextDays(d.nextDays);
+    },
+    {
+      enabled: open && !editing,
+      isEmpty: (d) =>
+        !d.form?.patient_name?.trim() &&
+        !d.cc?.length &&
+        !(d.lines ?? []).some((l: any) => (l?.medicine_name ?? "").trim()),
+      restoreMessage: "Unsaved prescription restored",
+    },
+  );
+
   const bmi = calcBmi(vitals);
   const nextVisitDate = addDays(dhakaInputToIso(form.rx_date), Number(nextDays) || 0);
 
@@ -458,6 +480,7 @@ function PrescriptionsPage() {
     },
     onSuccess: () => {
       toast.success("Prescription saved");
+      clearRxDraft();
       qc.invalidateQueries({ queryKey: ["prescriptions"] });
       setOpen(false);
       resetForm();
