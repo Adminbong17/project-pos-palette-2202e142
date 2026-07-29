@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchAllIn } from "@/lib/fetch-all";
+import { useCurrentRole } from "@/hooks/use-current-role";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({ meta: [{ title: "Sales — QweekPOS" }] }),
@@ -35,6 +36,7 @@ type RangeKey = "today" | "7d" | "30d" | "all" | "custom";
 
 function SalesPage() {
   const { data: business } = useCurrentBusiness();
+  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const qc = useQueryClient();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
@@ -191,7 +193,7 @@ function SalesPage() {
 
   const { data: profitByInvoice = {} } = useQuery({
     queryKey: ["sales-profit", business?.id, saleIds.length],
-    enabled: !!business?.id && saleIds.length > 0,
+    enabled: !!business?.id && saleIds.length > 0 && isAdmin,
     queryFn: async () => {
       const lines = await fetchAllIn<any>(
         (chunk) => supabase.from("transaction_sell_lines")
@@ -290,8 +292,8 @@ function SalesPage() {
         <Card label="Total Amount" value={fmt(totals.total)} />
         <Card label="Total Paid" value={fmt(totals.paid)} />
         <Card label="Total Due" value={fmt(totals.total - totals.paid)} />
-        <Card label="Total Profit" value={fmt(totalProfit)} />
-        <Card label="Avg Margin" value={`${totalMargin.toFixed(1)}%`} />
+        {isAdmin && <Card label="Total Profit" value={fmt(totalProfit)} />}
+        {isAdmin && <Card label="Avg Margin" value={`${totalMargin.toFixed(1)}%`} />}
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
@@ -307,16 +309,16 @@ function SalesPage() {
               <th className="text-right p-3">Total</th>
               <th className="text-right p-3">Paid</th>
               <th className="text-right p-3">Due</th>
-              <th className="text-right p-3">Profit</th>
-              <th className="text-right p-3">Margin</th>
+              {isAdmin && <th className="text-right p-3">Profit</th>}
+              {isAdmin && <th className="text-right p-3">Margin</th>}
               <th className="text-right p-3">Action</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+              <tr><td colSpan={isAdmin ? 12 : 10} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">No sales yet.</td></tr>
+              <tr><td colSpan={isAdmin ? 12 : 10} className="p-6 text-center text-muted-foreground">No sales yet.</td></tr>
             ) : (
               rows.map((r) => {
                 const due = Number(r.final_total || 0) - Number(r.total_paid || 0);
@@ -334,12 +336,12 @@ function SalesPage() {
                     <td className="p-3 text-right">{fmt(Number(r.final_total))}</td>
                     <td className="p-3 text-right">{fmt(Number(r.total_paid))}</td>
                     <td className="p-3 text-right">{fmt(due)}</td>
-                    <td className={`p-3 text-right font-semibold ${profit === null ? "text-muted-foreground" : profit >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                    {isAdmin && <td className={`p-3 text-right font-semibold ${profit === null ? "text-muted-foreground" : profit >= 0 ? "text-emerald-600" : "text-destructive"}`}>
                       {profit === null ? "…" : fmt(profit)}
-                    </td>
-                    <td className={`p-3 text-right ${margin === null ? "text-muted-foreground" : margin >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                    </td>}
+                    {isAdmin && <td className={`p-3 text-right ${margin === null ? "text-muted-foreground" : margin >= 0 ? "text-emerald-600" : "text-destructive"}`}>
                       {margin === null ? "…" : `${margin.toFixed(1)}%`}
-                    </td>
+                    </td>}
                     <td className="p-3 text-right">
                       <div className="inline-flex gap-1">
                         <Button size="sm" variant="outline" disabled={printingId === r.id} onClick={() => reprint(r.id)} title="Print">

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { Wallet } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
@@ -19,6 +20,7 @@ function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); re
 
 function ProfitReportPage() {
   const { data: business } = useCurrentBusiness();
+  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const businessId = business?.id;
   const [range, setRange] = useState<"today" | "7d" | "30d" | "all" | "custom">("30d");
   const [customFrom, setCustomFrom] = useState<string>("");
@@ -150,6 +152,9 @@ function ProfitReportPage() {
     return { rows, invoiceRows, totalRevenue, totalCost, grossProfit, netProfit, totalDiscount };
   }, [sellLines, products, variations, sales]);
 
+  if (!roleLoading && !isAdmin) {
+    return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
+  }
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

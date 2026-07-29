@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import {
   Briefcase, PackageOpen, ShoppingCart, TrendingUp, Coins, HandCoins,
@@ -21,6 +22,7 @@ function monthsAgo(n: number) { const d = startOfDay(new Date()); d.setMonth(d.g
 
 function AnalyticsPage() {
   const { data: business } = useCurrentBusiness();
+  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const businessId = business?.id;
   const currency = "BDT";
 
@@ -178,6 +180,9 @@ function AnalyticsPage() {
     { label: "Total Transactions", value: m.txCount, icon: ArrowLeftRight, tint: "bg-cyan-500/15 text-cyan-400" },
   ];
 
+  if (!roleLoading && !isAdmin) {
+    return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
+  }
   return (
     <div className="space-y-6 p-6">
       <div>
