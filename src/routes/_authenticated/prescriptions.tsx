@@ -927,7 +927,20 @@ function PrescriptionsPage() {
           </div>
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
-            <Label className="text-base">Patient Vitals</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-base">Patient Vitals</Label>
+              <RxPresetCombo
+                triggerLabel="Add my vital"
+                placeholder="Search or type a vital name…"
+                options={myVitals.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                onAdd={(n) => myVitals.add(n)}
+                onRemove={(id) => myVitals.remove(id)}
+                onPick={(n) => {
+                  if (!extraVitals.some((e) => e.name.toLowerCase() === n.toLowerCase()))
+                    setExtraVitals([...extraVitals, { name: n, value: "" }]);
+                }}
+              />
+            </div>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {VITAL_FIELDS.map((f) => (
                 <div key={f.key}>
@@ -955,8 +968,30 @@ function PrescriptionsPage() {
                   </span>
                 </div>
               </div>
+              {extraVitals.map((e, i) => (
+                <div key={`extra-${i}`}>
+                  <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                    <span className="truncate">{e.name}</span>
+                    <button
+                      type="button"
+                      className="text-destructive"
+                      onClick={() => setExtraVitals(extraVitals.filter((_, ix) => ix !== i))}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Label>
+                  <Input
+                    placeholder="Value"
+                    value={e.value}
+                    onChange={(ev) =>
+                      setExtraVitals(extraVitals.map((x, ix) => (ix === i ? { ...x, value: ev.target.value } : x)))
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </div>
+
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
             <div className="flex items-center justify-between">
