@@ -445,14 +445,44 @@ function EditPurchasePage() {
 
           )}
           {lines.length > 0 && (
-            <div className="flex items-center justify-between text-sm border-t pt-2 font-semibold">
-              <span>Total</span><span>{fmt(total)}</span>
+            <div className="space-y-1 border-t pt-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Subtotal</span><span>{fmt(total)}</span>
+              </div>
+              {vatAmount > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">VAT</span><span>{fmt(vatAmount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>VAT per pcs (added to purchase price)</span><span>{fmt(vatPerPcs)}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between font-semibold">
+                <span>Total</span><span>{fmt(grandTotal)}</span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+        <label className="block">
+          <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
+          <div className="flex gap-2">
+            <input type="number" step="any" placeholder="0.00" className={inputCls} value={vatValue} onChange={(e) => setVatValue(e.target.value)} />
+            <select className="h-9 rounded-lg border border-border bg-input px-2 text-sm" value={vatMode} onChange={(e) => setVatMode(e.target.value as any)}>
+              <option value="amount">৳</option>
+              <option value="percent">%</option>
+            </select>
+          </div>
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            {vatAmount > 0 && totalPcs > 0
+              ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
+              : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
+          </span>
+        </label>
         <label className="block">
           <span className={labelCls}>Amount paid</span>
           <input type="number" step="any" className={inputCls} value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
@@ -465,9 +495,10 @@ function EditPurchasePage() {
         </label>
         <div className="text-sm self-end">
           <div className="text-muted-foreground text-xs">Due</div>
-          <div className="font-semibold">{fmt(Math.max(0, total - Number(amountPaid || 0)))}</div>
+          <div className="font-semibold">{fmt(Math.max(0, grandTotal - Number(amountPaid || 0)))}</div>
         </div>
       </div>
+
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => navigate({ to: "/purchases/$id", params: { id } })}>Cancel</Button>
