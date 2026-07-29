@@ -476,11 +476,12 @@ function PosScreen() {
           </select>
         </div>
 
-        <div className="lg:flex-1 lg:overflow-auto p-2 space-y-1">
+        <div ref={cartScrollRef} className="lg:flex-1 lg:overflow-auto p-2 space-y-1">
           {cart.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground py-12">Click a product to add it.</div>
-          ) : cart.map((l) => (
-            <div key={l.variation_id} className="rounded-lg bg-card border border-border/60 p-2.5">
+          ) : cart.map((l, i) => (
+            <div key={l.variation_id} ref={i === cart.length - 1 ? lastLineRef : undefined} className="rounded-lg bg-card border border-border/60 p-2.5">
+
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium leading-tight truncate">{l.name}</div>
