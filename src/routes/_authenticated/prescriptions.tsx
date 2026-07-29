@@ -185,6 +185,33 @@ function calcBmi(v: Vitals): string {
 
 export type ExtraVital = { name: string; value: string };
 
+/** Doses per day from a frequency like "1+0+1", "1/2+0+1", "1+1+1 after meal". */
+function dosesPerDay(freq: string): number {
+  const m = (freq ?? "").match(/\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?/g);
+  if (!m) return 0;
+  const nums = m.map((t) => {
+    const [a, b] = t.split("/").map((x) => parseFloat(x));
+    return b ? a / b : a;
+  });
+  return nums.reduce((s, n) => s + (isFinite(n) ? n : 0), 0);
+}
+
+/** Number of days from a duration like "7 days", "2 weeks", "1 month". */
+function durationDays(dur: string): number {
+  const s = (dur ?? "").toLowerCase();
+  const n = parseFloat(s.match(/\d+(?:\.\d+)?/)?.[0] ?? "");
+  if (!n || !isFinite(n)) return 0;
+  if (/month|mas|মাস/.test(s)) return n * 30;
+  if (/week|সপ্তাহ/.test(s)) return n * 7;
+  return n;
+}
+
+/** Auto medicine quantity = doses/day × days (rounded up). */
+function autoQuantity(freq: string, dur: string): number {
+  const q = dosesPerDay(freq) * durationDays(dur);
+  return q > 0 ? Math.ceil(q) : 0;
+}
+
 /** Compose to a single readable string stored in prescriptions.vitals */
 function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
   const parts: string[] = [];
