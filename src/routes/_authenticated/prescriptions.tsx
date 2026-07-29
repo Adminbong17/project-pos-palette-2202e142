@@ -212,6 +212,16 @@ function autoQuantity(freq: string, dur: string): number {
   return q > 0 ? Math.ceil(q) : 0;
 }
 
+/** Merge a frequency/duration change and recompute the quantity from it. */
+function withAutoQty(line: Line, patch: Partial<Line>): Partial<Line> {
+  const merged = { ...line, ...patch };
+  const qty = autoQuantity(merged.frequency, merged.duration);
+  return qty > 0 ? { ...patch, quantity: qty } : patch;
+}
+  const q = dosesPerDay(freq) * durationDays(dur);
+  return q > 0 ? Math.ceil(q) : 0;
+}
+
 /** Compose to a single readable string stored in prescriptions.vitals */
 function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
   const parts: string[] = [];
