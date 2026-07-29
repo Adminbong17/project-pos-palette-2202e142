@@ -1041,6 +1041,32 @@ function PrescriptionsPage() {
           </div>
 
 
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-base">Investigation</Label>
+              <RxPresetCombo
+                triggerLabel="My investigations"
+                placeholder="Search or type investigation…"
+                options={myInvestigations.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                onAdd={(n) => myInvestigations.add(n)}
+                onRemove={(id) => myInvestigations.remove(id)}
+                onPick={(n) =>
+                  setForm((f) => ({
+                    ...f,
+                    investigation: f.investigation.trim() ? `${f.investigation.trim()}\n${n}` : n,
+                  }))
+                }
+              />
+            </div>
+            <Textarea
+              className="mt-2"
+              rows={3}
+              placeholder="CBC, X-ray chest P/A view…"
+              value={form.investigation}
+              onChange={(e) => setForm({ ...form, investigation: e.target.value })}
+            />
+          </div>
+
           <div className="mt-3">
             <div className="flex items-center justify-between">
               <Label className="text-base">Medicines</Label>
@@ -1054,12 +1080,15 @@ function PrescriptionsPage() {
                   key={i}
                   line={l}
                   products={products.data ?? []}
+                  myMedicines={myMedicines}
+                  myFreqs={myFreqs}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
                 />
               ))}
             </div>
           </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <div>
