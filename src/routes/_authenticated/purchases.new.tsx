@@ -392,7 +392,7 @@ function NewPurchasePage() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>Supplier</span>
           <input
@@ -713,7 +713,7 @@ function NewPurchasePage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
           <div className="flex gap-2">

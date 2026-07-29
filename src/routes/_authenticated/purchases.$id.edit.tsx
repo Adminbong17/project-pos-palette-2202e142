@@ -85,6 +85,7 @@ function EditPurchasePage() {
     setDate(new Date(t.transaction_date).toISOString().slice(0, 16));
     setStatus(t.status);
     setNotes(t.additional_notes ?? "");
+    setDiscountAmount(Number(t.discount_amount || 0) > 0 ? String(t.discount_amount) : "");
     setAmountPaid(String(t.total_paid ?? ""));
     setLines(
       existing.lines.map((l: any) => {
@@ -350,7 +351,7 @@ function EditPurchasePage() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>Supplier</span>
           <input
@@ -529,7 +530,7 @@ function EditPurchasePage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
           <div className="flex gap-2">
