@@ -47,13 +47,14 @@ function NewPurchasePage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
   const [vatValue, setVatValue] = useState("");
+  const [vatPercent, setVatPercent] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
 
   // Auto-save this purchase draft (power cut / accidental close safe).
   const { clearDraft: clearPurchaseDraft } = useAutosaveDraft(
     business?.id ? `purchase-new:${business.id}` : null,
-    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, lines },
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, vatPercent, lines },
     (d) => {
       if (d.locationId) setLocationId(d.locationId);
       if (d.supplierName) setSupplierName(d.supplierName);
@@ -65,6 +66,7 @@ function NewPurchasePage() {
       if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
       if (d.vatMode) setVatMode(d.vatMode);
       if (d.vatValue) setVatValue(d.vatValue);
+      if (d.vatPercent) setVatPercent(d.vatPercent);
       if (d.lines?.length) setLines(d.lines);
     },
     { isEmpty: (d) => !d.lines?.length && !d.supplierName && !d.refNo && !d.notes, restoreMessage: "Unsaved purchase restored" },
@@ -219,13 +221,16 @@ function NewPurchasePage() {
     [lines],
   );
 
+  const vatPct = Math.max(0, Number(vatPercent || 0));
+
   const vatAmount = useMemo(() => {
+    if (vatPct > 0) return (total * vatPct) / 100;
     const v = Number(vatValue || 0);
     if (!v) return 0;
     return vatMode === "percent" ? (total * v) / 100 : v;
-  }, [vatValue, vatMode, total]);
+  }, [vatValue, vatMode, total, vatPct]);
 
-  const vatPerPcs = totalPcs > 0 ? vatAmount / totalPcs : 0;
+  const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
   const grandTotal = total + vatAmount;
 
 
@@ -338,7 +343,8 @@ function NewPurchasePage() {
           lines: lines.map((l) => {
             const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
             const mult = l.unit === "box" ? ps : 1;
-            const perPcs = (mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price)) + vatPerPcs;
+            const base = mult > 1 ? Number(l.purchase_price) / mult : Number(l.purchase_price);
+            const perPcs = base * (1 + vatPct / 100) + vatPerPcs;
             return {
               product_id: l.product_id,
               variation_id: l.variation_id,
@@ -414,6 +420,24 @@ function NewPurchasePage() {
             <option value="pending">Pending</option>
             <option value="ordered">Ordered</option>
           </select>
+        </label>
+        <label className="block">
+          <span className={labelCls}>VAT %  (purchase price-এ অটো যোগ হবে)</span>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            placeholder="e.g. 15"
+            className={inputCls}
+            value={vatPercent}
+            onChange={(e) => {
+              setVatPercent(e.target.value);
+              if (Number(e.target.value || 0) > 0) setVatValue("");
+            }}
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            {vatPct > 0 ? `প্রতিটি প্রোডাক্টের দামে +${vatPct}% যোগ হবে` : "খালি রাখলে নিচের VAT বক্স ব্যবহার হবে"}
+          </span>
         </label>
         <label className="block sm:col-span-3">
           <span className={labelCls}>Notes</span>
@@ -642,12 +666,12 @@ function NewPurchasePage() {
               {vatAmount > 0 && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">VAT</span>
+                    <span className="text-muted-foreground">VAT{vatPct > 0 ? ` (${vatPct}%)` : ""}</span>
                     <span>{fmt(vatAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>VAT per pcs (added to purchase price)</span>
-                    <span>{fmt(vatPerPcs)}</span>
+                    <span>{vatPct > 0 ? "প্রতিটি দামে +% যোগ হচ্ছে" : "VAT per pcs (added to purchase price)"}</span>
+                    <span>{vatPct > 0 ? `+${vatPct}%` : fmt(vatPerPcs)}</span>
                   </div>
                 </>
               )}
@@ -664,16 +688,18 @@ function NewPurchasePage() {
         <label className="block">
           <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
           <div className="flex gap-2">
-            <input type="number" step="any" placeholder="0.00" className={inputCls} value={vatValue} onChange={(e) => setVatValue(e.target.value)} />
-            <select className="h-9 rounded-lg border border-border bg-input px-2 text-sm" value={vatMode} onChange={(e) => setVatMode(e.target.value as any)}>
+            <input type="number" step="any" placeholder={vatPct > 0 ? "—" : "0.00"} disabled={vatPct > 0} className={inputCls + (vatPct > 0 ? " opacity-50" : "")} value={vatPct > 0 ? "" : vatValue} onChange={(e) => setVatValue(e.target.value)} />
+            <select className="h-9 rounded-lg border border-border bg-input px-2 text-sm" disabled={vatPct > 0} value={vatMode} onChange={(e) => setVatMode(e.target.value as any)}>
               <option value="amount">৳</option>
               <option value="percent">%</option>
             </select>
           </div>
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            {vatAmount > 0 && totalPcs > 0
-              ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
-              : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
+            {vatPct > 0
+              ? `উপরে VAT ${vatPct}% দেওয়া আছে — এই বক্স বন্ধ`
+              : vatAmount > 0 && totalPcs > 0
+                ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
+                : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
           </span>
         </label>
         <label className="block">
