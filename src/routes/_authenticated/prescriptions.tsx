@@ -375,14 +375,29 @@ function PrescriptionsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
   });
 
-  const addCc = (name: string) => {
+  const addCc = (name: string, saveToMyList = false) => {
     const n = name.trim();
     if (!n) return;
     if (!cc.some((c) => c.name.toLowerCase() === n.toLowerCase())) setCc([...cc, { name: n, days: "" }]);
-    if (!(ccOptions.data ?? []).some((o) => o.name.toLowerCase() === n.toLowerCase())) addCcOption.mutate(n);
+    if (saveToMyList) myCc.add(n);
     setCcSearch("");
     setCcOpen(false);
   };
+
+  const ccPickList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; removable?: boolean }[] = [];
+    for (const o of myCc.items) {
+      seen.add(o.name.toLowerCase());
+      out.push({ id: o.id, name: o.name, removable: true });
+    }
+    for (const o of ccOptions.data ?? []) {
+      if (seen.has(o.name.toLowerCase())) continue;
+      out.push({ id: o.id, name: o.name });
+    }
+    return out;
+  }, [myCc.items, ccOptions.data]);
+
 
 
   const products = useQuery({
