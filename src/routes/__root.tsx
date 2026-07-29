@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionKeepAlive } from "@/components/session-keep-alive";
+
 
 function NotFoundComponent() {
   return (
@@ -82,8 +84,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionKeepAlive />
       <Outlet />
       <Toaster />
     </QueryClientProvider>
   );
 }
+

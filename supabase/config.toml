@@ -1,1 +1,8 @@
 project_id = "fmjzfzvbswkbxsrwcknu"
+
+[auth]
+# Access token valid for 8 hours; refresh token reuse window kept generous
+# so long shifts never get logged out mid-work.
+jwt_expiry = 28800
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 60
