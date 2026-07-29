@@ -1125,17 +1125,30 @@ function PrescriptionsPage() {
   );
 }
 
-function MedicineRow({ line, products, onChange, onRemove }: {
+type PresetApi = {
+  items: { id: string; name: string }[];
+  add: (name: string) => void;
+  remove: (id: string) => void;
+};
+
+function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
+  myMedicines: PresetApi; myFreqs: PresetApi;
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
   const [pSearch, setPSearch] = useState("");
   const selected = useMemo(() => products.find((p) => p.id === line.product_id), [products, line.product_id]);
+  const allOptions = useMemo<ProductOpt[]>(() => {
+    const own = myMedicines.items.map((m) => ({ id: `my:${m.id}`, name: m.name, variation_id: null }));
+    return [...own, ...products];
+  }, [myMedicines.items, products]);
   const filtered = useMemo(() => {
     const q = pSearch.trim().toLowerCase();
-    return q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
-  }, [products, pSearch]);
+    return q ? allOptions.filter((p) => p.name.toLowerCase().includes(q)) : allOptions;
+  }, [allOptions, pSearch]);
+  const query = pSearch.trim();
+  const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
       <div className="md:col-span-4">
@@ -1148,16 +1161,33 @@ function MedicineRow({ line, products, onChange, onRemove }: {
           </PopoverTrigger>
           <PopoverContent className="p-0 w-[360px]" align="start">
             <Command shouldFilter={false}>
-              <CommandInput placeholder={`Search ${products.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
+              <CommandInput placeholder={`Search ${allOptions.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
               <CommandList>
-                <CommandEmpty>No products.</CommandEmpty>
+                {query && !exists && (
+                  <CommandGroup>
+                    <CommandItem value={`__add_${query}`} onSelect={() => {
+                      myMedicines.add(query);
+                      onChange({ product_id: null, variation_id: null, medicine_name: query });
+                      setPSearch("");
+                      setPOpen(false);
+                    }}>
+                      <Plus className="mr-2 h-4 w-4" /> Add “{query}” to my medicines
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
                 <CommandGroup>
                   {filtered.map((p) => (
                     <CommandItem key={p.id} value={p.id} onSelect={() => {
-                      onChange({ product_id: p.id, variation_id: p.variation_id, medicine_name: p.name });
+                      const own = p.id.startsWith("my:");
+                      onChange({
+                        product_id: own ? null : p.id,
+                        variation_id: own ? null : p.variation_id,
+                        medicine_name: p.name,
+                      });
                       setPSearch("");
                       setPOpen(false);
-                    }}>{p.name}</CommandItem>
+                    }}>{p.id.startsWith("my:") ? `★ ${p.name}` : p.name}</CommandItem>
                   ))}
                 </CommandGroup>
               </CommandList>
@@ -1167,8 +1197,19 @@ function MedicineRow({ line, products, onChange, onRemove }: {
         <Input className="mt-1 h-8" placeholder="Medicine name" value={line.medicine_name}
           onChange={(e) => onChange({ medicine_name: e.target.value })} />
       </div>
-      <Input className="md:col-span-4 h-9" placeholder="Freq (1+0+1)" value={line.frequency}
-        onChange={(e) => onChange({ frequency: e.target.value })} />
+      <div className="md:col-span-4 flex items-start gap-1">
+        <Input className="h-9 flex-1" placeholder="Freq (1+0+1)" value={line.frequency}
+          onChange={(e) => onChange({ frequency: e.target.value })} />
+        <RxPresetCombo
+          triggerLabel="…"
+          placeholder="Search or type frequency…"
+          width={260}
+          options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          onAdd={(n) => myFreqs.add(n)}
+          onRemove={(id) => myFreqs.remove(id)}
+          onPick={(n) => onChange({ frequency: n })}
+        />
+      </div>
       <Input className="md:col-span-2 h-9" placeholder="Duration (7 days)" value={line.duration}
         onChange={(e) => onChange({ duration: e.target.value })} />
       <Input className="md:col-span-1 h-9" type="number" min={0} step="0.01" placeholder="Qty" value={line.quantity}
