@@ -657,10 +657,10 @@ function PrescriptionsPage() {
 
     const headerHtml = `
       <div class="header center">
-        <h2>${esc(bizName)}</h2>
+        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : esc(bizName)}</h2>
+        ${rx.doctor_qualification ? `<div class="desig">${esc(rx.doctor_qualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
-        ${rx.doctor_name ? `<div style="margin-top:4px;"><strong>Dr. ${esc(rx.doctor_name)}</strong>${rx.doctor_qualification ? ` — ${esc(rx.doctor_qualification)}` : ""}</div>` : ""}
       </div>`;
 
     const metaHtml = `
