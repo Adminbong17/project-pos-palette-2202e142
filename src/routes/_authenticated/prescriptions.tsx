@@ -470,7 +470,8 @@ function PrescriptionsPage() {
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
-    setExtraVitals([]);
+    // A doctor's saved vitals are their defaults — show them on every new Rx.
+    setExtraVitals(myVitals.items.map((v) => ({ name: v.name, value: "" })));
     setCc([]);
     setNextDays("");
   };
