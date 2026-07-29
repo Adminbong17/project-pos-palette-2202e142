@@ -35,8 +35,10 @@ function EditSalePage() {
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
 
-  const { data: existing } = useQuery({
+  const { data: existing, isFetching: fetchingExisting } = useQuery({
     queryKey: ["sale-edit", id],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data: tx } = await supabase.from("transactions").select("*").eq("id", id).maybeSingle();
       const { data: ls } = await supabase
@@ -48,7 +50,8 @@ function EditSalePage() {
   });
 
   useEffect(() => {
-    if (!existing?.tx || loaded) return;
+    if (!existing?.tx || fetchingExisting || loaded) return;
+
     const t: any = existing.tx;
     setInvoiceNo(t.invoice_no ?? "");
     setDate(new Date(t.transaction_date).toISOString().slice(0, 16));
