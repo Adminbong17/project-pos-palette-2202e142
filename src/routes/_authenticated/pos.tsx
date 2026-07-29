@@ -1,6 +1,6 @@
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -56,6 +56,17 @@ function PosScreen() {
   const [ocrOpen, setOcrOpen] = useState(false);
   const [lastSale, setLastSale] = useState<SaleSnapshot | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
+  const cartScrollRef = useRef<HTMLDivElement>(null);
+  const lastLineRef = useRef<HTMLDivElement>(null);
+  const prevCartLen = useRef(0);
+
+  useEffect(() => {
+    if (cart.length > prevCartLen.current) {
+      lastLineRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    prevCartLen.current = cart.length;
+  }, [cart.length]);
+
 
   // Locations — auto-pick first
   const { data: locations = [] } = useQuery({
@@ -476,11 +487,12 @@ function PosScreen() {
           </select>
         </div>
 
-        <div className="lg:flex-1 lg:overflow-auto p-2 space-y-1">
+        <div ref={cartScrollRef} className="lg:flex-1 lg:overflow-auto p-2 space-y-1">
           {cart.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground py-12">Click a product to add it.</div>
-          ) : cart.map((l) => (
-            <div key={l.variation_id} className="rounded-lg bg-card border border-border/60 p-2.5">
+          ) : cart.map((l, i) => (
+            <div key={l.variation_id} ref={i === cart.length - 1 ? lastLineRef : undefined} className="rounded-lg bg-card border border-border/60 p-2.5">
+
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium leading-tight truncate">{l.name}</div>
