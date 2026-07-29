@@ -1189,10 +1189,23 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
     const own = myMedicines.items.map((m) => ({ id: `my:${m.id}`, name: m.name, variation_id: null }));
     return [...own, ...products];
   }, [myMedicines.items, products]);
+  // Typing stays smooth: filtering runs on a deferred value and the rendered
+  // list is capped, so a 7000-item catalog never blocks the keystroke.
+  const deferredSearch = useDeferredValue(pSearch);
   const filtered = useMemo(() => {
-    const q = pSearch.trim().toLowerCase();
-    return q ? allOptions.filter((p) => p.name.toLowerCase().includes(q)) : allOptions;
-  }, [allOptions, pSearch]);
+    const q = deferredSearch.trim().toLowerCase();
+    if (!q) return allOptions.slice(0, 50);
+    const starts: ProductOpt[] = [];
+    const contains: ProductOpt[] = [];
+    for (const p of allOptions) {
+      const n = p.name.toLowerCase();
+      const i = n.indexOf(q);
+      if (i === 0) starts.push(p);
+      else if (i > 0) contains.push(p);
+      if (starts.length >= 50) break;
+    }
+    return [...starts, ...contains].slice(0, 50);
+  }, [allOptions, deferredSearch]);
   const query = pSearch.trim();
   const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
   return (
