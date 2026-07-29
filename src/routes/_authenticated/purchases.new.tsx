@@ -232,6 +232,9 @@ function NewPurchasePage() {
 
   const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
   const grandTotal = total + vatAmount;
+  // VAT-inclusive effective cost that will actually be saved to the product
+  const withVatPerPcs = (basePerPcs: number) => basePerPcs * (1 + vatPct / 100) + vatPerPcs;
+
 
 
   const save = useMutation({
@@ -547,6 +550,13 @@ function NewPurchasePage() {
                         <input type="number" step="any" placeholder="0.00" className="w-full h-8 rounded-md bg-transparent px-2 text-sm text-right font-semibold" value={l.purchase_price} onChange={(e) => setPrice(idx, e.target.value)} />
                       </div>
                       <div className="text-[11px] text-muted-foreground text-right mt-1">per {l.unit === "box" ? "box" : "pcs"}{l.unit === "box" && Number(l.purchase_price) > 0 ? ` · ${fmt(Number(l.purchase_price) / ps)}/pcs` : ""}</div>
+                      {(vatPct > 0 || vatPerPcs > 0) && Number(l.purchase_price) > 0 && (
+                        <div className="text-[11px] text-right mt-1 font-medium text-primary">
+                          VAT সহ: {fmt(withVatPerPcs(Number(l.purchase_price) / (l.unit === "box" ? ps : 1)))} / pcs
+                          {l.unit === "box" ? ` · ${fmt(withVatPerPcs(Number(l.purchase_price) / ps) * ps)} / box` : ""}
+                        </div>
+                      )}
+
                       {l.previous_purchase_price != null && (
                         <div className="text-[11px] text-muted-foreground text-right mt-1 flex gap-2 justify-end flex-wrap">
                           <button type="button" className="underline hover:text-foreground" onClick={() => setPrice(idx, String((l.previous_purchase_price ?? 0) * (l.unit === "box" ? ps : 1)))}>Prev: {fmt((l.previous_purchase_price ?? 0) * (l.unit === "box" ? ps : 1))}</button>
@@ -636,6 +646,13 @@ function NewPurchasePage() {
                   {l.unit === "box" && Number(l.purchase_price) > 0 && (
                     <div className="text-[11px] text-muted-foreground mt-1">{fmt(Number(l.purchase_price) / ps)} / pcs</div>
                   )}
+                  {(vatPct > 0 || vatPerPcs > 0) && Number(l.purchase_price) > 0 && (
+                    <div className="text-[11px] mt-1 font-medium text-primary">
+                      VAT সহ: {fmt(withVatPerPcs(Number(l.purchase_price) / (l.unit === "box" ? ps : 1)))} / pcs
+                      {l.unit === "box" ? ` · ${fmt(withVatPerPcs(Number(l.purchase_price) / ps) * ps)} / box` : ""}
+                    </div>
+                  )}
+
                 </label>
 
                 <label className="block">
