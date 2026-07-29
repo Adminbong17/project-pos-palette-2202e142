@@ -56,6 +56,17 @@ function PosScreen() {
   const [ocrOpen, setOcrOpen] = useState(false);
   const [lastSale, setLastSale] = useState<SaleSnapshot | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
+  const cartScrollRef = useRef<HTMLDivElement>(null);
+  const lastLineRef = useRef<HTMLDivElement>(null);
+  const prevCartLen = useRef(0);
+
+  useEffect(() => {
+    if (cart.length > prevCartLen.current) {
+      lastLineRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    prevCartLen.current = cart.length;
+  }, [cart.length]);
+
 
   // Locations — auto-pick first
   const { data: locations = [] } = useQuery({
