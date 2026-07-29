@@ -3274,6 +3274,7 @@ export type Database = {
         Args: { _business_id: string }
         Returns: string
       }
+      delete_purchase: { Args: { _id: string }; Returns: undefined }
       delete_sale: { Args: { _id: string }; Returns: undefined }
       delete_stock_adjustment: { Args: { _id: string }; Returns: undefined }
       delete_stock_transfer: { Args: { _id: string }; Returns: undefined }
