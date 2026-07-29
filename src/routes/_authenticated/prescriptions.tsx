@@ -1092,7 +1092,19 @@ function PrescriptionsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <div>
-              <Label>Advice</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Advice</Label>
+                <RxPresetCombo
+                  triggerLabel="My advice"
+                  placeholder="Search or type advice…"
+                  options={myAdvice.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                  onAdd={(n) => myAdvice.add(n)}
+                  onRemove={(id) => myAdvice.remove(id)}
+                  onPick={(n) =>
+                    setForm((f) => ({ ...f, advice: f.advice.trim() ? `${f.advice.trim()}\n${n}` : n }))
+                  }
+                />
+              </div>
               <Textarea rows={3} value={form.advice} onChange={(e) => setForm({ ...form, advice: e.target.value })} placeholder="Diet / lifestyle advice…" />
             </div>
             <div>
