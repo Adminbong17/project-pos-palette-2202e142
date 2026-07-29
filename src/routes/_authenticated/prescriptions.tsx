@@ -508,7 +508,8 @@ function PrescriptionsPage() {
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
         diagnosis: composeCc(cc) || null,
-        vitals: composeVitals(vitals) || null,
+        vitals: composeVitals(vitals, extraVitals) || null,
+        investigation: form.investigation.trim() || null,
         advice: form.advice.trim() || null,
         next_visit: nextVisitDate || null,
         notes: form.notes.trim() || null,
