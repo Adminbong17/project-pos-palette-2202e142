@@ -439,10 +439,11 @@ function PrescriptionsPage() {
       patient_phone: "", contact_id: "",
       doctor_name: me.data?.doctor_name ?? "",
       doctor_qualification: me.data?.doctor_qualification ?? "",
-      diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
+      diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
+    setExtraVitals([]);
     setCc([]);
     setNextDays("");
   };
