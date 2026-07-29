@@ -122,6 +122,23 @@ function parseCc(s: string | null | undefined): Cc[] {
   }).filter((c) => c.name);
 }
 
+/** "7" -> "7 days"; leaves "7 days" / "2 weeks" untouched. */
+function fmtDuration(d?: string | null): string {
+  const s = (d ?? "").trim();
+  if (!s) return "";
+  return /^\d+(\.\d+)?$/.test(s) ? `${s} days` : s;
+}
+
+/** Split a free-text block into serial items (newline or comma separated). */
+function serialItems(s?: string | null): string[] {
+  return (s ?? "")
+    .split(/\r?\n|,/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+
+
 
 /** Current date/time in Bangladesh (Asia/Dhaka) as parts. */
 function dhakaParts(d: Date = new Date()) {
@@ -640,10 +657,10 @@ function PrescriptionsPage() {
 
     const headerHtml = `
       <div class="header center">
-        <h2>${esc(bizName)}</h2>
+        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : esc(bizName)}</h2>
+        ${rx.doctor_qualification ? `<div class="desig">${esc(rx.doctor_qualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
-        ${rx.doctor_name ? `<div style="margin-top:4px;"><strong>Dr. ${esc(rx.doctor_name)}</strong>${rx.doctor_qualification ? ` — ${esc(rx.doctor_qualification)}` : ""}</div>` : ""}
       </div>`;
 
     const metaHtml = `
@@ -657,11 +674,17 @@ function PrescriptionsPage() {
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
       </div>`;
 
+    const numbered = (s?: string | null) => {
+      const items = serialItems(s);
+      if (!items.length) return "";
+      return items.map((x, i) => `<div>${i + 1}. ${esc(x)}</div>`).join("");
+    };
+
     const medsHtml = rxLines.length
       ? rxLines.map((l, i) => `
         <div class="med">
           <div class="med-name">${i + 1}. ${esc(l.medicine_name)}${l.quantity ? ` &nbsp;<span class="qty">(Qty: ${l.quantity})</span>` : ""}</div>
-          <div class="med-sub">${[l.frequency, l.duration].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
+          <div class="med-sub">${[l.frequency, fmtDuration(l.duration)].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
           ${l.instructions ? `<div class="med-sub"><em>${esc(l.instructions)}</em></div>` : ""}
         </div>`).join("")
       : `<div class="label">No medicines</div>`;
@@ -671,7 +694,8 @@ function PrescriptionsPage() {
         @page { size: A4; margin: 0; }
         html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
         .page { width:210mm; min-height:297mm; padding:12mm 10mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
-        h2 { margin:2px 0; font-size:18px; }
+        h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
+        .desig { font-size:13px; margin-bottom:3px; }
         .center { text-align:center; }
         .row { display:flex; justify-content:space-between; gap:8px; }
         .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
@@ -697,11 +721,11 @@ function PrescriptionsPage() {
         <div class="split">
           <div class="left">
             <div class="sec-title">C/C</div>
-            <div>${rx.diagnosis ? nl(rx.diagnosis) : "&nbsp;"}</div>
+            <div>${numbered(rx.diagnosis) || "&nbsp;"}</div>
             <div class="sec-title">Vitals</div>
             <div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
             <div class="sec-title">Investigation</div>
-            <div>${investigation ? nl(investigation) : "&nbsp;"}</div>
+            <div>${numbered(investigation) || "&nbsp;"}</div>
           </div>
           <div class="right">
             <div class="rx-area">
@@ -710,7 +734,7 @@ function PrescriptionsPage() {
             </div>
             <div class="adv-area">
               <div class="sec-title" style="margin-top:0;">Advice</div>
-              <div>${rx.advice ? nl(rx.advice) : "&nbsp;"}</div>
+              <div>${numbered(rx.advice) || "&nbsp;"}</div>
               ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
@@ -728,7 +752,8 @@ function PrescriptionsPage() {
       @page { size: ${size} auto; margin: 0; }
       html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:${fs}; }
       .page { width:${widthCss}; padding:4mm; box-sizing:border-box; background:#fff; }
-      h2 { margin:2px 0; font-size:14px; }
+      h2 { margin:2px 0; font-size:17px; }
+      .desig { font-size:0.9em; }
       .center { text-align:center; }
       .row { display:flex; justify-content:space-between; gap:8px; }
       .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
@@ -745,11 +770,11 @@ function PrescriptionsPage() {
       ${headerHtml}
       ${metaHtml}
       <div class="label">Vitals:</div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}
-      ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
-      ${investigation ? `<div><span class="label">Investigation:</span> ${nl(investigation)}</div>` : ""}
+      ${rx.diagnosis ? `<div><span class="label">C/C:</span></div>${numbered(rx.diagnosis)}` : ""}
+      ${investigation ? `<div><span class="label">Investigation:</span></div>${numbered(investigation)}` : ""}
       <div class="rx-mark">℞</div>
       ${medsHtml}
-      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span><br>${nl(rx.advice)}</div>` : ""}
+      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span>${numbered(rx.advice)}</div>` : ""}
       ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
