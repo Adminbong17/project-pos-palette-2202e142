@@ -218,9 +218,6 @@ function withAutoQty(line: Line, patch: Partial<Line>): Partial<Line> {
   const qty = autoQuantity(merged.frequency, merged.duration);
   return qty > 0 ? { ...patch, quantity: qty } : patch;
 }
-  const q = dosesPerDay(freq) * durationDays(dur);
-  return q > 0 ? Math.ceil(q) : 0;
-}
 
 /** Compose to a single readable string stored in prescriptions.vitals */
 function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
