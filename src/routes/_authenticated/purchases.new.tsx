@@ -309,7 +309,9 @@ function NewPurchasePage() {
       for (const l of lines) {
         const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
         const mult = l.unit === "box" ? ps : 1;
-        const perPcsPrice = Number(l.purchase_price || 0) / (mult || 1);
+        // Per-piece cost WITH VAT included, so the product price stays accurate.
+        const basePerPcs = Number(l.purchase_price || 0) / (mult || 1);
+        const perPcsPrice = basePerPcs > 0 ? basePerPcs * (1 + vatPct / 100) + vatPerPcs : 0;
         const mrpVal = Number(l.mrp || 0);
         if (!seenVariations.has(l.variation_id) && perPcsPrice > 0) {
           seenVariations.add(l.variation_id);
