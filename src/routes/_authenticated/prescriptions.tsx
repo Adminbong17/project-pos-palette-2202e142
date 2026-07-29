@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -184,6 +184,40 @@ function calcBmi(v: Vitals): string {
 }
 
 export type ExtraVital = { name: string; value: string };
+
+/** Doses per day from a frequency like "1+0+1", "1/2+0+1", "1+1+1 after meal". */
+function dosesPerDay(freq: string): number {
+  const m = (freq ?? "").match(/\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?/g);
+  if (!m) return 0;
+  const nums = m.map((t) => {
+    const [a, b] = t.split("/").map((x) => parseFloat(x));
+    return b ? a / b : a;
+  });
+  return nums.reduce((s, n) => s + (isFinite(n) ? n : 0), 0);
+}
+
+/** Number of days from a duration like "7 days", "2 weeks", "1 month". */
+function durationDays(dur: string): number {
+  const s = (dur ?? "").toLowerCase();
+  const n = parseFloat(s.match(/\d+(?:\.\d+)?/)?.[0] ?? "");
+  if (!n || !isFinite(n)) return 0;
+  if (/month|mas|মাস/.test(s)) return n * 30;
+  if (/week|সপ্তাহ/.test(s)) return n * 7;
+  return n;
+}
+
+/** Auto medicine quantity = doses/day × days (rounded up). */
+function autoQuantity(freq: string, dur: string): number {
+  const q = dosesPerDay(freq) * durationDays(dur);
+  return q > 0 ? Math.ceil(q) : 0;
+}
+
+/** Merge a frequency/duration change and recompute the quantity from it. */
+function withAutoQty(line: Line, patch: Partial<Line>): Partial<Line> {
+  const merged = { ...line, ...patch };
+  const qty = autoQuantity(merged.frequency, merged.duration);
+  return qty > 0 ? { ...patch, quantity: qty } : patch;
+}
 
 /** Compose to a single readable string stored in prescriptions.vitals */
 function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
@@ -443,12 +477,24 @@ function PrescriptionsPage() {
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
-    setExtraVitals([]);
+    // A doctor's saved vitals are their defaults — show them on every new Rx.
+    setExtraVitals(myVitals.items.map((v) => ({ name: v.name, value: "" })));
     setCc([]);
     setNextDays("");
   };
 
   const openNew = () => { resetForm(); setOpen(true); };
+
+  // Saved vitals load asynchronously — keep them present as defaults on a new Rx.
+  useEffect(() => {
+    if (!open || editing || myVitals.items.length === 0) return;
+    setExtraVitals((prev) => {
+      const missing = myVitals.items
+        .filter((v) => !prev.some((p) => p.name.toLowerCase() === v.name.toLowerCase()))
+        .map((v) => ({ name: v.name, value: "" }));
+      return missing.length ? [...prev, ...missing] : prev;
+    });
+  }, [open, editing, myVitals.items]);
 
   const openEdit = async (rx: Rx) => {
     setEditing(rx);
@@ -1199,7 +1245,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
       </div>
       <div className="md:col-span-4 flex items-start gap-1">
         <Input className="h-9 flex-1" placeholder="Freq (1+0+1)" value={line.frequency}
-          onChange={(e) => onChange({ frequency: e.target.value })} />
+          onChange={(e) => onChange(withAutoQty(line, { frequency: e.target.value }))} />
         <RxPresetCombo
           triggerLabel="…"
           placeholder="Search or type frequency…"
@@ -1207,13 +1253,14 @@ function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove 
           options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
           onAdd={(n) => myFreqs.add(n)}
           onRemove={(id) => myFreqs.remove(id)}
-          onPick={(n) => onChange({ frequency: n })}
+          onPick={(n) => onChange(withAutoQty(line, { frequency: n }))}
         />
       </div>
       <Input className="md:col-span-2 h-9" placeholder="Duration (7 days)" value={line.duration}
-        onChange={(e) => onChange({ duration: e.target.value })} />
+        onChange={(e) => onChange(withAutoQty(line, { duration: e.target.value }))} />
       <Input className="md:col-span-1 h-9" type="number" min={0} step="0.01" placeholder="Qty" value={line.quantity}
         onChange={(e) => onChange({ quantity: Number(e.target.value) })} />
+
       <Button className="md:col-span-1 h-9" size="icon" variant="ghost" onClick={onRemove}>
         <X className="h-4 w-4 text-destructive" />
       </Button>
