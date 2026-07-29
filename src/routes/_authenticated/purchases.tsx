@@ -126,6 +126,16 @@ function PurchasesList() {
                       <div className="inline-flex gap-1">
                         <Button asChild size="sm" variant="ghost"><Link to="/purchases/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link></Button>
                         <Button asChild size="sm" variant="ghost"><Link to="/purchases/$id/edit" params={{ id: r.id }}><Pencil className="h-4 w-4" /></Link></Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={del.isPending}
+                          onClick={() => {
+                            if (confirm("Delete this purchase? Stock will be reduced accordingly.")) del.mutate(r.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
