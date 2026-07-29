@@ -8,6 +8,8 @@ import { Plus, Trash2, Pencil, Search, FileText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
+import { useRxPresets } from "@/hooks/use-rx-presets";
+import { RxPresetCombo } from "@/components/rx-preset-combo";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,8 +183,10 @@ function calcBmi(v: Vitals): string {
   return (kg / (m * m)).toFixed(1);
 }
 
+export type ExtraVital = { name: string; value: string };
+
 /** Compose to a single readable string stored in prescriptions.vitals */
-function composeVitals(v: Vitals): string {
+function composeVitals(v: Vitals, extras: ExtraVital[] = []): string {
   const parts: string[] = [];
   for (const f of VITAL_FIELDS) {
     const val = (v[f.key] ?? "").trim();
@@ -191,6 +195,11 @@ function composeVitals(v: Vitals): string {
       const bmi = calcBmi(v);
       if (bmi) parts.push(`BMI: ${bmi} kg/m²`);
     }
+  }
+  for (const e of extras) {
+    const n = (e.name ?? "").trim();
+    const val = (e.value ?? "").trim();
+    if (n && val) parts.push(`${n}: ${val}`);
   }
   return parts.join(", ");
 }
@@ -210,6 +219,21 @@ function parseVitals(s: string | null | undefined): Vitals {
   return out;
 }
 
+/** Custom (doctor-added) vitals found in a composed vitals string. */
+function parseExtraVitals(s: string | null | undefined): ExtraVital[] {
+  if (!s) return [];
+  const known = new Set([...VITAL_FIELDS.map((f) => f.label.toLowerCase()), "bmi"]);
+  const out: ExtraVital[] = [];
+  for (const chunk of s.split(",")) {
+    const [rawLabel, ...rest] = chunk.split(":");
+    if (!rest.length) continue;
+    const label = rawLabel.trim();
+    if (!label || known.has(label.toLowerCase())) continue;
+    out.push({ name: label, value: rest.join(":").trim() });
+  }
+  return out;
+}
+
 /** Ordered vitals lines for printing: "1. Height: 65 in" / "N/A" when empty. */
 function vitalsLines(s: string | null | undefined): string[] {
   const v = parseVitals(s);
@@ -222,8 +246,12 @@ function vitalsLines(s: string | null | undefined): string[] {
       rows.push({ label: "BMI", value: bmi ? `${bmi} kg/m²` : "N/A" });
     }
   }
+  for (const e of parseExtraVitals(s)) {
+    rows.push({ label: e.name, value: e.value || "N/A" });
+  }
   return rows.map((r, i) => `${i + 1}. ${r.label}: ${r.value}`);
 }
+
 
 
 
@@ -241,22 +269,33 @@ function PrescriptionsPage() {
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", contact_id: "",
     doctor_name: "", doctor_qualification: "",
-    diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
+    diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [vitals, setVitals] = useState<Vitals>(emptyVitals());
+  const [extraVitals, setExtraVitals] = useState<ExtraVital[]>([]);
   const [cc, setCc] = useState<Cc[]>([]);
   const [ccOpen, setCcOpen] = useState(false);
   const [ccSearch, setCcSearch] = useState("");
   const [nextDays, setNextDays] = useState("");
+
+  // Doctor's own saved lists (private to the logged-in doctor).
+  const myCc = useRxPresets("cc", businessId);
+  const myVitals = useRxPresets("vital", businessId);
+  const myInvestigations = useRxPresets("investigation", businessId);
+  const myFreqs = useRxPresets("frequency", businessId);
+  const myAdvice = useRxPresets("advice", businessId);
+  const myMedicines = useRxPresets("medicine", businessId);
+
   // Auto-save the prescription being written (power cut safe).
   const { clearDraft: clearRxDraft } = useAutosaveDraft(
     businessId ? `prescription:${businessId}` : null,
-    { form, lines, vitals, cc, nextDays },
+    { form, lines, vitals, extraVitals, cc, nextDays },
     (d) => {
       if (d.form) setForm((f) => ({ ...f, ...d.form }));
       if (d.lines?.length) setLines(d.lines);
       if (d.vitals) setVitals(d.vitals);
+      if (d.extraVitals?.length) setExtraVitals(d.extraVitals);
       if (d.cc?.length) setCc(d.cc);
       if (d.nextDays) setNextDays(d.nextDays);
     },
@@ -269,6 +308,7 @@ function PrescriptionsPage() {
       restoreMessage: "Unsaved prescription restored",
     },
   );
+
 
   const bmi = calcBmi(vitals);
   const nextVisitDate = addDays(dhakaInputToIso(form.rx_date), Number(nextDays) || 0);
@@ -337,14 +377,29 @@ function PrescriptionsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
   });
 
-  const addCc = (name: string) => {
+  const addCc = (name: string, saveToMyList = false) => {
     const n = name.trim();
     if (!n) return;
     if (!cc.some((c) => c.name.toLowerCase() === n.toLowerCase())) setCc([...cc, { name: n, days: "" }]);
-    if (!(ccOptions.data ?? []).some((o) => o.name.toLowerCase() === n.toLowerCase())) addCcOption.mutate(n);
+    if (saveToMyList) myCc.add(n);
     setCcSearch("");
     setCcOpen(false);
   };
+
+  const ccPickList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; removable?: boolean }[] = [];
+    for (const o of myCc.items) {
+      seen.add(o.name.toLowerCase());
+      out.push({ id: o.id, name: o.name, removable: true });
+    }
+    for (const o of ccOptions.data ?? []) {
+      if (seen.has(o.name.toLowerCase())) continue;
+      out.push({ id: o.id, name: o.name });
+    }
+    return out;
+  }, [myCc.items, ccOptions.data]);
+
 
 
   const products = useQuery({
@@ -384,10 +439,11 @@ function PrescriptionsPage() {
       patient_phone: "", contact_id: "",
       doctor_name: me.data?.doctor_name ?? "",
       doctor_qualification: me.data?.doctor_qualification ?? "",
-      diagnosis: "", vitals: "", advice: "", next_visit: "", notes: "",
+      diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
     });
     setLines([emptyLine()]);
     setVitals(emptyVitals());
+    setExtraVitals([]);
     setCc([]);
     setNextDays("");
   };
@@ -409,13 +465,20 @@ function PrescriptionsPage() {
       doctor_qualification: rx.doctor_qualification ?? "",
       diagnosis: rx.diagnosis ?? "",
       vitals: rx.vitals ?? "",
+      investigation: "",
       advice: rx.advice ?? "",
       next_visit: rx.next_visit ?? "",
       notes: rx.notes ?? "",
     });
     setVitals(parseVitals(rx.vitals));
+    setExtraVitals(parseExtraVitals(rx.vitals));
     setCc(parseCc(rx.diagnosis));
     setNextDays(diffDays(rx.rx_date, rx.next_visit ?? ""));
+
+    const { data: invRow } = await supabase.from("prescriptions")
+      .select("investigation").eq("id", rx.id).maybeSingle();
+    if (invRow) setForm((f) => ({ ...f, investigation: (invRow as any).investigation ?? "" }));
+
 
     const { data } = await supabase.from("prescription_lines")
       .select("id, product_id, variation_id, medicine_name, frequency, duration, instructions, quantity")
@@ -445,7 +508,8 @@ function PrescriptionsPage() {
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
         diagnosis: composeCc(cc) || null,
-        vitals: composeVitals(vitals) || null,
+        vitals: composeVitals(vitals, extraVitals) || null,
+        investigation: form.investigation.trim() || null,
         advice: form.advice.trim() || null,
         next_visit: nextVisitDate || null,
         notes: form.notes.trim() || null,
@@ -863,7 +927,20 @@ function PrescriptionsPage() {
           </div>
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
-            <Label className="text-base">Patient Vitals</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-base">Patient Vitals</Label>
+              <RxPresetCombo
+                triggerLabel="Add my vital"
+                placeholder="Search or type a vital name…"
+                options={myVitals.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                onAdd={(n) => myVitals.add(n)}
+                onRemove={(id) => myVitals.remove(id)}
+                onPick={(n) => {
+                  if (!extraVitals.some((e) => e.name.toLowerCase() === n.toLowerCase()))
+                    setExtraVitals([...extraVitals, { name: n, value: "" }]);
+                }}
+              />
+            </div>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {VITAL_FIELDS.map((f) => (
                 <div key={f.key}>
@@ -891,34 +968,42 @@ function PrescriptionsPage() {
                   </span>
                 </div>
               </div>
+              {extraVitals.map((e, i) => (
+                <div key={`extra-${i}`}>
+                  <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                    <span className="truncate">{e.name}</span>
+                    <button
+                      type="button"
+                      className="text-destructive"
+                      onClick={() => setExtraVitals(extraVitals.filter((_, ix) => ix !== i))}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Label>
+                  <Input
+                    placeholder="Value"
+                    value={e.value}
+                    onChange={(ev) =>
+                      setExtraVitals(extraVitals.map((x, ix) => (ix === i ? { ...x, value: ev.target.value } : x)))
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </div>
+
 
           <div className="mt-3 rounded-xl border border-border/60 p-3">
             <div className="flex items-center justify-between">
               <Label className="text-base">C/C (Chief Complaints)</Label>
-              <Popover open={ccOpen} onOpenChange={setCcOpen}>
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" /> Add C/C</Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 w-[320px]" align="end">
-                  <Command>
-                    <CommandInput placeholder="Search or type C/C…" value={ccSearch} onValueChange={setCcSearch} />
-                    <CommandList>
-                      <CommandEmpty>
-                        <Button variant="ghost" size="sm" onClick={() => addCc(ccSearch)} disabled={!ccSearch.trim()}>
-                          Add “{ccSearch}”
-                        </Button>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {(ccOptions.data ?? []).map((o) => (
-                          <CommandItem key={o.id} value={o.name} onSelect={() => addCc(o.name)}>{o.name}</CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <RxPresetCombo
+                triggerLabel="Add C/C"
+                placeholder="Search or type C/C…"
+                options={ccPickList}
+                onAdd={(n) => myCc.add(n)}
+                onRemove={(id) => myCc.remove(id)}
+                onPick={(n) => addCc(n)}
+              />
             </div>
             {cc.length === 0 ? (
               <p className="mt-2 text-xs text-muted-foreground">No complaint added yet. Search an existing C/C or type a new one.</p>
@@ -956,6 +1041,32 @@ function PrescriptionsPage() {
           </div>
 
 
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-base">Investigation</Label>
+              <RxPresetCombo
+                triggerLabel="My investigations"
+                placeholder="Search or type investigation…"
+                options={myInvestigations.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                onAdd={(n) => myInvestigations.add(n)}
+                onRemove={(id) => myInvestigations.remove(id)}
+                onPick={(n) =>
+                  setForm((f) => ({
+                    ...f,
+                    investigation: f.investigation.trim() ? `${f.investigation.trim()}\n${n}` : n,
+                  }))
+                }
+              />
+            </div>
+            <Textarea
+              className="mt-2"
+              rows={3}
+              placeholder="CBC, X-ray chest P/A view…"
+              value={form.investigation}
+              onChange={(e) => setForm({ ...form, investigation: e.target.value })}
+            />
+          </div>
+
           <div className="mt-3">
             <div className="flex items-center justify-between">
               <Label className="text-base">Medicines</Label>
@@ -969,6 +1080,8 @@ function PrescriptionsPage() {
                   key={i}
                   line={l}
                   products={products.data ?? []}
+                  myMedicines={myMedicines}
+                  myFreqs={myFreqs}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
                 />
@@ -976,9 +1089,22 @@ function PrescriptionsPage() {
             </div>
           </div>
 
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <div>
-              <Label>Advice</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Advice</Label>
+                <RxPresetCombo
+                  triggerLabel="My advice"
+                  placeholder="Search or type advice…"
+                  options={myAdvice.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                  onAdd={(n) => myAdvice.add(n)}
+                  onRemove={(id) => myAdvice.remove(id)}
+                  onPick={(n) =>
+                    setForm((f) => ({ ...f, advice: f.advice.trim() ? `${f.advice.trim()}\n${n}` : n }))
+                  }
+                />
+              </div>
               <Textarea rows={3} value={form.advice} onChange={(e) => setForm({ ...form, advice: e.target.value })} placeholder="Diet / lifestyle advice…" />
             </div>
             <div>
@@ -999,17 +1125,30 @@ function PrescriptionsPage() {
   );
 }
 
-function MedicineRow({ line, products, onChange, onRemove }: {
+type PresetApi = {
+  items: { id: string; name: string }[];
+  add: (name: string) => void;
+  remove: (id: string) => void;
+};
+
+function MedicineRow({ line, products, myMedicines, myFreqs, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
+  myMedicines: PresetApi; myFreqs: PresetApi;
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
   const [pSearch, setPSearch] = useState("");
   const selected = useMemo(() => products.find((p) => p.id === line.product_id), [products, line.product_id]);
+  const allOptions = useMemo<ProductOpt[]>(() => {
+    const own = myMedicines.items.map((m) => ({ id: `my:${m.id}`, name: m.name, variation_id: null }));
+    return [...own, ...products];
+  }, [myMedicines.items, products]);
   const filtered = useMemo(() => {
     const q = pSearch.trim().toLowerCase();
-    return q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
-  }, [products, pSearch]);
+    return q ? allOptions.filter((p) => p.name.toLowerCase().includes(q)) : allOptions;
+  }, [allOptions, pSearch]);
+  const query = pSearch.trim();
+  const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
       <div className="md:col-span-4">
@@ -1022,16 +1161,33 @@ function MedicineRow({ line, products, onChange, onRemove }: {
           </PopoverTrigger>
           <PopoverContent className="p-0 w-[360px]" align="start">
             <Command shouldFilter={false}>
-              <CommandInput placeholder={`Search ${products.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
+              <CommandInput placeholder={`Search ${allOptions.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
               <CommandList>
-                <CommandEmpty>No products.</CommandEmpty>
+                {query && !exists && (
+                  <CommandGroup>
+                    <CommandItem value={`__add_${query}`} onSelect={() => {
+                      myMedicines.add(query);
+                      onChange({ product_id: null, variation_id: null, medicine_name: query });
+                      setPSearch("");
+                      setPOpen(false);
+                    }}>
+                      <Plus className="mr-2 h-4 w-4" /> Add “{query}” to my medicines
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
                 <CommandGroup>
                   {filtered.map((p) => (
                     <CommandItem key={p.id} value={p.id} onSelect={() => {
-                      onChange({ product_id: p.id, variation_id: p.variation_id, medicine_name: p.name });
+                      const own = p.id.startsWith("my:");
+                      onChange({
+                        product_id: own ? null : p.id,
+                        variation_id: own ? null : p.variation_id,
+                        medicine_name: p.name,
+                      });
                       setPSearch("");
                       setPOpen(false);
-                    }}>{p.name}</CommandItem>
+                    }}>{p.id.startsWith("my:") ? `★ ${p.name}` : p.name}</CommandItem>
                   ))}
                 </CommandGroup>
               </CommandList>
@@ -1041,8 +1197,19 @@ function MedicineRow({ line, products, onChange, onRemove }: {
         <Input className="mt-1 h-8" placeholder="Medicine name" value={line.medicine_name}
           onChange={(e) => onChange({ medicine_name: e.target.value })} />
       </div>
-      <Input className="md:col-span-4 h-9" placeholder="Freq (1+0+1)" value={line.frequency}
-        onChange={(e) => onChange({ frequency: e.target.value })} />
+      <div className="md:col-span-4 flex items-start gap-1">
+        <Input className="h-9 flex-1" placeholder="Freq (1+0+1)" value={line.frequency}
+          onChange={(e) => onChange({ frequency: e.target.value })} />
+        <RxPresetCombo
+          triggerLabel="…"
+          placeholder="Search or type frequency…"
+          width={260}
+          options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          onAdd={(n) => myFreqs.add(n)}
+          onRemove={(id) => myFreqs.remove(id)}
+          onPick={(n) => onChange({ frequency: n })}
+        />
+      </div>
       <Input className="md:col-span-2 h-9" placeholder="Duration (7 days)" value={line.duration}
         onChange={(e) => onChange({ duration: e.target.value })} />
       <Input className="md:col-span-1 h-9" type="number" min={0} step="0.01" placeholder="Qty" value={line.quantity}

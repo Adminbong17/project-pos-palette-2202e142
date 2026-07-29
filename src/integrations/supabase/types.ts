@@ -2304,6 +2304,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rx_presets: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       selling_price_groups: {
         Row: {
           business_id: string
