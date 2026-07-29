@@ -734,7 +734,7 @@ function PrescriptionsPage() {
             </div>
             <div class="adv-area">
               <div class="sec-title" style="margin-top:0;">Advice</div>
-              <div>${rx.advice ? nl(rx.advice) : "&nbsp;"}</div>
+              <div>${numbered(rx.advice) || "&nbsp;"}</div>
               ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
