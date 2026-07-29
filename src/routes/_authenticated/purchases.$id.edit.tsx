@@ -469,6 +469,13 @@ function EditPurchasePage() {
                   {l.unit === "box" && Number(l.purchase_price) > 0 && (
                     <div className="text-[11px] text-muted-foreground mt-1">{fmt(Number(l.purchase_price) / ps)} / pcs</div>
                   )}
+                  {(vatPct > 0 || vatPerPcs > 0) && Number(l.purchase_price) > 0 && (
+                    <div className="text-[11px] mt-1 font-medium text-primary">
+                      VAT সহ: {fmt(withVatPerPcs(Number(l.purchase_price) / (l.unit === "box" ? ps : 1)))} / pcs
+                      {l.unit === "box" ? ` · ${fmt(withVatPerPcs(Number(l.purchase_price) / ps) * ps)} / box` : ""}
+                    </div>
+                  )}
+
                 </label>
                 <label className="block">
                   <span className={labelCls}>Expire date</span>
