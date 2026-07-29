@@ -232,6 +232,9 @@ function NewPurchasePage() {
 
   const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
   const grandTotal = total + vatAmount;
+  // VAT-inclusive effective cost that will actually be saved to the product
+  const withVatPerPcs = (basePerPcs: number) => basePerPcs * (1 + vatPct / 100) + vatPerPcs;
+
 
 
   const save = useMutation({
