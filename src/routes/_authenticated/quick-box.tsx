@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -32,6 +33,14 @@ function QuickBoxPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [pending, setPending] = useState<Record<string, string>>({});
+
+  // Keep unsaved pcs/box edits through a power cut or reload.
+  useAutosaveDraft(
+    business?.id ? `quick-box:${business.id}` : null,
+    { pending },
+    (d) => { if (d.pending && Object.keys(d.pending).length) setPending(d.pending); },
+    { isEmpty: (d) => !d.pending || Object.keys(d.pending).length === 0, restoreMessage: "Unsaved box edits restored" },
+  );
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["quick-box-rows", business?.id],

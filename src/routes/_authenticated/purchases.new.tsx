@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { DateTextInput } from "@/components/date-text-input";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 
 export const Route = createFileRoute("/_authenticated/purchases/new")({
   component: NewPurchasePage,
@@ -46,6 +47,25 @@ function NewPurchasePage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
+
+  // Auto-save this purchase draft (power cut / accidental close safe).
+  const { clearDraft: clearPurchaseDraft } = useAutosaveDraft(
+    business?.id ? `purchase-new:${business.id}` : null,
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, lines },
+    (d) => {
+      if (d.locationId) setLocationId(d.locationId);
+      if (d.supplierName) setSupplierName(d.supplierName);
+      if (d.refNo) setRefNo(d.refNo);
+      if (d.date) setDate(d.date);
+      if (d.status) setStatus(d.status);
+      if (d.notes) setNotes(d.notes);
+      if (d.amountPaid) setAmountPaid(d.amountPaid);
+      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    { isEmpty: (d) => !d.lines?.length && !d.supplierName && !d.refNo && !d.notes, restoreMessage: "Unsaved purchase restored" },
+  );
+
   const [scanOpen, setScanOpen] = useState(false);
   const [phoneScanOpen, setPhoneScanOpen] = useState(false);
 
@@ -290,6 +310,7 @@ function NewPurchasePage() {
     },
     onSuccess: () => {
       toast.success("Purchase saved");
+      clearPurchaseDraft();
       qc.invalidateQueries();
       navigate({ to: "/purchases" });
     },
