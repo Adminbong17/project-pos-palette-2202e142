@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 const PREFIX = "draft:";
+const VERSION = 2;
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 3; // keep drafts for 3 days
 
 type Options<T> = {
@@ -39,11 +40,21 @@ export function useAutosaveDraft<T>(
   const readyRef = useRef(false);
   const restoredForKey = useRef<string | null>(null);
   // After a successful save we clear the draft. Any pending debounce / unmount
-  // flush would immediately write it back and the next mount would show
-  // "Unsaved work restored". Block writes for a short window after clearing.
+  // flush can otherwise immediately write the saved data back. Keep the exact
+  // saved snapshot blocked until the user changes the form into a new draft.
   const blockUntilRef = useRef(0);
+  const clearedSignatureRef = useRef<string | null>(null);
+
+  const getSignature = useCallback((value: T) => {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(Date.now());
+    }
+  }, []);
 
   const clearDraft = useCallback(() => {
+    clearedSignatureRef.current = getSignature(dataRef.current);
     blockUntilRef.current = Date.now() + 2000;
     if (!storageKey || typeof window === "undefined") return;
     try {
@@ -51,25 +62,32 @@ export function useAutosaveDraft<T>(
     } catch {
       /* ignore */
     }
-  }, [storageKey]);
+  }, [getSignature, storageKey]);
 
   const flush = useCallback(() => {
     if (!storageKey || typeof window === "undefined" || !readyRef.current) return;
     if (Date.now() < blockUntilRef.current) return;
     try {
       const current = dataRef.current;
+      const signature = getSignature(current);
       if (isEmptyRef.current?.(current)) {
+        clearedSignatureRef.current = null;
         window.localStorage.removeItem(storageKey);
         return;
       }
+      if (clearedSignatureRef.current === signature) {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+      clearedSignatureRef.current = null;
       window.localStorage.setItem(
         storageKey,
-        JSON.stringify({ at: Date.now(), data: current }),
+        JSON.stringify({ version: VERSION, at: Date.now(), signature, data: current }),
       );
     } catch {
       /* quota / private mode — ignore */
     }
-  }, [storageKey]);
+  }, [getSignature, storageKey]);
 
 
   // Restore once per key
@@ -85,8 +103,10 @@ export function useAutosaveDraft<T>(
     try {
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { at?: number; data?: T };
-        if (parsed?.data !== undefined && Date.now() - (parsed.at ?? 0) < MAX_AGE_MS) {
+        const parsed = JSON.parse(raw) as { version?: number; at?: number; data?: T };
+        if (parsed.version !== VERSION) {
+          window.localStorage.removeItem(storageKey);
+        } else if (parsed?.data !== undefined && Date.now() - (parsed.at ?? 0) < MAX_AGE_MS) {
           restoreRef.current(parsed.data);
           toast.info(restoreMessage);
         } else {
@@ -102,6 +122,14 @@ export function useAutosaveDraft<T>(
   // Debounced persist on every change
   useEffect(() => {
     if (!storageKey || !enabled || !readyRef.current) return;
+    if (isEmptyRef.current?.(data)) {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     const t = setTimeout(flush, 300);
     return () => clearTimeout(t);
   }, [storageKey, enabled, flush, data]);
