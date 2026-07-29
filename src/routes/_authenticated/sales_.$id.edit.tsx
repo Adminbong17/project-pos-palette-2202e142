@@ -74,7 +74,7 @@ function EditSalePage() {
       }),
     );
     setLoaded(true);
-  }, [existing, loaded]);
+  }, [existing, fetchingExisting, loaded]);
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["sale-edit-product-search", business?.id, search],
