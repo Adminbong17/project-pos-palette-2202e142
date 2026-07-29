@@ -213,6 +213,8 @@ function EditPurchasePage() {
   }, [vatValue, vatMode, total, vatPct]);
 
   const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
+  const withVatPerPcs = (basePerPcs: number) => basePerPcs * (1 + vatPct / 100) + vatPerPcs;
+
   const grandTotal = total + vatAmount;
 
 
