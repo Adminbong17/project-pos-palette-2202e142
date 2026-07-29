@@ -769,11 +769,11 @@ function PrescriptionsPage() {
       ${headerHtml}
       ${metaHtml}
       <div class="label">Vitals:</div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}
-      ${rx.diagnosis ? `<div><span class="label">C/C:</span> ${esc(rx.diagnosis)}</div>` : ""}
-      ${investigation ? `<div><span class="label">Investigation:</span> ${nl(investigation)}</div>` : ""}
+      ${rx.diagnosis ? `<div><span class="label">C/C:</span></div>${numbered(rx.diagnosis)}` : ""}
+      ${investigation ? `<div><span class="label">Investigation:</span></div>${numbered(investigation)}` : ""}
       <div class="rx-mark">℞</div>
       ${medsHtml}
-      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span><br>${nl(rx.advice)}</div>` : ""}
+      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span>${numbered(rx.advice)}</div>` : ""}
       ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
