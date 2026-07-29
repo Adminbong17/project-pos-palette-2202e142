@@ -9,6 +9,7 @@ import { Search, Plus, Minus, Trash2, ShoppingCart, X, ScanLine, Smartphone, Sca
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
 import { OcrScanner } from "@/components/OcrScanner";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS — QweekPOS" }] }),
@@ -56,6 +57,20 @@ function PosScreen() {
   const [ocrOpen, setOcrOpen] = useState(false);
   const [lastSale, setLastSale] = useState<SaleSnapshot | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
+  // Auto-save the in-progress cart so a power cut does not lose it.
+  const { clearDraft: clearPosDraft } = useAutosaveDraft(
+    business?.id ? `pos:${business.id}` : null,
+    { cart, discount, paymentMethod, amountPaid, contactId },
+    (d) => {
+      if (d.cart?.length) setCart(d.cart);
+      if (d.discount) setDiscount(d.discount);
+      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.amountPaid) setAmountPaid(d.amountPaid);
+      if (d.contactId) setContactId(d.contactId);
+    },
+    { isEmpty: (d) => !d.cart?.length, restoreMessage: "Unsaved cart restored" },
+  );
+
   const cartScrollRef = useRef<HTMLDivElement>(null);
   const lastLineRef = useRef<HTMLDivElement>(null);
   const prevCartLen = useRef(0);
@@ -287,6 +302,7 @@ function PosScreen() {
     onSuccess: ({ snapshot }) => {
       toast.success("Sale recorded");
       if (snapshot) setLastSale(snapshot);
+      clearPosDraft();
       setCart([]);
       setDiscount(0);
       setAmountPaid("");
