@@ -48,13 +48,14 @@ function NewPurchasePage() {
   const [vatMode, setVatMode] = useState<"amount" | "percent">("amount");
   const [vatValue, setVatValue] = useState("");
   const [vatPercent, setVatPercent] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
 
   // Auto-save this purchase draft (power cut / accidental close safe).
   const { clearDraft: clearPurchaseDraft } = useAutosaveDraft(
     business?.id ? `purchase-new:${business.id}` : null,
-    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, vatPercent, lines },
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, vatPercent, discountAmount, lines },
     (d) => {
       if (d.locationId) setLocationId(d.locationId);
       if (d.supplierName) setSupplierName(d.supplierName);
@@ -67,6 +68,7 @@ function NewPurchasePage() {
       if (d.vatMode) setVatMode(d.vatMode);
       if (d.vatValue) setVatValue(d.vatValue);
       if (d.vatPercent) setVatPercent(d.vatPercent);
+      if (d.discountAmount) setDiscountAmount(d.discountAmount);
       if (d.lines?.length) setLines(d.lines);
     },
     { isEmpty: (d) => !d.lines?.length && !d.supplierName && !d.refNo && !d.notes, restoreMessage: "Unsaved purchase restored" },
@@ -231,7 +233,8 @@ function NewPurchasePage() {
   }, [vatValue, vatMode, total, vatPct]);
 
   const vatPerPcs = vatPct > 0 ? 0 : totalPcs > 0 ? vatAmount / totalPcs : 0;
-  const grandTotal = total + vatAmount;
+  const discount = Math.max(0, Number(discountAmount || 0));
+  const grandTotal = Math.max(0, total + vatAmount - discount);
   // VAT-inclusive effective cost that will actually be saved to the product
   const withVatPerPcs = (basePerPcs: number) => basePerPcs * (1 + vatPct / 100) + vatPerPcs;
 
@@ -345,6 +348,7 @@ function NewPurchasePage() {
           additional_notes: notes || null,
           amount_paid: Number(amountPaid || 0),
           payment_method: paymentMethod,
+          discount_amount: discount,
           lines: lines.map((l) => {
             const ps = Math.max(1, Math.floor(Number(l.pack_size || 1)));
             const mult = l.unit === "box" ? ps : 1;
@@ -388,7 +392,7 @@ function NewPurchasePage() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>Supplier</span>
           <input
@@ -694,6 +698,12 @@ function NewPurchasePage() {
                   </div>
                 </>
               )}
+              {discount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span>- {fmt(discount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between font-semibold">
                 <span>Total</span>
                 <span>{fmt(grandTotal)}</span>
@@ -703,7 +713,7 @@ function NewPurchasePage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-border/60 bg-card p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className={labelCls}>VAT ({vatMode === "percent" ? "%" : "amount"})</span>
           <div className="flex gap-2">
@@ -720,6 +730,11 @@ function NewPurchasePage() {
                 ? `${fmt(vatAmount)} → ${fmt(vatPerPcs)} / pcs (${totalPcs} pcs)`
                 : "VAT মোট পিসের সাথে সমান ভাগে purchase price-এ যোগ হবে"}
           </span>
+        </label>
+        <label className="block">
+          <span className={labelCls}>Discount (৳)</span>
+          <input type="number" step="any" placeholder="0.00" className={inputCls} value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} />
+          <span className="mt-1 block text-[11px] text-muted-foreground">সাব-টোটাল থেকে বাদ যাবে — purchase price-এ কোনো প্রভাব পড়বে না</span>
         </label>
         <label className="block">
           <span className={labelCls}>Amount paid</span>
