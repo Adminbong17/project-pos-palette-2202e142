@@ -136,7 +136,7 @@ function NewPurchasePage() {
         line_total: "",
         expire_date: "",
         previous_purchase_price: lastPrice,
-        unit: ps > 1 ? "box" : "pcs",
+        unit: "box",
         pack_size: String(ps),
         original_pack_size: ps,
         mrp: mrpVal ? String(mrpVal) : "",
