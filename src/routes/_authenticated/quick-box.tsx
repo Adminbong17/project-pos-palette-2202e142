@@ -151,16 +151,18 @@ function QuickBoxPage() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          autoFocus
-          className={`${inputCls} pl-9`}
-          placeholder="Search product by name, SKU or variation…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      <FloatingSearch spacer={52}>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            className={`${inputCls} pl-9`}
+            placeholder="Search product by name, SKU or variation…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </FloatingSearch>
 
       {/* Mobile: 2-row card layout */}
       <div className="sm:hidden space-y-2">
