@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
