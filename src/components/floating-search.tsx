@@ -3,20 +3,22 @@ import { createPortal } from "react-dom";
 
 type FloatingSearchProps = {
   children: ReactNode;
-  /** Height of the in-flow placeholder that reserves space for the floating bar */
+  /** Height of the in-flow placeholder that reserves space when floating */
   spacer?: number;
   className?: string;
 };
 
+const HEADER_OFFSET = 56; // top-14
+
 /**
- * Keeps a search bar permanently visible in a floating layer, aligned to the
- * width/position of where it would normally sit in the layout.
- * Works on both desktop and mobile.
+ * Renders the search bar inline in the page. Once the user scrolls past it,
+ * it detaches into a floating layer pinned under the header (desktop + mobile).
  */
 export function FloatingSearch({ children, spacer = 60, className = "" }: FloatingSearchProps) {
   const [mounted, setMounted] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  const [floating, setFloating] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -27,6 +29,7 @@ export function FloatingSearch({ children, spacer = 60, className = "" }: Floati
     const measure = () => {
       const rect = el.getBoundingClientRect();
       setBox({ left: rect.left, width: rect.width });
+      setFloating(rect.top < HEADER_OFFSET);
     };
 
     measure();
@@ -41,10 +44,19 @@ export function FloatingSearch({ children, spacer = 60, className = "" }: Floati
     };
   }, [mounted]);
 
+  const isFloating = mounted && floating;
+
   return (
     <>
-      <div ref={anchorRef} className="w-full" style={{ height: spacer }} aria-hidden="true" />
-      {mounted
+      <div
+        ref={anchorRef}
+        className="w-full"
+        style={isFloating ? { height: spacer } : undefined}
+        aria-hidden={isFloating ? "true" : undefined}
+      >
+        {isFloating ? null : children}
+      </div>
+      {isFloating
         ? createPortal(
             <div
               className={`fixed top-14 z-50 rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg ${className}`}
