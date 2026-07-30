@@ -102,7 +102,7 @@ function EditPurchasePage() {
           expire_date: l.expire_date ?? "",
           previous_purchase_price: null,
           unit: "pcs" as const,
-          pack_size: String(ps),
+          pack_size: ps > 1 ? String(ps) : "",
           original_pack_size: ps,
         };
       }),
@@ -149,7 +149,7 @@ function EditPurchasePage() {
         expire_date: "",
         previous_purchase_price: prev > 0 ? prev : null,
         unit: ps > 1 ? "box" : "pcs",
-        pack_size: String(ps),
+        pack_size: ps > 1 ? String(ps) : "",
         original_pack_size: ps,
       },
     ]);
@@ -449,7 +449,7 @@ function EditPurchasePage() {
                   <button type="button" onClick={() => updateLine(idx, { unit: "box" })} className={`flex-1 h-8 rounded border ${l.unit === "box" ? "bg-primary text-primary-foreground border-primary" : "border-border"}`}>Box</button>
                   <label className="flex items-center gap-1">
                     <span className="text-muted-foreground">Pcs/Box</span>
-                    <input type="number" min="1" step="1" className="w-16 h-8 rounded border border-border bg-input px-2 text-xs" value={l.pack_size} onChange={(e) => updateLine(idx, { pack_size: e.target.value })} />
+                    <input type="number" min="1" step="1" placeholder="Pcs / box" className="w-16 h-8 rounded border border-border bg-input px-2 text-xs" value={l.pack_size} onChange={(e) => updateLine(idx, { pack_size: e.target.value })} />
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
