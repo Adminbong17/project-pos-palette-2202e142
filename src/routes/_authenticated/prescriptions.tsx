@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
@@ -876,10 +877,12 @@ function PrescriptionsPage() {
           <p className="text-sm text-muted-foreground">Create, manage, and print patient prescriptions.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search patient / Rx no / phone…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-72" />
-          </div>
+          <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search patient / Rx no / phone…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+            </div>
+          </FloatingSearch>
           <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
         </div>
       </div>

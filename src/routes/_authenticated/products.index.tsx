@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,16 +300,18 @@ function ProductsList() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="font-display text-lg font-semibold">All Products</h2>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search name or SKU…"
-              className="h-8 w-64 rounded-lg border border-border bg-input pl-8 pr-3 text-xs"
-            />
-          </div>
+          <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search name or SKU…"
+                className="h-9 w-full rounded-lg border border-border bg-input pl-8 pr-3 text-sm"
+              />
+            </div>
+          </FloatingSearch>
           <div className="flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 text-xs">
             <QrCode className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-muted-foreground">QR</span>

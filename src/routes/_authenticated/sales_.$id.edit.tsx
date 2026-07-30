@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -211,21 +212,23 @@ function EditSalePage() {
 
       <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-3">
         <h3 className="text-sm font-semibold">Products</h3>
-        <div className="relative">
-          <input className={inputCls} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product by name, SKU or barcode…" />
-          {search.trim().length >= 2 && searchResults.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
-              {searchResults.flatMap((p: any) =>
-                (p.variations ?? []).map((v: any) => (
-                  <button type="button" key={`${p.id}-${v.id}`} onClick={() => addLine(p, v)} className="block w-full text-left px-3 py-2 text-sm hover:bg-muted/50">
-                    <div className="font-medium">{p.name}{v.name && v.name !== "DUMMY" ? ` — ${v.name}` : ""}</div>
-                    <div className="text-xs text-muted-foreground">SKU: {p.sku}</div>
-                  </button>
-                )),
-              )}
-            </div>
-          )}
-        </div>
+        <FloatingSearch spacer={48}>
+          <div className="relative">
+            <input className={inputCls} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product by name, SKU or barcode…" />
+            {search.trim().length >= 2 && searchResults.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
+                {searchResults.flatMap((p: any) =>
+                  (p.variations ?? []).map((v: any) => (
+                    <button type="button" key={`${p.id}-${v.id}`} onClick={() => addLine(p, v)} className="block w-full text-left px-3 py-2 text-sm hover:bg-muted/50">
+                      <div className="font-medium">{p.name}{v.name && v.name !== "DUMMY" ? ` — ${v.name}` : ""}</div>
+                      <div className="text-xs text-muted-foreground">SKU: {p.sku}</div>
+                    </button>
+                  )),
+                )}
+              </div>
+            )}
+          </div>
+        </FloatingSearch>
 
         <div className="space-y-2">
           {lines.length === 0 ? (

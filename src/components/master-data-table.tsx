@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -126,12 +127,14 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="font-display text-lg font-semibold">{title}</h2>
         <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name…"
-            className="h-9 w-56 rounded-lg border border-border bg-input px-3 text-sm" />
+          <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name…"
+              className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm" />
+          </FloatingSearch>
           {selected.size > 0 && (
             <>
               <span className="text-xs text-muted-foreground">{selected.size} selected</span>

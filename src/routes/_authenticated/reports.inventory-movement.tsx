@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -239,15 +240,17 @@ function InventoryMovementPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search product, SKU or reference…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <FloatingSearch spacer={44}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search product, SKU or reference…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </FloatingSearch>
         <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
           {(["all", "in", "out"] as const).map((k) => (
             <button

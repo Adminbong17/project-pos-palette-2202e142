@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -322,15 +323,17 @@ function ContactsPage() {
             {t === "all" ? "All" : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name, mobile, email…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-border bg-input text-sm"
-          />
-        </div>
+        <FloatingSearch spacer={44}>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by name, mobile, email…"
+              className="w-full h-9 pl-8 pr-3 rounded-lg border border-border bg-input text-sm"
+            />
+          </div>
+        </FloatingSearch>
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">

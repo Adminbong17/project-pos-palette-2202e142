@@ -1,3 +1,4 @@
+import { FloatingSearch } from "@/components/floating-search";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -480,13 +481,15 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-semibold uppercase text-muted-foreground">Lines</h4>
-          <input
-            type="search"
-            placeholder="Search product then click Add…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 max-w-xs h-8 rounded-lg border border-border bg-input px-3 text-xs"
-          />
+          <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
+            <input
+              type="search"
+              placeholder="Search product then click Add…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-9 rounded-lg border border-border bg-input px-3 text-sm"
+            />
+          </FloatingSearch>
           <button type="button" onClick={addLine} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1 text-xs">
             <Plus className="h-3 w-3" /> Add line
           </button>
