@@ -368,11 +368,13 @@ function ExpensesList({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search ref, notes, category…" className="pl-8 w-72" />
-        </div>
+        <FloatingSearch spacer={44}>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search ref, notes, category…" className="pl-8 w-full" />
+          </div>
+        </FloatingSearch>
         <div className="ml-auto flex gap-2">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
