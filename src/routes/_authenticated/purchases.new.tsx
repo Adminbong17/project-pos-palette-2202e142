@@ -466,7 +466,8 @@ function NewPurchasePage() {
             </Button>
           </div>
         </div>
-        <div className="sticky top-0 z-20 -mx-5 -mt-3 border-b border-border/60 bg-card/95 px-5 py-3 backdrop-blur relative">
+        <div className="sticky top-14 z-30 -mx-5 -mt-3 border-b border-border/60 bg-card px-5 py-3 shadow-sm">
+          <div className="relative">
           <input
             className={inputCls}
             value={search}
@@ -492,6 +493,7 @@ function NewPurchasePage() {
               )}
             </div>
           )}
+          </div>
         </div>
         <BarcodeScanner open={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => handleScanned(c)} />
         <PhoneScanDialog open={phoneScanOpen} onClose={() => setPhoneScanOpen(false)} onDetected={(c) => handleScanned(c)} />
