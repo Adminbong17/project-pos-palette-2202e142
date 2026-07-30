@@ -415,7 +415,7 @@ function EditPurchasePage() {
 
       <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-3">
         <h3 className="text-sm font-semibold">Products</h3>
-        <div className="relative">
+        <div className="sticky top-0 z-20 -mx-5 -mt-3 border-b border-border/60 bg-card/95 px-5 py-3 backdrop-blur relative">
           <input className={inputCls} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product by name or SKU…" />
           {search.trim().length >= 2 && searchResults.length > 0 && (
             <div className="absolute z-10 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">

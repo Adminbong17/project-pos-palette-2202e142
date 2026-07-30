@@ -466,7 +466,7 @@ function NewPurchasePage() {
             </Button>
           </div>
         </div>
-        <div className="relative">
+        <div className="sticky top-0 z-20 -mx-5 -mt-3 border-b border-border/60 bg-card/95 px-5 py-3 backdrop-blur relative">
           <input
             className={inputCls}
             value={search}
