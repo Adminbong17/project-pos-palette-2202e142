@@ -43,12 +43,16 @@ export function FloatingSearch({ children, spacer = 60, className = "" }: Floati
 
   return (
     <>
-      <div ref={anchorRef} style={{ height: spacer }} aria-hidden="true" />
+      <div ref={anchorRef} className="w-full" style={{ height: spacer }} aria-hidden="true" />
       {mounted
         ? createPortal(
             <div
               className={`fixed top-14 z-50 rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg ${className}`}
-              style={box ? { left: box.left, width: box.width } : { left: 12, right: 12 }}
+              style={
+                box && box.width >= 200
+                  ? { left: box.left, width: box.width }
+                  : { left: 12, right: 12 }
+              }
             >
               {children}
             </div>,
