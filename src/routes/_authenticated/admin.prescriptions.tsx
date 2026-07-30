@@ -251,15 +251,17 @@ function AdminPrescriptionsPage() {
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Search patient, Rx no, phone, doctor, diagnosis"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <FloatingSearch spacer={44}>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Search patient, Rx no, phone, doctor, diagnosis"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </FloatingSearch>
         <Select value={doctor} onValueChange={setDoctor}>
           <SelectTrigger className="sm:w-52"><SelectValue placeholder="All doctors" /></SelectTrigger>
           <SelectContent>
