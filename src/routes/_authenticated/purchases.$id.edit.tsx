@@ -148,7 +148,7 @@ function EditPurchasePage() {
         line_total: "",
         expire_date: "",
         previous_purchase_price: prev > 0 ? prev : null,
-        unit: ps > 1 ? "box" : "pcs",
+        unit: "box",
         pack_size: String(ps),
         original_pack_size: ps,
       },
