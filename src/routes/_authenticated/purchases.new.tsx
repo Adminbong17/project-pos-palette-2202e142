@@ -10,6 +10,7 @@ import { DateTextInput } from "@/components/date-text-input";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+import { FloatingPurchaseSearch } from "@/components/floating-purchase-search";
 
 export const Route = createFileRoute("/_authenticated/purchases/new")({
   component: NewPurchasePage,
@@ -466,9 +467,8 @@ function NewPurchasePage() {
             </Button>
           </div>
         </div>
-        <div className="h-[60px] md:h-auto">
-          <div className="fixed left-3 right-3 top-14 z-40 rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg md:sticky md:inset-auto md:top-14 md:-mx-5 md:-mt-3 md:rounded-none md:border-x-0 md:border-t-0 md:px-5 md:shadow-sm">
-            <div className="relative">
+        <FloatingPurchaseSearch>
+          <div className="relative">
           <input
             className={inputCls}
             value={search}
@@ -494,9 +494,8 @@ function NewPurchasePage() {
               )}
             </div>
           )}
-            </div>
           </div>
-        </div>
+        </FloatingPurchaseSearch>
         <BarcodeScanner open={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => handleScanned(c)} />
         <PhoneScanDialog open={phoneScanOpen} onClose={() => setPhoneScanOpen(false)} onDetected={(c) => handleScanned(c)} />
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { DateTextInput } from "@/components/date-text-input";
+import { FloatingPurchaseSearch } from "@/components/floating-purchase-search";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id/edit")({
   component: EditPurchasePage,
@@ -415,9 +416,8 @@ function EditPurchasePage() {
 
       <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-3">
         <h3 className="text-sm font-semibold">Products</h3>
-        <div className="h-[60px] md:h-auto">
-          <div className="fixed left-3 right-3 top-14 z-40 rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg md:sticky md:inset-auto md:top-14 md:-mx-5 md:-mt-3 md:rounded-none md:border-x-0 md:border-t-0 md:px-5 md:shadow-sm">
-            <div className="relative">
+        <FloatingPurchaseSearch>
+          <div className="relative">
           <input className={inputCls} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product by name or SKU…" />
           {search.trim().length >= 2 && searchResults.length > 0 && (
             <div className="absolute z-10 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
@@ -431,9 +431,8 @@ function EditPurchasePage() {
               )}
             </div>
           )}
-            </div>
           </div>
-        </div>
+        </FloatingPurchaseSearch>
 
         <div className="space-y-2">
           {lines.length === 0 ? (
