@@ -372,7 +372,8 @@ function PosScreen() {
             </select>
           </div>
           <div className="relative space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-2">
-            <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
+          <FloatingSearch spacer={48}>
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 placeholder="Search by name or SKU…"
@@ -381,6 +382,7 @@ function PosScreen() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+          </FloatingSearch>
             <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
               <button
                 type="button"
