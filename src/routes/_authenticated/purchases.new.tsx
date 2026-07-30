@@ -493,6 +493,7 @@ function NewPurchasePage() {
               )}
             </div>
           )}
+          </div>
         </div>
         <BarcodeScanner open={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => handleScanned(c)} />
         <PhoneScanDialog open={phoneScanOpen} onClose={() => setPhoneScanOpen(false)} onDetected={(c) => handleScanned(c)} />
