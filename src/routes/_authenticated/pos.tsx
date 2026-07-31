@@ -391,7 +391,7 @@ function PosScreen() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-lg font-bold text-destructive truncate">{i.name}{i.variant_label ? ` — ${i.variant_label}` : ""}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{i.sub_sku} · Stock: {i.stock}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{i.sub_sku} · <span className="text-emerald-600">In stock</span></div>
                       </div>
                       <div className="text-base font-semibold text-primary">{i.price.toFixed(2)}</div>
                     </button>
@@ -489,7 +489,7 @@ function PosScreen() {
                 >
                   <div className="font-medium text-sm">{m.name}{m.variant_label ? ` — ${m.variant_label}` : ""}</div>
                   <div className="text-[11px] text-muted-foreground font-mono">
-                    SKU: {m.sub_sku} · Stock: {m.stock} · ৳{m.price.toFixed(2)}
+                    SKU: {m.sub_sku} · <span className="text-emerald-600">In stock</span> · ৳{m.price.toFixed(2)}
                   </div>
                 </button>
               ))}
