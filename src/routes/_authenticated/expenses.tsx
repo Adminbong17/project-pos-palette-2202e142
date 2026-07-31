@@ -262,7 +262,7 @@ function ExpensesList({
     (d) => { setForm({ ...emptyExpForm, ...d }); setOpen(true); },
     {
       enabled: open && !editId,
-      isEmpty: (d) => !d.amount && !d.ref_no?.trim() && !d.note?.trim(),
+      isEmpty: (d) => (!d.amount || d.amount === "0") && !d.ref_no?.trim() && !d.notes?.trim(),
       restoreMessage: "Unsaved expense restored",
     },
   );
