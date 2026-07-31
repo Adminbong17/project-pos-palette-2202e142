@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 
 type FloatingSearchProps = {
   children: ReactNode;
+  /** Optional result list rendered directly under the input (travels with the floating bar) */
+  results?: ReactNode;
   /** Height of the in-flow placeholder that reserves space when floating */
   spacer?: number;
   className?: string;
@@ -14,7 +16,8 @@ const HEADER_OFFSET = 56; // top-14
  * Renders the search bar inline in the page. Once the user scrolls past it,
  * it detaches into a floating layer pinned under the header (desktop + mobile).
  */
-export function FloatingSearch({ children, spacer = 60, className = "" }: FloatingSearchProps) {
+export function FloatingSearch({ children, results, spacer = 60, className = "" }: FloatingSearchProps) {
+
   const [mounted, setMounted] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ left: number; width: number } | null>(null);
