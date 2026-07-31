@@ -361,6 +361,7 @@ function EditPurchasePage() {
       return data;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Purchase updated");
       qc.invalidateQueries();
       navigate({ to: "/purchases/$id", params: { id } });
