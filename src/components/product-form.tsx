@@ -87,6 +87,43 @@ export function ProductForm({ productId }: Props) {
     { name: "DUMMY", sub_sku: "", barcode: "", default_purchase_price: 0, mrp: 0, pack_size: 1 },
   ]);
   const [image, setImage] = useState<string>("");
+
+  // Auto-save the in-progress product so a power cut does not lose it.
+  type ProductDraft = {
+    name: string; sku: string; type: "single" | "variable" | "combo"; categoryId: string;
+    brandId: string; unitId: string; taxId: string; alertQty: string; enableStock: boolean;
+    notForSelling: boolean; description: string; purchasePrice: string; mrp: string;
+    packSize: string; barcode: string; variations: Variation[]; image: string;
+  };
+  const { clearDraft } = useAutosaveDraft<ProductDraft>(
+    productId ? `product-edit:${productId}` : "product-new",
+    { name, sku, type, categoryId, brandId, unitId, taxId, alertQty, enableStock, notForSelling, description, purchasePrice, mrp, packSize, barcode, variations, image },
+    (d) => {
+      if (d.name) setName(d.name);
+      if (d.sku) setSku(d.sku);
+      if (d.type) setType(d.type);
+      if (d.categoryId) setCategoryId(d.categoryId);
+      if (d.brandId) setBrandId(d.brandId);
+      if (d.unitId) setUnitId(d.unitId);
+      if (d.taxId) setTaxId(d.taxId);
+      if (d.alertQty) setAlertQty(d.alertQty);
+      if (typeof d.enableStock === "boolean") setEnableStock(d.enableStock);
+      if (typeof d.notForSelling === "boolean") setNotForSelling(d.notForSelling);
+      if (d.description) setDescription(d.description);
+      if (d.purchasePrice) setPurchasePrice(d.purchasePrice);
+      if (d.mrp) setMrp(d.mrp);
+      if (d.packSize) setPackSize(d.packSize);
+      if (d.barcode) setBarcode(d.barcode);
+      if (d.variations?.length) setVariations(d.variations);
+      if (d.image) setImage(d.image);
+    },
+    {
+      enabled: !productId,
+      isEmpty: (d) => !d.name?.trim() && !d.sku?.trim(),
+      restoreMessage: "Unsaved product restored",
+    },
+  );
+
   const imageInputRef = useRef<HTMLInputElement>(null);
   const uploadFn = useServerFn(vaultUpload);
   const uploadImg = useMutation({
