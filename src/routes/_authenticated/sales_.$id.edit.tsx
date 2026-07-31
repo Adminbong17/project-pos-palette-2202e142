@@ -189,6 +189,7 @@ function EditSalePage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Sale updated");
       navigate({ to: "/sales" });
     },
