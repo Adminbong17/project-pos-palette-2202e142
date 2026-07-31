@@ -192,6 +192,11 @@ const VITAL_FIELDS: { key: VitalKey; label: string; unit: string; placeholder: s
 
 const emptyVitals = (): Vitals => ({ height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "", rbs: "" });
 
+/** True when at least one vital has been filled in. */
+const hasAnyVital = (v?: Partial<Vitals> | null) =>
+  !!v && Object.values(v).some((x) => (x ?? "").toString().trim() !== "");
+
+
 /** BMI from height (inches) and weight (kg). */
 function calcBmi(v: Vitals): string {
   const inches = parseFloat(v.height);
