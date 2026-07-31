@@ -72,6 +72,8 @@ function AdminPrescriptionsPage() {
   const [detail, setDetail] = useState<Rx | null>(null);
   const [ccOpen, setCcOpen] = useState(false);
   const [ccName, setCcName] = useState("");
+  const [invOpen, setInvOpen] = useState(false);
+  const [invName, setInvName] = useState("");
 
   const ccList = useQuery({
     queryKey: ["cc-options", businessId],
@@ -109,6 +111,45 @@ function AdminPrescriptionsPage() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cc-options", businessId] }),
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
+  });
+
+  const invList = useQuery({
+    queryKey: ["inv-options", businessId],
+    enabled: !!businessId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("investigations")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const addInv = useMutation({
+    mutationFn: async (name: string) => {
+      const n = name.trim();
+      if (!n) throw new Error("Enter an investigation name");
+      const { error } = await supabase.from("investigations").insert({ business_id: businessId!, name: n });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setInvName("");
+      toast.success("Investigation added");
+      qc.invalidateQueries({ queryKey: ["inv-options", businessId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not add"),
+  });
+
+  const delInv = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("investigations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inv-options", businessId] }),
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
@@ -202,7 +243,10 @@ function AdminPrescriptionsPage() {
           <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
           <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
         </div>
-        <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
+          <Button variant="outline" onClick={() => setInvOpen(true)}>Manage Investigation list</Button>
+        </div>
       </header>
 
       <Dialog open={ccOpen} onOpenChange={setCcOpen}>
@@ -228,6 +272,34 @@ function AdminPrescriptionsPage() {
             ))}
             {!ccList.isLoading && (ccList.data ?? []).length === 0 && (
               <p className="text-sm text-muted-foreground">No complaints yet — add some so doctors can search them.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={invOpen} onOpenChange={setInvOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Investigations (shared)</DialogTitle></DialogHeader>
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. CBC"
+              value={invName}
+              onChange={(e) => setInvName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addInv.mutate(invName); }}
+            />
+            <Button onClick={() => addInv.mutate(invName)} disabled={addInv.isPending}>Add</Button>
+          </div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {(invList.data ?? []).map((c) => (
+              <div key={c.id} className="flex items-center justify-between rounded-md border border-border/60 px-2 py-1 text-sm">
+                <span>{c.name}</span>
+                <Button size="icon" variant="ghost" onClick={() => delInv.mutate(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            {!invList.isLoading && (invList.data ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No investigations yet — add some so doctors can search them.</p>
             )}
           </div>
         </DialogContent>
