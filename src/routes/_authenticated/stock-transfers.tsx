@@ -227,6 +227,28 @@ function NewTransferDialog({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([]);
 
+  // Auto-save the in-progress transfer so a power cut does not lose it.
+  type TransferDraft = {
+    refNo: string; date: string; fromLoc: string; toLoc: string;
+    status: TransferStatus; shipping: number; notes: string; lines: LineDraft[];
+  };
+  const { clearDraft } = useAutosaveDraft<TransferDraft>(
+    businessId ? `stock-transfer-new:${businessId}` : null,
+    { refNo, date, fromLoc, toLoc, status, shipping, notes, lines },
+    (d) => {
+      if (d.refNo) setRefNo(d.refNo);
+      if (d.date) setDate(d.date);
+      if (d.fromLoc) setFromLoc(d.fromLoc);
+      if (d.toLoc) setToLoc(d.toLoc);
+      if (d.status) setStatus(d.status);
+      if (d.shipping) setShipping(d.shipping);
+      if (d.notes) setNotes(d.notes);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    { isEmpty: (d) => !d.lines?.length, restoreMessage: "Unsaved transfer restored" },
+  );
+
+
   const linesTotal = useMemo(() => lines.reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unit_cost || 0), 0), [lines]);
   const grandTotal = linesTotal + Number(shipping || 0);
 
