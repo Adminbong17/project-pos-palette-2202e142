@@ -267,6 +267,7 @@ export function ProductForm({ productId }: Props) {
       }
     },
     onSuccess: () => {
+      clearDraft();
       toast.success(productId ? "Product updated" : "Product created");
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product", productId] });
