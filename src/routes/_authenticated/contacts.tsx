@@ -163,6 +163,19 @@ function ContactsPage() {
   const [ledgerContact, setLedgerContact] = useState<Contact | null>(null);
   const [ledgerPrintSize, setLedgerPrintSize] = useState<"A4" | "80mm" | "58mm">("A4");
 
+  // Auto-save the in-progress contact so a power cut does not lose it.
+  const { clearDraft: clearContactDraft } = useAutosaveDraft<typeof emptyForm>(
+    "contact-new",
+    form,
+    (d) => { setForm({ ...emptyForm, ...d }); setOpen(true); },
+    {
+      enabled: open && !editing,
+      isEmpty: (d) => !d.name?.trim() && !d.mobile?.trim(),
+      restoreMessage: "Unsaved contact restored",
+    },
+  );
+
+
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["contacts", business?.id],
     enabled: !!business?.id,
