@@ -1086,7 +1086,7 @@ function PrescriptionsPage() {
         </Table>
       </div>
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+      <Dialog open={open} onOpenChange={(o) => { if (o) setOpen(true); else closeForm(); }}>
         <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Prescription" : "New Prescription"}</DialogTitle>
@@ -1358,7 +1358,7 @@ function PrescriptionsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={closeForm}>Cancel</Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending ? "Saving…" : editing ? "Update" : "Save"}
             </Button>
