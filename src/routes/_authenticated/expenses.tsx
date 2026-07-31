@@ -7,6 +7,8 @@ import { Plus, Trash2, Pencil, Wallet, RefreshCcw, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
