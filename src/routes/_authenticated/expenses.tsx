@@ -355,6 +355,7 @@ function ExpensesList({
       }
     },
     onSuccess: () => {
+      clearExpenseDraft();
       toast.success(editId ? "Expense updated" : "Expense recorded");
       setOpen(false);
       onChanged();
