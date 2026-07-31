@@ -1255,6 +1255,7 @@ function PrescriptionsPage() {
                   myFreqs={myFreqs}
                   freqOptions={freqPickList}
                   myInstructions={myInstructions}
+                  instrOptions={instrPickList}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
                 />
@@ -1304,10 +1305,11 @@ type PresetApi = {
   remove: (id: string) => void;
 };
 
-function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInstructions, onChange, onRemove }: {
+function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInstructions, instrOptions, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
   myMedicines: PresetApi; myFreqs: PresetApi; myInstructions: PresetApi;
   freqOptions: { id: string; name: string; removable?: boolean }[];
+  instrOptions: { id: string; name: string; removable?: boolean }[];
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
@@ -1417,7 +1419,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
           triggerLabel="…"
           placeholder="Search or type instruction…"
           width={280}
-          options={myInstructions.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          options={instrOptions}
           onAdd={(n) => myInstructions.add(n)}
           onRemove={(id) => myInstructions.remove(id)}
           onPick={(n) => onChange({ instructions: n })}
