@@ -72,6 +72,8 @@ function AdminPrescriptionsPage() {
   const [detail, setDetail] = useState<Rx | null>(null);
   const [ccOpen, setCcOpen] = useState(false);
   const [ccName, setCcName] = useState("");
+  const [invOpen, setInvOpen] = useState(false);
+  const [invName, setInvName] = useState("");
 
   const ccList = useQuery({
     queryKey: ["cc-options", businessId],
