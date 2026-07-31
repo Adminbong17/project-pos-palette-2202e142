@@ -134,6 +134,14 @@ export function useAutosaveDraft<T>(
     return () => clearTimeout(t);
   }, [storageKey, enabled, flush, data]);
 
+  // Periodic safety flush — a power cut fires no unload event, so never rely
+  // on pagehide alone.
+  useEffect(() => {
+    if (!storageKey || !enabled || typeof window === "undefined") return;
+    const id = window.setInterval(() => flush(), 3000);
+    return () => window.clearInterval(id);
+  }, [storageKey, enabled, flush]);
+
   // Flush immediately when the tab is hidden / closed
   useEffect(() => {
     if (!storageKey || !enabled || typeof window === "undefined") return;
@@ -151,6 +159,7 @@ export function useAutosaveDraft<T>(
       flush();
     };
   }, [storageKey, enabled, flush]);
+
 
   return { clearDraft, flush };
 }
