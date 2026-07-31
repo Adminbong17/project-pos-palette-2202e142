@@ -537,6 +537,33 @@ function PrescriptionsPage() {
     return out;
   }, [myInstructions.items, instrOptions.data]);
 
+  const adviceOptions = useQuery({
+    queryKey: ["advice-options", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rx_advices")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as CcOption[];
+    },
+  });
+
+  const advicePickList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; removable?: boolean }[] = [];
+    for (const o of myAdvice.items) {
+      seen.add(o.name.toLowerCase());
+      out.push({ id: o.id, name: o.name, removable: true });
+    }
+    for (const o of adviceOptions.data ?? []) {
+      if (seen.has(o.name.toLowerCase())) continue;
+      out.push({ id: o.id, name: o.name });
+    }
+    return out;
+  }, [myAdvice.items, adviceOptions.data]);
 
 
 
@@ -1271,7 +1298,7 @@ function PrescriptionsPage() {
                 <RxPresetCombo
                   triggerLabel="My advice"
                   placeholder="Search or type advice…"
-                  options={myAdvice.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                  options={advicePickList}
                   onAdd={(n) => myAdvice.add(n)}
                   onRemove={(id) => myAdvice.remove(id)}
                   onPick={(n) =>
