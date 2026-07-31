@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { PrintSizeButton, type PrintSize } from "@/components/print-size-select";
 import { fetchAll } from "@/lib/fetch-all";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
