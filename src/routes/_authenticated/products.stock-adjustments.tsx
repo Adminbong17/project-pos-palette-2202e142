@@ -481,7 +481,34 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-semibold uppercase text-muted-foreground">Lines</h4>
-          <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
+          <FloatingSearch
+            spacer={40}
+            className="max-w-[calc(100vw-24px)]"
+            results={
+              searchQuery ? (
+                <div className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-border bg-background">
+                  {filteredProductPicks.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs text-muted-foreground">No products found.</div>
+                  ) : (
+                    filteredProductPicks.map((item) => (
+                      <button
+                        key={item.variationId}
+                        type="button"
+                        onClick={() => addProductPick(item)}
+                        className="flex w-full items-center justify-between gap-3 border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/50"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-destructive">{item.label}</span>
+                          <span className="block text-xs text-muted-foreground">SKU/Barcode: {item.code}</span>
+                        </span>
+                        <span className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">Add</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null
+            }
+          >
             <input
               type="search"
               placeholder="Search product then click Add…"
@@ -494,28 +521,7 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
             <Plus className="h-3 w-3" /> Add line
           </button>
         </div>
-        {searchQuery && (
-          <div className="max-h-72 overflow-y-auto rounded-lg border border-border bg-background">
-            {filteredProductPicks.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-muted-foreground">No products found.</div>
-            ) : (
-              filteredProductPicks.map((item) => (
-                <button
-                  key={item.variationId}
-                  type="button"
-                  onClick={() => addProductPick(item)}
-                  className="flex w-full items-center justify-between gap-3 border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/50"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-destructive">{item.label}</span>
-                    <span className="block text-xs text-muted-foreground">SKU/Barcode: {item.code}</span>
-                  </span>
-                  <span className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">Add</span>
-                </button>
-              ))
-            )}
-          </div>
-        )}
+
         {lines.length === 0 && <p className="text-xs text-muted-foreground">No lines yet.</p>}
         {lines.map((l, idx) => (
           <div key={idx} className="grid gap-2 sm:grid-cols-12 items-end">
