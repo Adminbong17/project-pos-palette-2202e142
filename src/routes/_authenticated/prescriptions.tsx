@@ -192,6 +192,11 @@ const VITAL_FIELDS: { key: VitalKey; label: string; unit: string; placeholder: s
 
 const emptyVitals = (): Vitals => ({ height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "", rbs: "" });
 
+/** True when at least one vital has been filled in. */
+const hasAnyVital = (v?: Partial<Vitals> | null) =>
+  !!v && Object.values(v).some((x) => (x ?? "").toString().trim() !== "");
+
+
 /** BMI from height (inches) and weight (kg). */
 function calcBmi(v: Vitals): string {
   const inches = parseFloat(v.height);
@@ -341,6 +346,8 @@ function PrescriptionsPage() {
   const myInstructions = useRxPresets("instruction", businessId);
 
   // Auto-save the prescription being written (power cut safe).
+  // Kept enabled even when the dialog is closed so a reload/crash can restore
+  // the work and re-open the form automatically.
   const { clearDraft: clearRxDraft } = useAutosaveDraft(
     businessId ? `prescription:${businessId}` : null,
     { form, lines, vitals, extraVitals, cc, nextDays },
@@ -351,16 +358,24 @@ function PrescriptionsPage() {
       if (d.extraVitals?.length) setExtraVitals(d.extraVitals);
       if (d.cc?.length) setCc(d.cc);
       if (d.nextDays) setNextDays(d.nextDays);
+      setEditing(null);
+      setOpen(true);
     },
     {
-      enabled: open && !editing,
+      enabled: !editing,
       isEmpty: (d) =>
         !d.form?.patient_name?.trim() &&
+        !d.form?.patient_phone?.trim() &&
+        !d.form?.investigation?.trim() &&
+        !d.form?.advice?.trim() &&
         !d.cc?.length &&
+        !(d.extraVitals ?? []).some((v: any) => (v?.value ?? "").trim()) &&
+        !hasAnyVital(d.vitals) &&
         !(d.lines ?? []).some((l: any) => (l?.medicine_name ?? "").trim()),
       restoreMessage: "Unsaved prescription restored",
     },
   );
+
 
 
   const bmi = calcBmi(vitals);
