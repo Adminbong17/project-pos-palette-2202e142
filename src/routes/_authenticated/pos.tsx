@@ -373,7 +373,33 @@ function PosScreen() {
             </select>
           </div>
           <div className="relative space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-2">
-          <FloatingSearch spacer={48}>
+          <FloatingSearch
+            spacer={48}
+            results={
+              search.trim() ? (
+                <div className="mt-1 max-h-80 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
+                  {items.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">No matches</div>
+                  ) : items.slice(0, 20).map((i) => (
+                    <button
+                      key={i.variation_id}
+                      onClick={() => { addToCart(i); setSearch(""); }}
+                      className="w-full text-left px-3 py-3 hover:bg-muted/50 flex items-center gap-3 border-b border-border/40 last:border-0"
+                    >
+                      <div className="h-12 w-12 rounded bg-muted/40 grid place-items-center text-base shrink-0">
+                        {i.image ? <img src={i.image} alt="" className="h-full w-full object-cover rounded" /> : "📦"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-lg font-bold text-destructive truncate">{i.name}{i.variant_label ? ` — ${i.variant_label}` : ""}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{i.sub_sku} · Stock: {i.stock}</div>
+                      </div>
+                      <div className="text-base font-semibold text-primary">{i.price.toFixed(2)}</div>
+                    </button>
+                  ))}
+                </div>
+              ) : null
+            }
+          >
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -410,28 +436,7 @@ function PosScreen() {
                 <ScanText className="h-4 w-4 shrink-0" /> <span className="truncate">OCR</span>
               </button>
             </div>
-            {search.trim() && (
-              <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-80 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
-                {items.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">No matches</div>
-                ) : items.slice(0, 20).map((i) => (
-                  <button
-                    key={i.variation_id}
-                    onClick={() => { addToCart(i); setSearch(""); }}
-                    className="w-full text-left px-3 py-3 hover:bg-red-50 flex items-center gap-3 border-b border-border/40 last:border-0"
-                  >
-                    <div className="h-12 w-12 rounded bg-muted/40 grid place-items-center text-base shrink-0">
-                      {i.image ? <img src={i.image} alt="" className="h-full w-full object-cover rounded" /> : "📦"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-lg font-bold text-red-600 truncate">{i.name}{i.variant_label ? ` — ${i.variant_label}` : ""}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{i.sub_sku} · Stock: {i.stock}</div>
-                    </div>
-                    <div className="text-base font-semibold text-primary">{i.price.toFixed(2)}</div>
-                  </button>
-                ))}
-              </div>
-            )}
+
           </div>
         </div>
         <div className="lg:flex-1 lg:overflow-auto p-4">
