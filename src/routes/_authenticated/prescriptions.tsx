@@ -208,12 +208,22 @@ function calcBmi(v: Vitals): string {
 
 export type ExtraVital = { name: string; value: string };
 
-/** Doses per day from a frequency like "1+0+1", "1/2+0+1", "1+1+1 after meal". */
+/** Convert Bengali/Arabic-Indic digits to ASCII so parsing works. */
+function toAsciiDigits(s: string): string {
+  return (s ?? "").replace(/[০-৯٠-٩۰-۹]/g, (d) => {
+    const c = d.charCodeAt(0);
+    if (c >= 0x09e6 && c <= 0x09ef) return String(c - 0x09e6);
+    if (c >= 0x0660 && c <= 0x0669) return String(c - 0x0660);
+    return String(c - 0x06f0);
+  });
+}
+
+/** Doses per day from a frequency like "1+0+1", "১+০+১", "1/2+0+1". */
 function dosesPerDay(freq: string): number {
-  const m = (freq ?? "").match(/\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?/g);
+  const m = toAsciiDigits(freq).match(/\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?/g);
   if (!m) return 0;
   const nums = m.map((t) => {
-    const [a, b] = t.split("/").map((x) => parseFloat(x));
+    const [a, b] = t.split("/").map((x) => parseFloat(x.trim()));
     return b ? a / b : a;
   });
   return nums.reduce((s, n) => s + (isFinite(n) ? n : 0), 0);
@@ -221,13 +231,14 @@ function dosesPerDay(freq: string): number {
 
 /** Number of days from a duration like "7 days", "2 weeks", "1 month". */
 function durationDays(dur: string): number {
-  const s = (dur ?? "").toLowerCase();
+  const s = toAsciiDigits(dur).toLowerCase();
   const n = parseFloat(s.match(/\d+(?:\.\d+)?/)?.[0] ?? "");
   if (!n || !isFinite(n)) return 0;
   if (/month|mas|মাস/.test(s)) return n * 30;
   if (/week|সপ্তাহ/.test(s)) return n * 7;
   return n;
 }
+
 
 /** Auto medicine quantity = doses/day × days (rounded up). */
 function autoQuantity(freq: string, dur: string): number {
