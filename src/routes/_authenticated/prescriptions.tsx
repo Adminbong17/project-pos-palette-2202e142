@@ -640,7 +640,24 @@ function PrescriptionsPage() {
     setNextDays("");
   };
 
-  const openNew = () => { resetForm(); setOpen(true); };
+  const openNew = () => {
+    // Keep an unsaved draft alive: only start fresh when nothing is in progress.
+    const hasDraft =
+      !editing &&
+      (form.patient_name.trim() ||
+        cc.length > 0 ||
+        extraVitals.some((v) => (v.value ?? "").trim()) ||
+        lines.some((l) => (l.medicine_name ?? "").trim()));
+    if (!hasDraft) resetForm();
+    setOpen(true);
+  };
+
+  // Closing the form must NOT wipe an in-progress prescription — the draft
+  // stays so it is still there (and autosaved) when the form is opened again.
+  const closeForm = () => {
+    setOpen(false);
+    if (editing) resetForm();
+  };
 
   // Saved vitals load asynchronously — keep them present as defaults on a new Rx.
   useEffect(() => {
