@@ -292,6 +292,7 @@ function ContactsPage() {
       }
     },
     onSuccess: () => {
+      clearContactDraft();
       toast.success(editing ? "Contact updated" : "Contact created");
       qc.invalidateQueries({ queryKey: ["contacts"] });
       setOpen(false);
