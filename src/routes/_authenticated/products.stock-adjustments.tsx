@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Eye, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { fetchAll } from "@/lib/fetch-all";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 export const Route = createFileRoute("/_authenticated/products/stock-adjustments")({
   component: StockAdjustments,
