@@ -253,6 +253,19 @@ function ExpensesList({
   const [search, setSearch] = useState("");
   const [payFor, setPayFor] = useState<Expense | null>(null);
 
+  // Auto-save the in-progress expense so a power cut does not lose it.
+  const { clearDraft: clearExpenseDraft } = useAutosaveDraft<ExpForm>(
+    `expense-new:${businessId}`,
+    form,
+    (d) => { setForm({ ...emptyExpForm, ...d }); setOpen(true); },
+    {
+      enabled: open && !editId,
+      isEmpty: (d) => !d.amount && !d.ref_no?.trim() && !d.note?.trim(),
+      restoreMessage: "Unsaved expense restored",
+    },
+  );
+
+
   const openNew = () => { setEditId(null); setForm(emptyExpForm); setOpen(true); };
   const openEdit = (e: Expense) => {
     setEditId(e.id);
