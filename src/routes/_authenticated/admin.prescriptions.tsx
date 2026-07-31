@@ -243,7 +243,10 @@ function AdminPrescriptionsPage() {
           <h1 className="font-display text-xl font-semibold">Admin Prescriptions</h1>
           <p className="text-sm text-muted-foreground">Every prescription written in this business, across all doctors.</p>
         </div>
-        <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setCcOpen(true)}>Manage C/C list</Button>
+          <Button variant="outline" onClick={() => setInvOpen(true)}>Manage Investigation list</Button>
+        </div>
       </header>
 
       <Dialog open={ccOpen} onOpenChange={setCcOpen}>
