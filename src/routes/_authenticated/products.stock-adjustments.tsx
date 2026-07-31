@@ -306,7 +306,8 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
   const [loadedEdit, setLoadedEdit] = useState(!editRow);
 
   // Auto-save the in-progress adjustment so a power cut does not lose it.
-  const { clearDraft } = useAutosaveDraft(
+  type Draft = { locationId: string; type: "normal" | "abnormal"; reason: string; lines: Line[] };
+  const { clearDraft } = useAutosaveDraft<Draft>(
     !editRow && business?.id ? `stock-adjustment:${business.id}` : null,
     { locationId, type, reason, lines },
     (d) => {
@@ -321,6 +322,7 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
       restoreMessage: "Unsaved stock adjustment restored",
     },
   );
+
 
 
   useQuery({
