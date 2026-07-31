@@ -453,6 +453,34 @@ function PrescriptionsPage() {
     return out;
   }, [myCc.items, ccOptions.data]);
 
+  const invOptions = useQuery({
+    queryKey: ["inv-options", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("investigations")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as CcOption[];
+    },
+  });
+
+  const invPickList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; removable?: boolean }[] = [];
+    for (const o of myInvestigations.items) {
+      seen.add(o.name.toLowerCase());
+      out.push({ id: o.id, name: o.name, removable: true });
+    }
+    for (const o of invOptions.data ?? []) {
+      if (seen.has(o.name.toLowerCase())) continue;
+      out.push({ id: o.id, name: o.name });
+    }
+    return out;
+  }, [myInvestigations.items, invOptions.data]);
+
 
 
   const products = useQuery({
