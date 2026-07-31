@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Eye, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { fetchAll } from "@/lib/fetch-all";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 export const Route = createFileRoute("/_authenticated/products/stock-adjustments")({
   component: StockAdjustments,
@@ -303,6 +305,26 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
   const [search, setSearch] = useState("");
   const [loadedEdit, setLoadedEdit] = useState(!editRow);
 
+  // Auto-save the in-progress adjustment so a power cut does not lose it.
+  type Draft = { locationId: string; type: "normal" | "abnormal"; reason: string; lines: Line[] };
+  const { clearDraft } = useAutosaveDraft<Draft>(
+    !editRow && business?.id ? `stock-adjustment:${business.id}` : null,
+    { locationId, type, reason, lines },
+    (d) => {
+      if (d.locationId) setLocationId(d.locationId);
+      if (d.type) setType(d.type);
+      if (d.reason) setReason(d.reason);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    {
+      enabled: !editRow,
+      isEmpty: (d) => !d.lines?.length,
+      restoreMessage: "Unsaved stock adjustment restored",
+    },
+  );
+
+
+
   useQuery({
     queryKey: ["stock-adjustment-edit", editRow?.id],
     enabled: !!editRow?.id,
@@ -442,8 +464,10 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
       if (error) throw error;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success(editRow?.id ? "Adjustment updated and stock re-applied" : "Adjustment saved and stock updated");
       qc.invalidateQueries();
+
       onSaved();
       onClose();
     },
