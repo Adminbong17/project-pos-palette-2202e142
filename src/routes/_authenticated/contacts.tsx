@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, X, Search, Wallet, Printer } from "lucide-react";
 
