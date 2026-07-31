@@ -57,12 +57,17 @@ export function FloatingSearch({ children, results, spacer = 60, className = "" 
         style={isFloating ? { height: spacer } : undefined}
         aria-hidden={isFloating ? "true" : undefined}
       >
-        {isFloating ? null : children}
+        {isFloating ? null : (
+          <>
+            {children}
+            {results}
+          </>
+        )}
       </div>
       {isFloating
         ? createPortal(
             <div
-              className={`fixed top-14 z-50 rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg ${className}`}
+              className={`fixed top-14 z-50 max-h-[calc(100vh-72px)] overflow-y-auto rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg ${className}`}
               style={
                 box && box.width >= 200
                   ? { left: box.left, width: box.width }
@@ -70,10 +75,12 @@ export function FloatingSearch({ children, results, spacer = 60, className = "" 
               }
             >
               {children}
+              {results}
             </div>,
             document.body,
           )
         : null}
+
     </>
   );
 }
