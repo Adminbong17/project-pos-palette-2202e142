@@ -1275,9 +1275,10 @@ type PresetApi = {
   remove: (id: string) => void;
 };
 
-function MedicineRow({ line, products, myMedicines, myFreqs, myInstructions, onChange, onRemove }: {
+function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInstructions, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
   myMedicines: PresetApi; myFreqs: PresetApi; myInstructions: PresetApi;
+  freqOptions: { id: string; name: string; removable?: boolean }[];
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
