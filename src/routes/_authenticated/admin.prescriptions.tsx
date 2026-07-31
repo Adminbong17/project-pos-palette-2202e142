@@ -277,6 +277,34 @@ function AdminPrescriptionsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={invOpen} onOpenChange={setInvOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Investigations (shared)</DialogTitle></DialogHeader>
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. CBC"
+              value={invName}
+              onChange={(e) => setInvName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addInv.mutate(invName); }}
+            />
+            <Button onClick={() => addInv.mutate(invName)} disabled={addInv.isPending}>Add</Button>
+          </div>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {(invList.data ?? []).map((c) => (
+              <div key={c.id} className="flex items-center justify-between rounded-md border border-border/60 px-2 py-1 text-sm">
+                <span>{c.name}</span>
+                <Button size="icon" variant="ghost" onClick={() => delInv.mutate(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            {!invList.isLoading && (invList.data ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No investigations yet — add some so doctors can search them.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
