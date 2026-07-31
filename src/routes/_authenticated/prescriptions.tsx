@@ -1367,7 +1367,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
           triggerLabel="…"
           placeholder="Search or type frequency…"
           width={260}
-          options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          options={freqOptions}
           onAdd={(n) => myFreqs.add(n)}
           onRemove={(id) => myFreqs.remove(id)}
           onPick={(n) => onChange(withAutoQty(line, { frequency: n }))}
