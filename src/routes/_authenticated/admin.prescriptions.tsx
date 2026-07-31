@@ -112,6 +112,45 @@ function AdminPrescriptionsPage() {
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
+  const invList = useQuery({
+    queryKey: ["inv-options", businessId],
+    enabled: !!businessId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("investigations")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const addInv = useMutation({
+    mutationFn: async (name: string) => {
+      const n = name.trim();
+      if (!n) throw new Error("Enter an investigation name");
+      const { error } = await supabase.from("investigations").insert({ business_id: businessId!, name: n });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setInvName("");
+      toast.success("Investigation added");
+      qc.invalidateQueries({ queryKey: ["inv-options", businessId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not add"),
+  });
+
+  const delInv = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("investigations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inv-options", businessId] }),
+    onError: (e: any) => toast.error(e.message ?? "Delete failed"),
+  });
+
 
   const list = useQuery({
     queryKey: ["admin-prescriptions", businessId],
