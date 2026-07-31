@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, X, Search, Wallet, Printer } from "lucide-react";
 
@@ -163,6 +165,19 @@ function ContactsPage() {
   const [ledgerContact, setLedgerContact] = useState<Contact | null>(null);
   const [ledgerPrintSize, setLedgerPrintSize] = useState<"A4" | "80mm" | "58mm">("A4");
 
+  // Auto-save the in-progress contact so a power cut does not lose it.
+  const { clearDraft: clearContactDraft } = useAutosaveDraft<typeof emptyForm>(
+    "contact-new",
+    form,
+    (d) => { setForm({ ...emptyForm, ...d }); setOpen(true); },
+    {
+      enabled: open && !editing,
+      isEmpty: (d) => !d.name?.trim() && !d.mobile?.trim(),
+      restoreMessage: "Unsaved contact restored",
+    },
+  );
+
+
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["contacts", business?.id],
     enabled: !!business?.id,
@@ -277,6 +292,7 @@ function ContactsPage() {
       }
     },
     onSuccess: () => {
+      clearContactDraft();
       toast.success(editing ? "Contact updated" : "Contact created");
       qc.invalidateQueries({ queryKey: ["contacts"] });
       setOpen(false);

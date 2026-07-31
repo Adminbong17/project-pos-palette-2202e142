@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { completeProductionOrder } from "@/lib/manufacturing.functions";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -279,6 +281,27 @@ function BomDialog({ businessId, onDone }: { businessId: string; onDone: () => v
     { variation_id: string; quantity: number; unit_cost: number }[]
   >([{ variation_id: "", quantity: 1, unit_cost: 0 }]);
 
+  // Auto-save the in-progress BOM so a power cut does not lose it.
+  type BomDraft = {
+    name: string; outputQty: number; finishedVar: string; notes: string;
+    lines: { variation_id: string; quantity: number; unit_cost: number }[];
+  };
+  const { clearDraft } = useAutosaveDraft<BomDraft>(
+    `mfg-bom-new:${businessId}`,
+    { name, outputQty, finishedVar, notes, lines },
+    (d) => {
+      if (d.name) setName(d.name);
+      if (d.outputQty) setOutputQty(d.outputQty);
+      if (d.finishedVar) setFinishedVar(d.finishedVar);
+      if (d.notes) setNotes(d.notes);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    {
+      isEmpty: (d) => !d.name?.trim() && !d.finishedVar && !d.lines?.some((l) => l.variation_id),
+      restoreMessage: "Unsaved BOM restored",
+    },
+  );
+
   const finished = variations.find((v) => v.id === finishedVar);
 
   const save = useMutation({
@@ -316,6 +339,7 @@ function BomDialog({ businessId, onDone }: { businessId: string; onDone: () => v
       if (e2) throw e2;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("BOM created");
       qc.invalidateQueries({ queryKey: ["mfg-boms", businessId] });
       onDone();

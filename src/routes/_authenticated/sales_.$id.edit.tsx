@@ -7,6 +7,8 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 export const Route = createFileRoute("/_authenticated/sales_/$id/edit")({
   component: EditSalePage,
@@ -35,6 +37,27 @@ function EditSalePage() {
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
+
+  // Auto-save edits so a power cut / crash does not lose the work.
+  type SaleEditDraft = {
+    invoiceNo: string; date: string; notes: string; discount: string;
+    paid: string; contactId: string; lines: Line[];
+  };
+  const { clearDraft } = useAutosaveDraft<SaleEditDraft>(
+    `sale-edit:${id}`,
+    { invoiceNo, date, notes, discount, paid, contactId, lines },
+    (d) => {
+      if (d.invoiceNo) setInvoiceNo(d.invoiceNo);
+      if (d.date) setDate(d.date);
+      if (d.notes) setNotes(d.notes);
+      if (d.discount) setDiscount(d.discount);
+      if (d.paid) setPaid(d.paid);
+      if (d.contactId) setContactId(d.contactId);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    { enabled: loaded, isEmpty: (d) => !d.lines?.length, restoreMessage: "Unsaved sale edits restored" },
+  );
+
 
   const { data: existing, isFetching: fetchingExisting } = useQuery({
     queryKey: ["sale-edit", id],
@@ -166,6 +189,7 @@ function EditSalePage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Sale updated");
       navigate({ to: "/sales" });
     },

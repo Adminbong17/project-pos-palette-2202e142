@@ -7,6 +7,8 @@ import { Plus, Trash2, Pencil, Wallet, RefreshCcw, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,6 +255,19 @@ function ExpensesList({
   const [search, setSearch] = useState("");
   const [payFor, setPayFor] = useState<Expense | null>(null);
 
+  // Auto-save the in-progress expense so a power cut does not lose it.
+  const { clearDraft: clearExpenseDraft } = useAutosaveDraft<ExpForm>(
+    `expense-new:${businessId}`,
+    form,
+    (d) => { setForm({ ...emptyExpForm, ...d }); setOpen(true); },
+    {
+      enabled: open && !editId,
+      isEmpty: (d) => (!d.amount || d.amount === "0") && !d.ref_no?.trim() && !d.notes?.trim(),
+      restoreMessage: "Unsaved expense restored",
+    },
+  );
+
+
   const openNew = () => { setEditId(null); setForm(emptyExpForm); setOpen(true); };
   const openEdit = (e: Expense) => {
     setEditId(e.id);
@@ -340,6 +355,7 @@ function ExpensesList({
       }
     },
     onSuccess: () => {
+      clearExpenseDraft();
       toast.success(editId ? "Expense updated" : "Expense recorded");
       setOpen(false);
       onChanged();

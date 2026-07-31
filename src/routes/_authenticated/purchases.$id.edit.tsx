@@ -8,6 +8,8 @@ import { Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { DateTextInput } from "@/components/date-text-input";
 import { FloatingPurchaseSearch } from "@/components/floating-purchase-search";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 export const Route = createFileRoute("/_authenticated/purchases/$id/edit")({
   component: EditPurchasePage,
@@ -49,6 +51,35 @@ function EditPurchasePage() {
   const [lines, setLines] = useState<Line[]>([]);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
+
+  // Auto-save edits so a power cut / crash does not lose the work.
+  type PurchaseEditDraft = {
+    locationId: string; supplierName: string; refNo: string; date: string;
+    status: "received" | "pending" | "ordered"; notes: string; amountPaid: string;
+    paymentMethod: string; vatMode: "amount" | "percent"; vatValue: string;
+    vatPercent: string; discountAmount: string; lines: Line[];
+  };
+  const { clearDraft } = useAutosaveDraft<PurchaseEditDraft>(
+    `purchase-edit:${id}`,
+    { locationId, supplierName, refNo, date, status, notes, amountPaid, paymentMethod, vatMode, vatValue, vatPercent, discountAmount, lines },
+    (d) => {
+      if (d.locationId) setLocationId(d.locationId);
+      if (d.supplierName) setSupplierName(d.supplierName);
+      if (d.refNo) setRefNo(d.refNo);
+      if (d.date) setDate(d.date);
+      if (d.status) setStatus(d.status);
+      if (d.notes) setNotes(d.notes);
+      if (d.amountPaid) setAmountPaid(d.amountPaid);
+      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.vatMode) setVatMode(d.vatMode);
+      if (d.vatValue) setVatValue(d.vatValue);
+      if (d.vatPercent) setVatPercent(d.vatPercent);
+      if (d.discountAmount) setDiscountAmount(d.discountAmount);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    { enabled: loaded, isEmpty: (d) => !d.lines?.length, restoreMessage: "Unsaved purchase edits restored" },
+  );
+
 
   const { data: refs } = useQuery({
     queryKey: ["purchase-new-refs", business?.id],
@@ -330,6 +361,7 @@ function EditPurchasePage() {
       return data;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Purchase updated");
       qc.invalidateQueries();
       navigate({ to: "/purchases/$id", params: { id } });
