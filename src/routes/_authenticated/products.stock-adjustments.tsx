@@ -464,8 +464,10 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
       if (error) throw error;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success(editRow?.id ? "Adjustment updated and stock re-applied" : "Adjustment saved and stock updated");
       qc.invalidateQueries();
+
       onSaved();
       onClose();
     },
