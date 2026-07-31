@@ -339,6 +339,7 @@ function BomDialog({ businessId, onDone }: { businessId: string; onDone: () => v
       if (e2) throw e2;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("BOM created");
       qc.invalidateQueries({ queryKey: ["mfg-boms", businessId] });
       onDone();
