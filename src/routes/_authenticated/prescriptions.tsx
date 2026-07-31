@@ -1298,7 +1298,7 @@ function PrescriptionsPage() {
                 <RxPresetCombo
                   triggerLabel="My advice"
                   placeholder="Search or type advice…"
-                  options={myAdvice.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                  options={advicePickList}
                   onAdd={(n) => myAdvice.add(n)}
                   onRemove={(id) => myAdvice.remove(id)}
                   onPick={(n) =>
