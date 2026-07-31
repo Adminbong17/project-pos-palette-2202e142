@@ -481,6 +481,34 @@ function PrescriptionsPage() {
     return out;
   }, [myInvestigations.items, invOptions.data]);
 
+  const freqOptions = useQuery({
+    queryKey: ["freq-options", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rx_frequencies")
+        .select("id, name")
+        .eq("business_id", businessId!)
+        .order("name")
+        .limit(2000);
+      if (error) throw error;
+      return (data ?? []) as CcOption[];
+    },
+  });
+
+  const freqPickList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; removable?: boolean }[] = [];
+    for (const o of myFreqs.items) {
+      seen.add(o.name.toLowerCase());
+      out.push({ id: o.id, name: o.name, removable: true });
+    }
+    for (const o of freqOptions.data ?? []) {
+      if (seen.has(o.name.toLowerCase())) continue;
+      out.push({ id: o.id, name: o.name });
+    }
+    return out;
+  }, [myFreqs.items, freqOptions.data]);
+
 
 
   const products = useQuery({
@@ -1196,6 +1224,7 @@ function PrescriptionsPage() {
                   products={products.data ?? []}
                   myMedicines={myMedicines}
                   myFreqs={myFreqs}
+                  freqOptions={freqPickList}
                   myInstructions={myInstructions}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
@@ -1246,9 +1275,10 @@ type PresetApi = {
   remove: (id: string) => void;
 };
 
-function MedicineRow({ line, products, myMedicines, myFreqs, myInstructions, onChange, onRemove }: {
+function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInstructions, onChange, onRemove }: {
   line: Line; products: ProductOpt[];
   myMedicines: PresetApi; myFreqs: PresetApi; myInstructions: PresetApi;
+  freqOptions: { id: string; name: string; removable?: boolean }[];
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
   const [pOpen, setPOpen] = useState(false);
@@ -1337,7 +1367,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, myInstructions, onC
           triggerLabel="…"
           placeholder="Search or type frequency…"
           width={260}
-          options={myFreqs.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+          options={freqOptions}
           onAdd={(n) => myFreqs.add(n)}
           onRemove={(id) => myFreqs.remove(id)}
           onPick={(n) => onChange(withAutoQty(line, { frequency: n }))}
