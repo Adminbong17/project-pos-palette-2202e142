@@ -1224,6 +1224,7 @@ function PrescriptionsPage() {
                   products={products.data ?? []}
                   myMedicines={myMedicines}
                   myFreqs={myFreqs}
+                  freqOptions={freqPickList}
                   myInstructions={myInstructions}
                   onChange={(patch) => updateLine(i, patch)}
                   onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
