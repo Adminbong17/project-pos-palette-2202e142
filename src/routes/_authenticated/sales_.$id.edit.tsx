@@ -38,6 +38,27 @@ function EditSalePage() {
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
 
+  // Auto-save edits so a power cut / crash does not lose the work.
+  type SaleEditDraft = {
+    invoiceNo: string; date: string; notes: string; discount: string;
+    paid: string; contactId: string; lines: Line[];
+  };
+  const { clearDraft } = useAutosaveDraft<SaleEditDraft>(
+    `sale-edit:${id}`,
+    { invoiceNo, date, notes, discount, paid, contactId, lines },
+    (d) => {
+      if (d.invoiceNo) setInvoiceNo(d.invoiceNo);
+      if (d.date) setDate(d.date);
+      if (d.notes) setNotes(d.notes);
+      if (d.discount) setDiscount(d.discount);
+      if (d.paid) setPaid(d.paid);
+      if (d.contactId) setContactId(d.contactId);
+      if (d.lines?.length) setLines(d.lines);
+    },
+    { enabled: loaded, isEmpty: (d) => !d.lines?.length, restoreMessage: "Unsaved sale edits restored" },
+  );
+
+
   const { data: existing, isFetching: fetchingExisting } = useQuery({
     queryKey: ["sale-edit", id],
     staleTime: 0,
