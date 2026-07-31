@@ -8,6 +8,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2, ScanLine, Upload, Loader2, X } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { vaultUpload } from "@/lib/vault.functions";
+import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+
 
 type Variation = {
   id?: string;
