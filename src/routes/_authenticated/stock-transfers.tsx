@@ -283,6 +283,7 @@ function NewTransferDialog({
       return data as string;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Transfer created");
       qc.invalidateQueries({ queryKey: ["stock-transfers"] });
       onClose();
