@@ -467,34 +467,35 @@ function NewPurchasePage() {
             </Button>
           </div>
         </div>
-        <FloatingPurchaseSearch>
-          <div className="relative">
+        <FloatingPurchaseSearch
+          results={
+            search.trim().length >= 2 && searchResults.length > 0 ? (
+              <div className="mt-1 max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
+                {searchResults.flatMap((p: any) =>
+                  (p.variations ?? []).map((v: any) => (
+                    <button
+                      type="button"
+                      key={`${p.id}-${v.id}`}
+                      onClick={() => addLine(p, v)}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-muted/50"
+                    >
+                      <div className="font-medium">
+                        {p.name}{v.name && v.name !== "DUMMY" ? ` — ${v.name}` : ""}
+                      </div>
+                      <div className="text-xs text-muted-foreground">SKU: {p.sku} · Cost: {fmt(Number(v.default_purchase_price ?? 0))}</div>
+                    </button>
+                  )),
+                )}
+              </div>
+            ) : null
+          }
+        >
           <input
             className={inputCls}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search product by name, SKU or barcode…"
           />
-          {search.trim().length >= 2 && searchResults.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border bg-popover shadow-lg">
-              {searchResults.flatMap((p: any) =>
-                (p.variations ?? []).map((v: any) => (
-                  <button
-                    type="button"
-                    key={`${p.id}-${v.id}`}
-                    onClick={() => addLine(p, v)}
-                    className="block w-full text-left px-3 py-2 text-sm hover:bg-muted/50"
-                  >
-                    <div className="font-medium">
-                      {p.name}{v.name && v.name !== "DUMMY" ? ` — ${v.name}` : ""}
-                    </div>
-                    <div className="text-xs text-muted-foreground">SKU: {p.sku} · Cost: {fmt(Number(v.default_purchase_price ?? 0))}</div>
-                  </button>
-                )),
-              )}
-            </div>
-          )}
-          </div>
         </FloatingPurchaseSearch>
         <BarcodeScanner open={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => handleScanned(c)} />
         <PhoneScanDialog open={phoneScanOpen} onClose={() => setPhoneScanOpen(false)} onDetected={(c) => handleScanned(c)} />
