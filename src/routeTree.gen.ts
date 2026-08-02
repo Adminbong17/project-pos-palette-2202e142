@@ -69,6 +69,7 @@ import { Route as AuthenticatedCrmLeadsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCrmFollowupsRouteImport } from './routes/_authenticated/crm.followups'
 import { Route as AuthenticatedCrmCampaignsRouteImport } from './routes/_authenticated/crm.campaigns'
 import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_authenticated/admin.prescriptions'
+import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
 import { Route as AuthenticatedAdminBusinessRequestsRouteImport } from './routes/_authenticated/admin.business-requests'
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
 import { Route as AuthenticatedPurchasesIdEditRouteImport } from './routes/_authenticated/purchases.$id.edit'
@@ -402,6 +403,12 @@ const AuthenticatedAdminPrescriptionsRoute =
     path: '/admin/prescriptions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminDoctorsRoute =
+  AuthenticatedAdminDoctorsRouteImport.update({
+    id: '/admin/doctors',
+    path: '/admin/doctors',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminBusinessRequestsRoute =
   AuthenticatedAdminBusinessRequestsRouteImport.update({
     id: '/admin/business-requests',
@@ -448,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
+  '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/crm/followups': typeof AuthenticatedCrmFollowupsRoute
@@ -505,6 +513,7 @@ export interface FileRoutesByTo {
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
+  '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/crm/followups': typeof AuthenticatedCrmFollowupsRoute
@@ -571,6 +580,7 @@ export interface FileRoutesById {
   '/_authenticated/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
+  '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/_authenticated/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/_authenticated/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/_authenticated/crm/followups': typeof AuthenticatedCrmFollowupsRoute
@@ -637,6 +647,7 @@ export interface FileRouteTypes {
     | '/stock-transfers'
     | '/scan/$sessionId'
     | '/admin/business-requests'
+    | '/admin/doctors'
     | '/admin/prescriptions'
     | '/crm/campaigns'
     | '/crm/followups'
@@ -694,6 +705,7 @@ export interface FileRouteTypes {
     | '/stock-transfers'
     | '/scan/$sessionId'
     | '/admin/business-requests'
+    | '/admin/doctors'
     | '/admin/prescriptions'
     | '/crm/campaigns'
     | '/crm/followups'
@@ -759,6 +771,7 @@ export interface FileRouteTypes {
     | '/_authenticated/stock-transfers'
     | '/scan/$sessionId'
     | '/_authenticated/admin/business-requests'
+    | '/_authenticated/admin/doctors'
     | '/_authenticated/admin/prescriptions'
     | '/_authenticated/crm/campaigns'
     | '/_authenticated/crm/followups'
@@ -1226,6 +1239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPrescriptionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/doctors': {
+      id: '/_authenticated/admin/doctors'
+      path: '/admin/doctors'
+      fullPath: '/admin/doctors'
+      preLoaderRoute: typeof AuthenticatedAdminDoctorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/business-requests': {
       id: '/_authenticated/admin/business-requests'
       path: '/admin/business-requests'
@@ -1438,6 +1458,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedStockTransfersRoute: typeof AuthenticatedStockTransfersRoute
   AuthenticatedAdminBusinessRequestsRoute: typeof AuthenticatedAdminBusinessRequestsRoute
+  AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
   AuthenticatedSalesIdEditRoute: typeof AuthenticatedSalesIdEditRoute
 }
@@ -1467,6 +1488,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStockTransfersRoute: AuthenticatedStockTransfersRoute,
   AuthenticatedAdminBusinessRequestsRoute:
     AuthenticatedAdminBusinessRequestsRoute,
+  AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
   AuthenticatedAdminPrescriptionsRoute: AuthenticatedAdminPrescriptionsRoute,
   AuthenticatedSalesIdEditRoute: AuthenticatedSalesIdEditRoute,
 }

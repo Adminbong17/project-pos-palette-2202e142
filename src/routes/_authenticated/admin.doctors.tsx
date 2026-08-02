@@ -131,8 +131,8 @@ function AdminDoctorsPage() {
         _id: args.id,
         _business_id: businessId,
         _role: args.role,
-        _sections: args.sections,
-        _notes: null,
+        _sections: args.sections ?? undefined,
+        _notes: undefined,
       });
       if (error) throw error;
     },
@@ -148,7 +148,7 @@ function AdminDoctorsPage() {
     mutationFn: async (args: { id: string; notes: string | null }) => {
       const { error } = await supabase.rpc("reject_access_request", {
         _id: args.id,
-        _notes: args.notes,
+        _notes: args.notes ?? undefined,
       });
       if (error) throw error;
     },
