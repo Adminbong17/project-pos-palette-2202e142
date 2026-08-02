@@ -27,13 +27,14 @@ export const Route = createFileRoute("/_authenticated/rx-options")({
 
 type SharedTable = "chief_complaints" | "investigations" | "rx_frequencies" | "rx_instructions" | "rx_advices";
 
-const LISTS: { table: SharedTable; title: string; hint: string }[] = [
-  { table: "chief_complaints", title: "C/C (Chief Complaints)", hint: "e.g. Fever, Headache" },
-  { table: "investigations", title: "Investigations", hint: "e.g. CBC, X-ray Chest P/A" },
-  { table: "rx_frequencies", title: "Frequencies", hint: "e.g. 1+0+1" },
-  { table: "rx_instructions", title: "Rx Instructions", hint: "e.g. After meal" },
-  { table: "rx_advices", title: "Advices", hint: "e.g. Plenty of water" },
+const LISTS: { table: SharedTable; kind: RxOptionKind; title: string; hint: string }[] = [
+  { table: "chief_complaints", kind: "cc", title: "C/C (Chief Complaints)", hint: "e.g. Fever, Headache" },
+  { table: "investigations", kind: "investigation", title: "Investigations", hint: "e.g. CBC, X-ray Chest P/A" },
+  { table: "rx_frequencies", kind: "frequency", title: "Frequencies", hint: "e.g. 1+0+1" },
+  { table: "rx_instructions", kind: "instruction", title: "Rx Instructions", hint: "e.g. After meal" },
+  { table: "rx_advices", kind: "advice", title: "Advices", hint: "e.g. Plenty of water" },
 ];
+
 
 function ListCard({ table, title, hint, businessId }: { table: SharedTable; title: string; hint: string; businessId?: string }) {
   const qc = useQueryClient();
