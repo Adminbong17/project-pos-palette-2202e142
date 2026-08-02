@@ -101,14 +101,35 @@ function ListCard({
   });
 
   return (
-    <Card>
+    <Card className={enabled ? undefined : "opacity-90"}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          {title}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">{list.data?.length ?? 0}</span>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">
+              {title}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{list.data?.length ?? 0}</span>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Switch
+              id={`toggle-${kind}`}
+              checked={enabled}
+              disabled={toggleDisabled}
+              onCheckedChange={onToggle}
+            />
+            <Label htmlFor={`toggle-${kind}`} className="text-[10px] uppercase text-muted-foreground">
+              {enabled ? "Default on" : "Default off"}
+            </Label>
+          </div>
+        </div>
+        {!enabled && (
+          <p className="mt-1 rounded-md bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">
+            Doctors won’t see this shared list — only their own items from “My Rx Lists”.
+          </p>
+        )}
       </CardHeader>
+
       <CardContent className="space-y-3">
         <form
           className="flex gap-2"
