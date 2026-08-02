@@ -56,7 +56,7 @@ function AuthPage() {
       // render stale rows (a common cause of the "hung" screen after login).
       await qc.cancelQueries();
       qc.clear();
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: isRxMode() ? "/prescriptions" : "/dashboard", replace: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Authentication failed");
       setLoading(false);
