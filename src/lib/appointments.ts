@@ -83,7 +83,7 @@ export async function startPrescriptionFromAppointment(
       patient_gender: appointment.patient_gender,
       doctor_name: doctorName || null,
       doctor_qualification: doctorQualification || null,
-      created_by: uid,
+      created_by: ownerId,
     })
     .select("id")
     .single();
