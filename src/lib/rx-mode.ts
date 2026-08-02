@@ -30,10 +30,26 @@ export function isRxHost(hostname?: string | null) {
   return RX_HOST_MATCHERS.some((re) => re.test(h));
 }
 
-function isFullAppHost(hostname?: string | null) {
+export function isFullAppHost(hostname?: string | null) {
   if (!hostname) return false;
   const h = hostname.toLowerCase();
   return FULL_APP_HOSTS.some((re) => re.test(h));
+}
+
+/** Doctor-facing pages that should only appear on the Rx domain. */
+export const RX_ONLY_PATHS = [
+  "/rx-dashboard",
+  "/rx-appointments",
+  "/prescriptions",
+  "/rx-lists",
+  "/rx-staff",
+  "/rx-options",
+];
+
+/** True when the current host serves the full POS app (client-only). */
+export function isFullAppMode() {
+  if (typeof window === "undefined") return false;
+  return isFullAppHost(window.location.hostname);
 }
 
 /** Client-only check. Returns false during SSR. */
