@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useWheelScrollPassthrough } from "@/hooks/use-wheel-scroll-passthrough";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -1113,7 +1114,7 @@ function PrescriptionsPage() {
       </div>
 
       <Dialog open={open} onOpenChange={(o) => { if (o) setOpen(true); else closeForm(); }}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+        <DialogContent ref={dialogScrollRef} className="max-w-4xl max-h-[92vh] overflow-y-auto overscroll-contain">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Prescription" : "New Prescription"}</DialogTitle>
           </DialogHeader>
