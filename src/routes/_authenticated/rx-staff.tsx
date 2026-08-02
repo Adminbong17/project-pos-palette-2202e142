@@ -55,7 +55,48 @@ function StaffPage() {
     password: "",
     chamber_id: "",
   });
+  const [newChamber, setNewChamber] = useState({ name: "", address: "" });
   const [pwEdit, setPwEdit] = useState<Record<string, string>>({});
+
+  const addChamber = useMutation({
+    mutationFn: async () => {
+      if (!businessId) throw new Error("No business");
+      if (!newChamber.name.trim()) throw new Error("Location name is required");
+      const { data: auth } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("rx_chambers")
+        .insert({
+          business_id: businessId,
+          name: newChamber.name.trim(),
+          address: newChamber.address.trim() || null,
+          created_by: auth.user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: (id) => {
+      toast.success("Location added");
+      setNewChamber({ name: "", address: "" });
+      setForm((s) => ({ ...s, chamber_id: id }));
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not add location"),
+  });
+
+  const delChamber = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("rx_chambers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Location removed");
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not remove location"),
+  });
+
 
   const staff = useQuery({
     queryKey: ["rx-staff", businessId],
