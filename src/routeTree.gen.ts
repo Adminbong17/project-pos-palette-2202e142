@@ -19,6 +19,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedRxOptionsRouteImport } from './routes/_authenticated/rx-options'
 import { Route as AuthenticatedRxListsRouteImport } from './routes/_authenticated/rx-lists'
+import { Route as AuthenticatedRxDashboardRouteImport } from './routes/_authenticated/rx-dashboard'
 import { Route as AuthenticatedRestaurantRouteImport } from './routes/_authenticated/restaurant'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRepairRouteImport } from './routes/_authenticated/repair'
@@ -124,6 +125,12 @@ const AuthenticatedRxListsRoute = AuthenticatedRxListsRouteImport.update({
   path: '/rx-lists',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRxDashboardRoute =
+  AuthenticatedRxDashboardRouteImport.update({
+    id: '/rx-dashboard',
+    path: '/rx-dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRestaurantRoute = AuthenticatedRestaurantRouteImport.update({
   id: '/restaurant',
   path: '/restaurant',
@@ -447,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/repair': typeof AuthenticatedRepairRouteWithChildren
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
+  '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -506,6 +514,7 @@ export interface FileRoutesByTo {
   '/prescriptions': typeof AuthenticatedPrescriptionsRoute
   '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/quick-box': typeof AuthenticatedQuickBoxRoute
+  '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -572,6 +581,7 @@ export interface FileRoutesById {
   '/_authenticated/repair': typeof AuthenticatedRepairRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
+  '/_authenticated/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/_authenticated/rx-lists': typeof AuthenticatedRxListsRoute
   '/_authenticated/rx-options': typeof AuthenticatedRxOptionsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/repair'
     | '/reports'
     | '/restaurant'
+    | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
     | '/sales'
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/prescriptions'
     | '/purchases'
     | '/quick-box'
+    | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
     | '/sales'
@@ -763,6 +775,7 @@ export interface FileRouteTypes {
     | '/_authenticated/repair'
     | '/_authenticated/reports'
     | '/_authenticated/restaurant'
+    | '/_authenticated/rx-dashboard'
     | '/_authenticated/rx-lists'
     | '/_authenticated/rx-options'
     | '/_authenticated/sales'
@@ -887,6 +900,13 @@ declare module '@tanstack/react-router' {
       path: '/rx-lists'
       fullPath: '/rx-lists'
       preLoaderRoute: typeof AuthenticatedRxListsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rx-dashboard': {
+      id: '/_authenticated/rx-dashboard'
+      path: '/rx-dashboard'
+      fullPath: '/rx-dashboard'
+      preLoaderRoute: typeof AuthenticatedRxDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/restaurant': {
@@ -1451,6 +1471,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRepairRoute: typeof AuthenticatedRepairRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedRestaurantRoute: typeof AuthenticatedRestaurantRouteWithChildren
+  AuthenticatedRxDashboardRoute: typeof AuthenticatedRxDashboardRoute
   AuthenticatedRxListsRoute: typeof AuthenticatedRxListsRoute
   AuthenticatedRxOptionsRoute: typeof AuthenticatedRxOptionsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
@@ -1480,6 +1501,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRepairRoute: AuthenticatedRepairRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedRestaurantRoute: AuthenticatedRestaurantRouteWithChildren,
+  AuthenticatedRxDashboardRoute: AuthenticatedRxDashboardRoute,
   AuthenticatedRxListsRoute: AuthenticatedRxListsRoute,
   AuthenticatedRxOptionsRoute: AuthenticatedRxOptionsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
@@ -1505,3 +1527,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

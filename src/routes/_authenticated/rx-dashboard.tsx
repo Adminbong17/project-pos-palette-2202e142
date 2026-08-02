@@ -56,10 +56,12 @@ function RxDashboard() {
 
   const byDay = new Map<string, any[]>();
   for (const r of upcoming) {
-    const list = byDay.get(r.next_visit) ?? [];
+    const key = String((r as any).next_visit);
+    const list = byDay.get(key) ?? [];
     list.push(r);
-    byDay.set(r.next_visit, list);
+    byDay.set(key, list);
   }
+
   const days = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const todayCount = byDay.get(today)?.length ?? 0;
 
