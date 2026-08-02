@@ -718,6 +718,22 @@ function PrescriptionsPage() {
     setOpen(true);
   };
 
+  // Coming from the patient queue: ?rx=<id> opens that prescription straight away.
+  const { rx: rxParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [autoOpened, setAutoOpened] = useState<string | null>(null);
+  useEffect(() => {
+    if (!rxParam || autoOpened === rxParam) return;
+    const found = (list.data ?? []).find((r) => r.id === rxParam);
+    if (!found) return;
+    setAutoOpened(rxParam);
+    void openEdit(found);
+    navigate({ search: {} as any, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rxParam, list.data]);
+
+
+
   const save = useMutation({
     mutationFn: async () => {
       if (!businessId) throw new Error("No business");
