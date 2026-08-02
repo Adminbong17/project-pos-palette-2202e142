@@ -374,6 +374,9 @@ function PrescriptionsPage() {
     businessId ? `prescription:${businessId}` : null,
     { form, lines, vitals, extraVitals, cc, nextDays },
     (d) => {
+      // Never let a stale local draft overwrite a prescription opened from the
+      // patient queue / list — that is what made the two views look different.
+      if (rxParam) return;
       if (d.form) setForm((f) => ({ ...f, ...d.form }));
       if (d.lines?.length) setLines(d.lines);
       if (d.vitals) setVitals(d.vitals);
@@ -384,7 +387,7 @@ function PrescriptionsPage() {
       setOpen(true);
     },
     {
-      enabled: !editing,
+      enabled: !editing && !rxParam,
       isEmpty: (d) =>
         !d.form?.patient_name?.trim() &&
         !d.form?.patient_phone?.trim() &&
