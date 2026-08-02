@@ -32,7 +32,8 @@ function AuthedLayout() {
   const rxMode = isRxMode();
   const canUsePos = !rxMode && (isAdmin || !allowed || allowed.includes("pos"));
   const homePath = rxMode
-    ? "/prescriptions"
+    ? "/rx-dashboard"
+
     : isAdmin || !allowed || allowed.includes("dashboard")
       ? "/dashboard"
       : `/${allowed[0] ?? "pos"}`;
