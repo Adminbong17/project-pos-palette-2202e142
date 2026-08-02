@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Trash2, Stethoscope } from "lucide-react";
+import { FileText, Trash2, Stethoscope, Pencil } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/utils";
@@ -13,6 +13,29 @@ import {
 } from "@/lib/appointments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+type EditState = {
+  id: string;
+  patient_name: string;
+  patient_age: string;
+  patient_gender: string;
+  patient_phone: string;
+  appt_date: string;
+  appt_time: string;
+  chamber_id: string;
+  serial_no: string;
+  status: string;
+  notes: string;
+};
 
 export function AppointmentQueue({
   businessId,
@@ -20,16 +43,19 @@ export function AppointmentQueue({
   chamberId,
   chambers,
   allowDelete = false,
+  allowEdit = false,
 }: {
   businessId?: string;
   date: string;
   chamberId?: string;
   chambers: Chamber[];
   allowDelete?: boolean;
+  allowEdit?: boolean;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
+  const [edit, setEdit] = useState<EditState | null>(null);
 
   const list = useQuery({
     queryKey: ["rx-appointments", businessId, date, chamberId ?? "all"],
@@ -62,8 +88,35 @@ export function AppointmentQueue({
     onError: (e: any) => toast.error(e.message),
   });
 
-  const chamberName = (id: string | null) =>
-    chambers.find((c) => c.id === id)?.name ?? "—";
+  const save = useMutation({
+    mutationFn: async (e: EditState) => {
+      if (!e.patient_name.trim()) throw new Error("Patient name is required");
+      const { error } = await supabase
+        .from("rx_appointments")
+        .update({
+          patient_name: e.patient_name.trim(),
+          patient_age: e.patient_age.trim() || null,
+          patient_gender: e.patient_gender || null,
+          patient_phone: e.patient_phone.trim() || null,
+          appt_date: e.appt_date,
+          appt_time: e.appt_time || null,
+          chamber_id: e.chamber_id || null,
+          serial_no: e.serial_no ? Number(e.serial_no) : null,
+          status: e.status || "waiting",
+          notes: e.notes.trim() || null,
+        })
+        .eq("id", e.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Patient updated");
+      setEdit(null);
+      qc.invalidateQueries({ queryKey: ["rx-appointments"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const chamberName = (id: string | null) => chambers.find((c) => c.id === id)?.name ?? "—";
 
   const start = async (a: Appointment) => {
     if (!businessId) return;
@@ -120,6 +173,31 @@ export function AppointmentQueue({
                   <FileText className="mr-1 h-3.5 w-3.5" />
                   {a.prescription_id ? "Open prescription" : "Start prescription"}
                 </Button>
+                {allowEdit && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    title="Edit patient"
+                    onClick={() =>
+                      setEdit({
+                        id: a.id,
+                        patient_name: a.patient_name ?? "",
+                        patient_age: a.patient_age ?? "",
+                        patient_gender: a.patient_gender ?? "",
+                        patient_phone: a.patient_phone ?? "",
+                        appt_date: a.appt_date ?? date,
+                        appt_time: a.appt_time ? a.appt_time.slice(0, 5) : "",
+                        chamber_id: a.chamber_id ?? "",
+                        serial_no: a.serial_no != null ? String(a.serial_no) : "",
+                        status: a.status ?? "waiting",
+                        notes: (a as any).notes ?? "",
+                      })
+                    }
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {allowDelete && (
                   <Button
                     size="icon"
@@ -135,6 +213,98 @@ export function AppointmentQueue({
           ))}
         </ul>
       )}
+
+      <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit patient</DialogTitle>
+          </DialogHeader>
+          {edit && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label className="mb-1.5 block text-xs">Patient name *</Label>
+                <Input
+                  value={edit.patient_name}
+                  onChange={(e) => setEdit({ ...edit, patient_name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Age</Label>
+                <Input value={edit.patient_age} onChange={(e) => setEdit({ ...edit, patient_age: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Gender</Label>
+                <select
+                  value={edit.patient_gender}
+                  onChange={(e) => setEdit({ ...edit, patient_gender: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+                >
+                  <option value="">—</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Phone</Label>
+                <Input value={edit.patient_phone} onChange={(e) => setEdit({ ...edit, patient_phone: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Serial no</Label>
+                <Input
+                  inputMode="numeric"
+                  value={edit.serial_no}
+                  onChange={(e) => setEdit({ ...edit, serial_no: e.target.value.replace(/[^0-9]/g, "") })}
+                />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Date</Label>
+                <Input type="date" value={edit.appt_date} onChange={(e) => setEdit({ ...edit, appt_date: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Time</Label>
+                <Input type="time" value={edit.appt_time} onChange={(e) => setEdit({ ...edit, appt_time: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Location</Label>
+                <select
+                  value={edit.chamber_id}
+                  onChange={(e) => setEdit({ ...edit, chamber_id: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+                >
+                  <option value="">— No location —</option>
+                  {chambers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Status</Label>
+                <select
+                  value={edit.status}
+                  onChange={(e) => setEdit({ ...edit, status: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+                >
+                  <option value="waiting">Waiting</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="done">Done</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <Label className="mb-1.5 block text-xs">Notes</Label>
+                <Input value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
+            <Button disabled={save.isPending} onClick={() => edit && save.mutate(edit)}>
+              {save.isPending ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

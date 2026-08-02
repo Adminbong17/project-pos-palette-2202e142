@@ -59,6 +59,8 @@ const sections = [
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
 
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "prescriptions" },
+      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
+      { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },

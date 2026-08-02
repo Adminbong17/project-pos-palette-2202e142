@@ -93,7 +93,8 @@ function RxDashboard() {
         </div>
       </div>
 
-      <AppointmentQueue businessId={businessId} date={dhakaToday()} chambers={chambers.data ?? []} />
+      <AppointmentQueue
+          allowEdit businessId={businessId} date={dhakaToday()} chambers={chambers.data ?? []} />
 
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
