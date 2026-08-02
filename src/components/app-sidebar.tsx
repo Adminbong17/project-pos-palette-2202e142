@@ -9,7 +9,7 @@ import {
   Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
-import { isRxMode, isFullAppMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
+import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 
 
 const sections = [
@@ -58,7 +58,6 @@ const sections = [
       { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
 
-      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "prescriptions" },
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
@@ -83,7 +82,6 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
   const rxMode = isRxMode();
-  const fullApp = isFullAppMode();
   const base = isLoading
     ? []
     : isAdmin
@@ -96,9 +94,7 @@ export function AppSidebar() {
           .filter((sec) => sec.items.length > 0);
   const scoped = rxMode
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
-    : fullApp
-      ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }))
-      : base;
+    : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
   // Same destination can be listed under multiple permission keys — show it once.
   const visibleSections = scoped
     .map((sec) => {
