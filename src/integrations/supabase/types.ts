@@ -2398,6 +2398,7 @@ export type Database = {
           chamber_id: string | null
           created_at: string
           created_by: string | null
+          doctor_id: string | null
           id: string
           notes: string | null
           patient_age: string | null
@@ -2416,6 +2417,7 @@ export type Database = {
           chamber_id?: string | null
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           id?: string
           notes?: string | null
           patient_age?: string | null
@@ -2434,6 +2436,7 @@ export type Database = {
           chamber_id?: string | null
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           id?: string
           notes?: string | null
           patient_age?: string | null
@@ -2622,6 +2625,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rx_staff: {
+        Row: {
+          business_id: string
+          created_at: string
+          doctor_id: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+          username: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          doctor_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_staff_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rx_user_option_settings: {
         Row: {
