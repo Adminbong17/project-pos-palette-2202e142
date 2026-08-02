@@ -17,6 +17,7 @@ import { Route as AuthenticatedStockTransfersRouteImport } from './routes/_authe
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
+import { Route as AuthenticatedRxOptionsRouteImport } from './routes/_authenticated/rx-options'
 import { Route as AuthenticatedRxListsRouteImport } from './routes/_authenticated/rx-lists'
 import { Route as AuthenticatedRestaurantRouteImport } from './routes/_authenticated/restaurant'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -110,6 +111,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRxOptionsRoute = AuthenticatedRxOptionsRouteImport.update({
+  id: '/rx-options',
+  path: '/rx-options',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRxListsRoute = AuthenticatedRxListsRouteImport.update({
@@ -435,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/rx-lists': typeof AuthenticatedRxListsRoute
+  '/rx-options': typeof AuthenticatedRxOptionsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
@@ -492,6 +499,7 @@ export interface FileRoutesByTo {
   '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/quick-box': typeof AuthenticatedQuickBoxRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
+  '/rx-options': typeof AuthenticatedRxOptionsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/_authenticated/rx-lists': typeof AuthenticatedRxListsRoute
+  '/_authenticated/rx-options': typeof AuthenticatedRxOptionsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/restaurant'
     | '/rx-lists'
+    | '/rx-options'
     | '/sales'
     | '/settings'
     | '/setup'
@@ -678,6 +688,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/quick-box'
     | '/rx-lists'
+    | '/rx-options'
     | '/sales'
     | '/setup'
     | '/stock-transfers'
@@ -741,6 +752,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/restaurant'
     | '/_authenticated/rx-lists'
+    | '/_authenticated/rx-options'
     | '/_authenticated/sales'
     | '/_authenticated/settings'
     | '/_authenticated/setup'
@@ -848,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/sales'
       fullPath: '/sales'
       preLoaderRoute: typeof AuthenticatedSalesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rx-options': {
+      id: '/_authenticated/rx-options'
+      path: '/rx-options'
+      fullPath: '/rx-options'
+      preLoaderRoute: typeof AuthenticatedRxOptionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rx-lists': {
@@ -1413,6 +1432,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedRestaurantRoute: typeof AuthenticatedRestaurantRouteWithChildren
   AuthenticatedRxListsRoute: typeof AuthenticatedRxListsRoute
+  AuthenticatedRxOptionsRoute: typeof AuthenticatedRxOptionsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
@@ -1440,6 +1460,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedRestaurantRoute: AuthenticatedRestaurantRouteWithChildren,
   AuthenticatedRxListsRoute: AuthenticatedRxListsRoute,
+  AuthenticatedRxOptionsRoute: AuthenticatedRxOptionsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
