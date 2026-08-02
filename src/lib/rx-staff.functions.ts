@@ -10,6 +10,7 @@ type CreateStaffInput = {
   username: string;
   password: string;
   phone?: string;
+  chamber_id?: string | null;
 };
 
 function hasServiceRole() {
@@ -101,6 +102,7 @@ export const createRxStaff = createServerFn({ method: "POST" })
       _name: name,
       _phone: data.phone?.trim() || "",
       _username: data.username,
+      _chamber_id: data.chamber_id || null,
     });
     if (pErr) throw new Error(pErr.message);
 

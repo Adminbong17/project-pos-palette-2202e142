@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, MapPin } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
+import { useMyStaffChamber } from "@/hooks/use-my-staff-chamber";
 import { dhakaToday } from "@/lib/appointments";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { Button } from "@/components/ui/button";
@@ -38,8 +40,12 @@ function AppointmentsPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
 
+  const { isAssistant } = useCurrentRole();
   const chambers = useChambers(businessId);
   const chamberList = chambers.data ?? [];
+  const myStaff = useMyStaffChamber(businessId);
+  // Staff accounts work at the location their doctor assigned — they cannot pick one.
+  const lockedChamberId = isAssistant ? myStaff.data?.chamber_id ?? null : null;
 
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
@@ -51,6 +57,10 @@ function AppointmentsPage() {
     patient_phone: "",
     appt_time: "",
   });
+
+  useEffect(() => {
+    if (lockedChamberId) setChamberId(lockedChamberId);
+  }, [lockedChamberId]);
 
   const addChamber = useMutation({
     mutationFn: async () => {
@@ -120,6 +130,7 @@ function AppointmentsPage() {
         </p>
       </div>
 
+      {!isAssistant && (
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <div className="mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
@@ -159,22 +170,33 @@ function AppointmentsPage() {
           </ul>
         )}
       </div>
+      )}
 
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <h2 className="mb-3 text-sm font-semibold">Add patient</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label className="mb-1.5 block text-xs">Location</Label>
-            <select
-              value={chamberId}
-              onChange={(e) => setChamberId(e.target.value)}
-              className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
-            >
-              <option value="">— No location —</option>
-              {chamberList.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            {isAssistant ? (
+              <div className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 text-sm">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <span className="truncate">
+                  {chamberList.find((c) => c.id === lockedChamberId)?.name ??
+                    "No location assigned yet"}
+                </span>
+              </div>
+            ) : (
+              <select
+                value={chamberId}
+                onChange={(e) => setChamberId(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+              >
+                <option value="">— No location —</option>
+                {chamberList.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <Label className="mb-1.5 block text-xs">Date</Label>

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { UserPlus, Trash2, KeyRound, Users } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, MapPin } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useChambers } from "@/components/appointment-queue";
 
 export const Route = createFileRoute("/_authenticated/rx-staff")({
   head: () => ({
@@ -44,7 +45,16 @@ function StaffPage() {
   const setPassword = useServerFn(setRxStaffPassword);
   const remove = useServerFn(removeRxStaff);
 
-  const [form, setForm] = useState({ name: "", username: "", phone: "", password: "" });
+  const chambers = useChambers(businessId);
+  const chamberList = chambers.data ?? [];
+
+  const [form, setForm] = useState({
+    name: "",
+    username: "",
+    phone: "",
+    password: "",
+    chamber_id: "",
+  });
   const [pwEdit, setPwEdit] = useState<Record<string, string>>({});
 
   const staff = useQuery({
@@ -53,7 +63,7 @@ function StaffPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_staff")
-        .select("id, business_id, doctor_id, user_id, name, phone, username, is_active, created_at")
+        .select("id, business_id, doctor_id, user_id, name, phone, username, is_active, chamber_id, created_at")
         .eq("business_id", businessId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -71,12 +81,13 @@ function StaffPage() {
           username: form.username,
           password: form.password,
           phone: form.phone,
+          chamber_id: form.chamber_id || null,
         },
       });
     },
     onSuccess: () => {
       toast.success("Staff account created");
-      setForm({ name: "", username: "", phone: "", password: "" });
+      setForm({ name: "", username: "", phone: "", password: "", chamber_id: "" });
       qc.invalidateQueries({ queryKey: ["rx-staff"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not create staff"),
@@ -92,6 +103,21 @@ function StaffPage() {
       setPwEdit((s) => ({ ...s, [id]: "" }));
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not update password"),
+  });
+
+  const setChamber = useMutation({
+    mutationFn: async (v: { id: string; chamber_id: string | null }) => {
+      const { error } = await supabase
+        .from("rx_staff")
+        .update({ chamber_id: v.chamber_id })
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Location updated");
+      qc.invalidateQueries({ queryKey: ["rx-staff"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not update location"),
   });
 
   const delStaff = useMutation({
@@ -147,6 +173,19 @@ function StaffPage() {
               autoComplete="new-password"
             />
           </div>
+          <div>
+            <Label className="mb-1.5 block text-xs">Assigned location</Label>
+            <select
+              value={form.chamber_id}
+              onChange={(e) => setForm((s) => ({ ...s, chamber_id: e.target.value }))}
+              className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+            >
+              <option value="">— No location —</option>
+              {chamberList.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button onClick={() => addStaff.mutate()} disabled={addStaff.isPending}>
@@ -182,6 +221,19 @@ function StaffPage() {
                   </div>
                 </div>
                 {s.phone && <span className="text-xs text-muted-foreground">{s.phone}</span>}
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                  <select
+                    value={s.chamber_id ?? ""}
+                    onChange={(e) => setChamber.mutate({ id: s.id, chamber_id: e.target.value || null })}
+                    className="h-8 rounded-lg border border-border bg-input px-2 text-xs"
+                  >
+                    <option value="">— No location —</option>
+                    {chamberList.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <Badge variant="outline" className="text-[10px]">
                   {s.is_active ? "Active" : "Inactive"}
                 </Badge>

@@ -2629,6 +2629,7 @@ export type Database = {
       rx_staff: {
         Row: {
           business_id: string
+          chamber_id: string | null
           created_at: string
           doctor_id: string
           id: string
@@ -2641,6 +2642,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          chamber_id?: string | null
           created_at?: string
           doctor_id: string
           id?: string
@@ -2653,6 +2655,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          chamber_id?: string | null
           created_at?: string
           doctor_id?: string
           id?: string
@@ -2669,6 +2672,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rx_staff_chamber_id_fkey"
+            columns: ["chamber_id"]
+            isOneToOne: false
+            referencedRelation: "rx_chambers"
             referencedColumns: ["id"]
           },
         ]
@@ -3684,17 +3694,30 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
-      provision_rx_staff: {
-        Args: {
-          _business_id: string
-          _email: string
-          _name: string
-          _phone: string
-          _user_id: string
-          _username: string
-        }
-        Returns: undefined
-      }
+      provision_rx_staff:
+        | {
+            Args: {
+              _business_id: string
+              _email: string
+              _name: string
+              _phone: string
+              _user_id: string
+              _username: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _business_id: string
+              _chamber_id?: string
+              _email: string
+              _name: string
+              _phone: string
+              _user_id: string
+              _username: string
+            }
+            Returns: undefined
+          }
       receive_stock_transfer: { Args: { _id: string }; Returns: undefined }
       reject_access_request: {
         Args: { _id: string; _notes?: string }
