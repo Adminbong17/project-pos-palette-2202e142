@@ -9,7 +9,7 @@ import {
   Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
-import { isRxMode, RX_PATHS } from "@/lib/rx-mode";
+import { isRxMode, isFullAppMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 
 
 const sections = [
@@ -83,6 +83,7 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
   const rxMode = isRxMode();
+  const fullApp = isFullAppMode();
   const base = isLoading
     ? []
     : isAdmin
@@ -93,11 +94,18 @@ export function AppSidebar() {
             items: sec.items.filter((it: any) => allowed!.includes(it.key)),
           }))
           .filter((sec) => sec.items.length > 0);
-  const visibleSections = rxMode
-    ? base
-        .map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
-        .filter((sec) => sec.items.length > 0)
-    : base;
+  const scoped = rxMode
+    ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
+    : fullApp
+      ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }))
+      : base;
+  // Same destination can be listed under multiple permission keys — show it once.
+  const visibleSections = scoped
+    .map((sec) => {
+      const seen = new Set<string>();
+      return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };
+    })
+    .filter((sec) => sec.items.length > 0);
 
   return (
     <Sidebar>
