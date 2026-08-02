@@ -16,6 +16,7 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "quick-box", label: "Quick Box Add", path: "/quick-box" },
   { key: "prescriptions", label: "Doctor Dashboard", path: "/rx-dashboard" },
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
+  { key: "prescriptions", label: "Patient Queue", path: "/rx-appointments" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
 
 ];
