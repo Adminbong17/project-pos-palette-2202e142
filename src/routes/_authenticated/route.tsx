@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { useAllowedSections, isPathAllowed } from "@/hooks/use-allowed-sections";
+import { useAllowedSections, isPathAllowed, isPrescriptionOnly } from "@/hooks/use-allowed-sections";
 import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
