@@ -11,7 +11,7 @@ export const Route = createFileRoute("/auth")({
     // getSession() reads the local session (no network round-trip) so the
     // auth page paints instantly instead of waiting on the auth server.
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    if (data.session) throw redirect({ to: isRxMode() ? "/prescriptions" : "/dashboard" });
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
