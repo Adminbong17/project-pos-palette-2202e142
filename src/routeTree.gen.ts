@@ -45,6 +45,7 @@ import { Route as AuthenticatedRepairIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedProductsIndexRouteImport } from './routes/_authenticated/products.index'
 import { Route as AuthenticatedHrmIndexRouteImport } from './routes/_authenticated/hrm.index'
 import { Route as AuthenticatedCrmIndexRouteImport } from './routes/_authenticated/crm.index'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedSettingsUsersRouteImport } from './routes/_authenticated/settings.users'
 import { Route as AuthenticatedSettingsUnitsRouteImport } from './routes/_authenticated/settings.units'
 import { Route as AuthenticatedSettingsTaxRatesRouteImport } from './routes/_authenticated/settings.tax-rates'
@@ -265,6 +266,11 @@ const AuthenticatedCrmIndexRoute = AuthenticatedCrmIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedCrmRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsUsersRoute =
   AuthenticatedSettingsUsersRouteImport.update({
@@ -506,6 +512,7 @@ export interface FileRoutesByFullPath {
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/crm/': typeof AuthenticatedCrmIndexRoute
   '/hrm/': typeof AuthenticatedHrmIndexRoute
   '/products/': typeof AuthenticatedProductsIndexRoute
@@ -567,6 +574,7 @@ export interface FileRoutesByTo {
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/crm': typeof AuthenticatedCrmIndexRoute
   '/hrm': typeof AuthenticatedHrmIndexRoute
   '/products': typeof AuthenticatedProductsIndexRoute
@@ -637,6 +645,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/_authenticated/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/_authenticated/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/crm/': typeof AuthenticatedCrmIndexRoute
   '/_authenticated/hrm/': typeof AuthenticatedHrmIndexRoute
   '/_authenticated/products/': typeof AuthenticatedProductsIndexRoute
@@ -707,6 +716,7 @@ export interface FileRouteTypes {
     | '/settings/tax-rates'
     | '/settings/units'
     | '/settings/users'
+    | '/admin/'
     | '/crm/'
     | '/hrm/'
     | '/products/'
@@ -768,6 +778,7 @@ export interface FileRouteTypes {
     | '/settings/tax-rates'
     | '/settings/units'
     | '/settings/users'
+    | '/admin'
     | '/crm'
     | '/hrm'
     | '/products'
@@ -837,6 +848,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/tax-rates'
     | '/_authenticated/settings/units'
     | '/_authenticated/settings/users'
+    | '/_authenticated/admin/'
     | '/_authenticated/crm/'
     | '/_authenticated/hrm/'
     | '/_authenticated/products/'
@@ -1108,6 +1120,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/crm/'
       preLoaderRoute: typeof AuthenticatedCrmIndexRouteImport
       parentRoute: typeof AuthenticatedCrmRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings/users': {
       id: '/_authenticated/settings/users'
@@ -1522,6 +1541,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminBusinessRequestsRoute: typeof AuthenticatedAdminBusinessRequestsRoute
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedSalesIdEditRoute: typeof AuthenticatedSalesIdEditRoute
 }
 
@@ -1555,6 +1575,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminBusinessRequestsRoute,
   AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
   AuthenticatedAdminPrescriptionsRoute: AuthenticatedAdminPrescriptionsRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedSalesIdEditRoute: AuthenticatedSalesIdEditRoute,
 }
 
@@ -1570,3 +1591,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
