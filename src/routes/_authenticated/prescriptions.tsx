@@ -26,6 +26,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { PrintSizeButton, type PrintSize } from "@/components/print-size-select";
 
 export const Route = createFileRoute("/_authenticated/prescriptions")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    rx: typeof search.rx === "string" ? search.rx : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Prescriptions — QweekPOS" },
