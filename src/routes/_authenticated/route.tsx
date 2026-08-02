@@ -31,26 +31,21 @@ function AuthedLayout() {
   const qc = useQueryClient();
   const rxMode = isRxMode();
   const canUsePos = !rxMode && (isAdmin || !allowed || allowed.includes("pos"));
-  const homePath = rxMode
-    ? "/rx-dashboard"
-
-    : allowed && allowed.length === 1 && allowed[0] === "rx-queue"
-      ? "/rx-appointments"
-      : allowed && isPrescriptionOnly(allowed)
+  const homePath = isAdmin
+    ? rxMode
       ? "/rx-dashboard"
-      : isAdmin || !allowed || allowed.includes("dashboard")
-      ? "/dashboard"
-      : `/${allowed[0] ?? "pos"}`;
+      : "/dashboard"
+    : sectionHomePath(allowed);
   const isHome = pathname === homePath;
 
-  if (rxMode && !isRxPathAllowed(pathname)) {
-    return <Navigate to="/prescriptions" replace />;
+  if (!roleLoading && !sectionsLoading && rxMode && !isRxPathAllowed(pathname)) {
+    return <Navigate to={homePath as any} replace />;
   }
 
   if (!roleLoading && !sectionsLoading && !isAdmin && !isPathAllowed(pathname, allowed)) {
-    const first = allowed && allowed.length ? allowed[0] : "pos";
-    return <Navigate to={`/${first}` as any} replace />;
+    return <Navigate to={homePath as any} replace />;
   }
+
 
 
   async function signOut() {
