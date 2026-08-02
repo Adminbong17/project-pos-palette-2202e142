@@ -125,6 +125,11 @@ export const setRxStaffPassword = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!staff?.user_id) throw new Error("Staff not found or not accessible");
 
+    if (!hasServiceRole())
+      throw new Error(
+        "Password change needs the SUPABASE_SERVICE_ROLE_KEY on this deployment. Ask the staff member to use \"Forgot password\", or remove and re-create the account with a new password.",
+      );
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: uErr } = await supabaseAdmin.auth.admin.updateUserById(staff.user_id, {
       password: data.password,
@@ -140,28 +145,10 @@ export const removeRxStaff = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { data: staff, error } = await context.supabase
-      .from("rx_staff")
-      .select("id, user_id, business_id")
-      .eq("id", data.staff_id)
-      .maybeSingle();
+    const { error } = await context.supabase.rpc("deactivate_rx_staff", {
+      _staff_id: data.staff_id,
+    });
     if (error) throw new Error(error.message);
-    if (!staff) throw new Error("Staff not found or not accessible");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (staff.user_id) {
-      await supabaseAdmin
-        .from("business_users")
-        .update({ is_active: false })
-        .eq("business_id", staff.business_id)
-        .eq("user_id", staff.user_id);
-      await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("business_id", staff.business_id)
-        .eq("user_id", staff.user_id);
-    }
-    const { error: dErr } = await supabaseAdmin.from("rx_staff").delete().eq("id", staff.id);
-    if (dErr) throw new Error(dErr.message);
     return { ok: true };
   });
+
