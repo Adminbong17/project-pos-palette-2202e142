@@ -27,6 +27,9 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [qualification, setQualification] = useState("");
+  const [requestedRole, setRequestedRole] = useState<"Doctor" | "Salesman">("Doctor");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -44,14 +47,40 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Account created. Signing in…");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) throw error;
+
+        // Make sure we have a session so the request row can be written as this user.
+        const { data: s } = await supabase.auth.getSession();
+        if (!s.session) {
+          await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        }
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user) {
+          const { error: reqErr } = await supabase.from("access_requests").insert({
+            user_id: u.user.id,
+            email: email.trim(),
+            full_name: name.trim() || null,
+            phone: phone.trim() || null,
+            qualification: qualification.trim() || null,
+            requested_role: requestedRole,
+          });
+          if (reqErr && !`${reqErr.message}`.toLowerCase().includes("duplicate")) throw reqErr;
+        }
+        await supabase.auth.signOut();
+        await qc.cancelQueries();
+        qc.clear();
+        toast.success("Request sent. An admin will approve your account shortly.");
+        setMode("signin");
+        setPassword("");
+        setLoading(false);
+        return;
       }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+
       // Drop any cached data from a previous session so the dashboard does not
       // render stale rows (a common cause of the "hung" screen after login).
       await qc.cancelQueries();
@@ -62,6 +91,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
 
   const inputCls =
