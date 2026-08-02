@@ -2379,6 +2379,41 @@ export type Database = {
         }
         Relationships: []
       }
+      rx_option_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          kind: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_option_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rx_presets: {
         Row: {
           business_id: string

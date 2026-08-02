@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import { useRxPresets } from "@/hooks/use-rx-presets";
+import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
 import { RxPresetCombo } from "@/components/rx-preset-combo";
 
 import { Button } from "@/components/ui/button";
@@ -348,6 +349,7 @@ function PrescriptionsPage() {
   const [nextDays, setNextDays] = useState("");
 
   // Doctor's own saved lists (private to the logged-in doctor).
+  const rxSettings = useRxOptionSettings(businessId);
   const myCc = useRxPresets("cc", businessId);
   const myVitals = useRxPresets("vital", businessId);
   const myInvestigations = useRxPresets("investigation", businessId);
@@ -472,12 +474,13 @@ function PrescriptionsPage() {
       seen.add(o.name.toLowerCase());
       out.push({ id: o.id, name: o.name, removable: true });
     }
+    if (rxSettings.isEnabled("cc"))
     for (const o of ccOptions.data ?? []) {
       if (seen.has(o.name.toLowerCase())) continue;
       out.push({ id: o.id, name: o.name });
     }
     return out;
-  }, [myCc.items, ccOptions.data]);
+  }, [myCc.items, ccOptions.data, rxSettings.isEnabled("cc")]);
 
   const invOptions = useQuery({
     queryKey: ["inv-options", businessId],
@@ -500,12 +503,13 @@ function PrescriptionsPage() {
       seen.add(o.name.toLowerCase());
       out.push({ id: o.id, name: o.name, removable: true });
     }
+    if (rxSettings.isEnabled("investigation"))
     for (const o of invOptions.data ?? []) {
       if (seen.has(o.name.toLowerCase())) continue;
       out.push({ id: o.id, name: o.name });
     }
     return out;
-  }, [myInvestigations.items, invOptions.data]);
+  }, [myInvestigations.items, invOptions.data, rxSettings.isEnabled("investigation")]);
 
   const freqOptions = useQuery({
     queryKey: ["freq-options", businessId],
@@ -528,12 +532,13 @@ function PrescriptionsPage() {
       seen.add(o.name.toLowerCase());
       out.push({ id: o.id, name: o.name, removable: true });
     }
+    if (rxSettings.isEnabled("frequency"))
     for (const o of freqOptions.data ?? []) {
       if (seen.has(o.name.toLowerCase())) continue;
       out.push({ id: o.id, name: o.name });
     }
     return out;
-  }, [myFreqs.items, freqOptions.data]);
+  }, [myFreqs.items, freqOptions.data, rxSettings.isEnabled("frequency")]);
 
   const instrOptions = useQuery({
     queryKey: ["instr-options", businessId],
@@ -556,12 +561,13 @@ function PrescriptionsPage() {
       seen.add(o.name.toLowerCase());
       out.push({ id: o.id, name: o.name, removable: true });
     }
+    if (rxSettings.isEnabled("instruction"))
     for (const o of instrOptions.data ?? []) {
       if (seen.has(o.name.toLowerCase())) continue;
       out.push({ id: o.id, name: o.name });
     }
     return out;
-  }, [myInstructions.items, instrOptions.data]);
+  }, [myInstructions.items, instrOptions.data, rxSettings.isEnabled("instruction")]);
 
   const adviceOptions = useQuery({
     queryKey: ["advice-options", businessId],
@@ -584,12 +590,13 @@ function PrescriptionsPage() {
       seen.add(o.name.toLowerCase());
       out.push({ id: o.id, name: o.name, removable: true });
     }
+    if (rxSettings.isEnabled("advice"))
     for (const o of adviceOptions.data ?? []) {
       if (seen.has(o.name.toLowerCase())) continue;
       out.push({ id: o.id, name: o.name });
     }
     return out;
-  }, [myAdvice.items, adviceOptions.data]);
+  }, [myAdvice.items, adviceOptions.data, rxSettings.isEnabled("advice")]);
 
 
 

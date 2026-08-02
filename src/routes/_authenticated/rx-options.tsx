@@ -10,6 +10,9 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useRxOptionSettings, type RxOptionKind } from "@/hooks/use-rx-option-settings";
 
 export const Route = createFileRoute("/_authenticated/rx-options")({
   head: () => ({
@@ -27,15 +30,34 @@ export const Route = createFileRoute("/_authenticated/rx-options")({
 
 type SharedTable = "chief_complaints" | "investigations" | "rx_frequencies" | "rx_instructions" | "rx_advices";
 
-const LISTS: { table: SharedTable; title: string; hint: string }[] = [
-  { table: "chief_complaints", title: "C/C (Chief Complaints)", hint: "e.g. Fever, Headache" },
-  { table: "investigations", title: "Investigations", hint: "e.g. CBC, X-ray Chest P/A" },
-  { table: "rx_frequencies", title: "Frequencies", hint: "e.g. 1+0+1" },
-  { table: "rx_instructions", title: "Rx Instructions", hint: "e.g. After meal" },
-  { table: "rx_advices", title: "Advices", hint: "e.g. Plenty of water" },
+const LISTS: { table: SharedTable; kind: RxOptionKind; title: string; hint: string }[] = [
+  { table: "chief_complaints", kind: "cc", title: "C/C (Chief Complaints)", hint: "e.g. Fever, Headache" },
+  { table: "investigations", kind: "investigation", title: "Investigations", hint: "e.g. CBC, X-ray Chest P/A" },
+  { table: "rx_frequencies", kind: "frequency", title: "Frequencies", hint: "e.g. 1+0+1" },
+  { table: "rx_instructions", kind: "instruction", title: "Rx Instructions", hint: "e.g. After meal" },
+  { table: "rx_advices", kind: "advice", title: "Advices", hint: "e.g. Plenty of water" },
 ];
 
-function ListCard({ table, title, hint, businessId }: { table: SharedTable; title: string; hint: string; businessId?: string }) {
+
+function ListCard({
+  table,
+  kind,
+  title,
+  hint,
+  businessId,
+  enabled,
+  onToggle,
+  toggleDisabled,
+}: {
+  table: SharedTable;
+  kind: RxOptionKind;
+  title: string;
+  hint: string;
+  businessId?: string;
+  enabled: boolean;
+  onToggle: (next: boolean) => void;
+  toggleDisabled?: boolean;
+}) {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
   const key = ["rx-shared-options", table, businessId];
@@ -79,14 +101,35 @@ function ListCard({ table, title, hint, businessId }: { table: SharedTable; titl
   });
 
   return (
-    <Card>
+    <Card className={enabled ? undefined : "opacity-90"}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          {title}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">{list.data?.length ?? 0}</span>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">
+              {title}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{list.data?.length ?? 0}</span>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Switch
+              id={`toggle-${kind}`}
+              checked={enabled}
+              disabled={toggleDisabled}
+              onCheckedChange={onToggle}
+            />
+            <Label htmlFor={`toggle-${kind}`} className="text-[10px] uppercase text-muted-foreground">
+              {enabled ? "Default on" : "Default off"}
+            </Label>
+          </div>
+        </div>
+        {!enabled && (
+          <p className="mt-1 rounded-md bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">
+            Doctors won’t see this shared list — only their own items from “My Rx Lists”.
+          </p>
+        )}
       </CardHeader>
+
       <CardContent className="space-y-3">
         <form
           className="flex gap-2"
@@ -125,6 +168,7 @@ function ListCard({ table, title, hint, businessId }: { table: SharedTable; titl
 function RxOptionsPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading } = useCurrentRole();
+  const settings = useRxOptionSettings(business?.id);
 
   if (!isLoading && !isAdmin) {
     return (
@@ -141,13 +185,22 @@ function RxOptionsPage() {
         <h1 className="font-display text-2xl font-semibold">Manage Rx Options</h1>
         <p className="text-sm text-muted-foreground">
           Shared lists used by every doctor while writing a prescription — C/C, investigations, frequencies, instructions and advices.
+          Turn a list off if doctors should use only their own personal items.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {LISTS.map((l) => (
-          <ListCard key={l.table} {...l} businessId={business?.id} />
+          <ListCard
+            key={l.table}
+            {...l}
+            businessId={business?.id}
+            enabled={settings.isEnabled(l.kind)}
+            toggleDisabled={settings.isLoading || settings.isSaving || !business?.id}
+            onToggle={(next) => settings.setEnabled(l.kind, next)}
+          />
         ))}
       </div>
     </div>
   );
 }
+
