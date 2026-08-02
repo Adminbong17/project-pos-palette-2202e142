@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -26,11 +28,21 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+
 function RxDashboard() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin } = useCurrentRole();
   const businessId = business?.id;
   const chambers = useChambers(businessId);
+  const [queueDate, setQueueDate] = useState(dhakaToday());
+
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["rx-dashboard", businessId, isAdmin],
@@ -93,8 +105,34 @@ function RxDashboard() {
         </div>
       </div>
 
-      <AppointmentQueue
-          allowEdit businessId={businessId} date={dhakaToday()} chambers={chambers.data ?? []} />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1.5 block text-xs text-muted-foreground">Queue date</label>
+            <input
+              type="date"
+              value={queueDate}
+              onChange={(e) => setQueueDate(e.target.value || dhakaToday())}
+              className="h-9 rounded-lg border border-border bg-input px-3 text-sm"
+            />
+          </div>
+          <button
+            onClick={() => setQueueDate(dhakaToday())}
+            className="h-9 rounded-lg border border-border bg-background px-3 text-xs hover:bg-accent"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setQueueDate(addDays(dhakaToday(), 1))}
+            className="h-9 rounded-lg border border-border bg-background px-3 text-xs hover:bg-accent"
+          >
+            Tomorrow
+          </button>
+        </div>
+        <AppointmentQueue allowEdit businessId={businessId} date={queueDate} chambers={chambers.data ?? []} />
+      </div>
+
+
 
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -55,7 +55,48 @@ function StaffPage() {
     password: "",
     chamber_id: "",
   });
+  const [newChamber, setNewChamber] = useState({ name: "", address: "" });
   const [pwEdit, setPwEdit] = useState<Record<string, string>>({});
+
+  const addChamber = useMutation({
+    mutationFn: async () => {
+      if (!businessId) throw new Error("No business");
+      if (!newChamber.name.trim()) throw new Error("Location name is required");
+      const { data: auth } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("rx_chambers")
+        .insert({
+          business_id: businessId,
+          name: newChamber.name.trim(),
+          address: newChamber.address.trim() || null,
+          created_by: auth.user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: (id) => {
+      toast.success("Location added");
+      setNewChamber({ name: "", address: "" });
+      setForm((s) => ({ ...s, chamber_id: id }));
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not add location"),
+  });
+
+  const delChamber = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("rx_chambers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Location removed");
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not remove location"),
+  });
+
 
   const staff = useQuery({
     queryKey: ["rx-staff", businessId],
@@ -139,6 +180,51 @@ function StaffPage() {
           Create assistant logins (username + password). Assistants can only manage the patient queue.
         </p>
       </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">My locations (chambers)</h2>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <Input
+            placeholder="Location name"
+            value={newChamber.name}
+            onChange={(e) => setNewChamber((s) => ({ ...s, name: e.target.value }))}
+          />
+          <Input
+            placeholder="Address (optional)"
+            value={newChamber.address}
+            onChange={(e) => setNewChamber((s) => ({ ...s, address: e.target.value }))}
+          />
+          <Button onClick={() => addChamber.mutate()} disabled={addChamber.isPending}>
+            <MapPin className="mr-1 h-4 w-4" /> {addChamber.isPending ? "Adding…" : "Add location"}
+          </Button>
+        </div>
+        {chamberList.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {chamberList.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs"
+              >
+                <span>{c.name}</span>
+                <button
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => { if (confirm(`Remove ${c.name}?`)) delChamber.mutate(c.id); }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Add a location first — then assign it to each staff member below.
+          </p>
+        )}
+      </div>
+
 
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <div className="mb-3 flex items-center gap-2">
