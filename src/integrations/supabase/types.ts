@@ -2390,6 +2390,126 @@ export type Database = {
         }
         Relationships: []
       }
+      rx_appointments: {
+        Row: {
+          appt_date: string
+          appt_time: string | null
+          business_id: string
+          chamber_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          patient_age: string | null
+          patient_gender: string | null
+          patient_name: string
+          patient_phone: string | null
+          prescription_id: string | null
+          serial_no: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appt_date?: string
+          appt_time?: string | null
+          business_id: string
+          chamber_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_age?: string | null
+          patient_gender?: string | null
+          patient_name: string
+          patient_phone?: string | null
+          prescription_id?: string | null
+          serial_no?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appt_date?: string
+          appt_time?: string | null
+          business_id?: string
+          chamber_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_age?: string | null
+          patient_gender?: string | null
+          patient_name?: string
+          patient_phone?: string | null
+          prescription_id?: string | null
+          serial_no?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_appointments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rx_appointments_chamber_id_fkey"
+            columns: ["chamber_id"]
+            isOneToOne: false
+            referencedRelation: "rx_chambers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rx_appointments_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rx_chambers: {
+        Row: {
+          address: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_chambers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rx_frequencies: {
         Row: {
           business_id: string
