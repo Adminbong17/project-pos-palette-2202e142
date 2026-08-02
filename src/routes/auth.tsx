@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { isRxMode } from "@/lib/rx-mode";
+import { loginIdentifierToEmail } from "@/lib/rx-staff";
 
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -76,7 +77,7 @@ function AuthPage() {
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: loginIdentifierToEmail(email),
         password,
       });
       if (error) throw error;

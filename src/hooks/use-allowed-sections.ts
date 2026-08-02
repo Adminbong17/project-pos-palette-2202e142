@@ -18,6 +18,8 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
   { key: "prescriptions", label: "Patient Queue", path: "/rx-appointments" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
+  { key: "prescriptions", label: "My Staff", path: "/rx-staff" },
+  { key: "rx-queue", label: "Patient Queue", path: "/rx-appointments" },
 
 ];
 
@@ -26,14 +28,17 @@ const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 // Sections every signed-in user can always reach, regardless of role config.
 const ALWAYS_ALLOWED = ["quick-box"];
 
+// Clinical-only keys: users limited to these never get POS/inventory extras.
+const CLINICAL_KEYS = ["prescriptions", "rx-queue"];
+
 // A "doctor" only needs the prescription module — no POS/inventory extras.
 export function isPrescriptionOnly(list: string[] | null) {
   if (!list) return false;
-  return list.includes("prescriptions") && list.every((k) => k === "prescriptions");
+  return list.length > 0 && list.every((k) => CLINICAL_KEYS.includes(k));
 }
 
 function withAlways(list: string[]) {
-  if (isPrescriptionOnly(list)) return ["prescriptions"];
+  if (isPrescriptionOnly(list)) return list;
   return Array.from(new Set([...list, ...ALWAYS_ALLOWED]));
 }
 

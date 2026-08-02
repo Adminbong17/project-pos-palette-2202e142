@@ -17,6 +17,7 @@ import { Route as AuthenticatedStockTransfersRouteImport } from './routes/_authe
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
+import { Route as AuthenticatedRxStaffRouteImport } from './routes/_authenticated/rx-staff'
 import { Route as AuthenticatedRxOptionsRouteImport } from './routes/_authenticated/rx-options'
 import { Route as AuthenticatedRxListsRouteImport } from './routes/_authenticated/rx-lists'
 import { Route as AuthenticatedRxDashboardRouteImport } from './routes/_authenticated/rx-dashboard'
@@ -114,6 +115,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRxStaffRoute = AuthenticatedRxStaffRouteImport.update({
+  id: '/rx-staff',
+  path: '/rx-staff',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRxOptionsRoute = AuthenticatedRxOptionsRouteImport.update({
@@ -465,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
+  '/rx-staff': typeof AuthenticatedRxStaffRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
@@ -526,6 +533,7 @@ export interface FileRoutesByTo {
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
+  '/rx-staff': typeof AuthenticatedRxStaffRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
@@ -594,6 +602,7 @@ export interface FileRoutesById {
   '/_authenticated/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/_authenticated/rx-lists': typeof AuthenticatedRxListsRoute
   '/_authenticated/rx-options': typeof AuthenticatedRxOptionsRoute
+  '/_authenticated/rx-staff': typeof AuthenticatedRxStaffRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
@@ -663,6 +672,7 @@ export interface FileRouteTypes {
     | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
+    | '/rx-staff'
     | '/sales'
     | '/settings'
     | '/setup'
@@ -724,6 +734,7 @@ export interface FileRouteTypes {
     | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
+    | '/rx-staff'
     | '/sales'
     | '/setup'
     | '/stock-transfers'
@@ -791,6 +802,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rx-dashboard'
     | '/_authenticated/rx-lists'
     | '/_authenticated/rx-options'
+    | '/_authenticated/rx-staff'
     | '/_authenticated/sales'
     | '/_authenticated/settings'
     | '/_authenticated/setup'
@@ -899,6 +911,13 @@ declare module '@tanstack/react-router' {
       path: '/sales'
       fullPath: '/sales'
       preLoaderRoute: typeof AuthenticatedSalesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rx-staff': {
+      id: '/_authenticated/rx-staff'
+      path: '/rx-staff'
+      fullPath: '/rx-staff'
+      preLoaderRoute: typeof AuthenticatedRxStaffRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rx-options': {
@@ -1495,6 +1514,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRxDashboardRoute: typeof AuthenticatedRxDashboardRoute
   AuthenticatedRxListsRoute: typeof AuthenticatedRxListsRoute
   AuthenticatedRxOptionsRoute: typeof AuthenticatedRxOptionsRoute
+  AuthenticatedRxStaffRoute: typeof AuthenticatedRxStaffRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
@@ -1526,6 +1546,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRxDashboardRoute: AuthenticatedRxDashboardRoute,
   AuthenticatedRxListsRoute: AuthenticatedRxListsRoute,
   AuthenticatedRxOptionsRoute: AuthenticatedRxOptionsRoute,
+  AuthenticatedRxStaffRoute: AuthenticatedRxStaffRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
