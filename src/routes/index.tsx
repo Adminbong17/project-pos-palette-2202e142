@@ -39,7 +39,9 @@ function LandingPage() {
     if (isRxMode()) navigate({ to: "/prescriptions", replace: true });
   }, [navigate]);
 
+  return (
     <div
+
       className="min-h-screen text-foreground"
       style={{
         background:
