@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { formatDate } from "@/lib/utils";
+import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
+import { dhakaToday } from "@/lib/appointments";
 import { Users, FileText, CalendarClock, Stethoscope } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/rx-dashboard")({
