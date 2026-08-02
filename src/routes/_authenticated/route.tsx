@@ -5,6 +5,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useAllowedSections, isPathAllowed } from "@/hooks/use-allowed-sections";
+import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
+
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
