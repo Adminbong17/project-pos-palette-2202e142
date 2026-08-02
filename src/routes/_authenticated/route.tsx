@@ -36,6 +36,8 @@ function AuthedLayout() {
 
     : allowed && allowed.length === 1 && allowed[0] === "rx-queue"
       ? "/rx-appointments"
+      : allowed && isPrescriptionOnly(allowed)
+      ? "/rx-dashboard"
       : isAdmin || !allowed || allowed.includes("dashboard")
       ? "/dashboard"
       : `/${allowed[0] ?? "pos"}`;
