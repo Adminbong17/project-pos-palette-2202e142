@@ -336,6 +336,7 @@ function PrescriptionsPage() {
 
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const dialogScrollRef = useWheelScrollPassthrough<HTMLDivElement>();
   const [editing, setEditing] = useState<Rx | null>(null);
   const [form, setForm] = useState({
     rx_no: "", rx_date: dhakaLocalInput(),
