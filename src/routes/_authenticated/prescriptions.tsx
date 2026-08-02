@@ -334,6 +334,10 @@ function PrescriptionsPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
 
+  // Coming from the patient queue: ?rx=<id> opens that exact prescription.
+  const { rx: rxParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const dialogScrollRef = useWheelScrollPassthrough<HTMLDivElement>();
