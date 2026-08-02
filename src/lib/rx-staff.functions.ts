@@ -1,11 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const STAFF_EMAIL_DOMAIN = "staff.qweekpos.app";
-
-export function staffUsernameToEmail(username: string) {
-  return `${username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "")}@${STAFF_EMAIL_DOMAIN}`;
-}
+import { staffUsernameToEmail, normalizeStaffUsername } from "@/lib/rx-staff";
 
 type CreateStaffInput = {
   business_id: string;
@@ -15,30 +10,12 @@ type CreateStaffInput = {
   phone?: string;
 };
 
-type SetPasswordInput = { staff_id: string; password: string };
-type RemoveStaffInput = { staff_id: string };
-
-/** Caller must be a Doctor or Admin of the business. Returns the role id for assistants. */
-async function assertDoctorOrAdmin(
-  supabase: any,
-  businessId: string,
-): Promise<void> {
-  const { data: member, error: mErr } = await supabase
-    .from("business_users")
-    .select("id")
-    .eq("business_id", businessId)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (mErr) throw new Error(mErr.message);
-  if (!member) throw new Error("You are not a member of this business");
-}
-
 export const createRxStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: CreateStaffInput) => {
     if (!data?.business_id) throw new Error("business_id required");
     if (!data?.name?.trim()) throw new Error("Staff name is required");
-    const username = (data.username ?? "").trim().toLowerCase();
+    const username = normalizeStaffUsername(data.username);
     if (!/^[a-z0-9._-]{3,32}$/.test(username))
       throw new Error("Username must be 3-32 chars: letters, numbers, . _ -");
     if (!data?.password || data.password.length < 6)
@@ -47,7 +24,16 @@ export const createRxStaff = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertDoctorOrAdmin(supabase, data.business_id);
+
+    const { data: member, error: mErr } = await supabase
+      .from("business_users")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (mErr) throw new Error(mErr.message);
+    if (!member) throw new Error("You are not a member of this business");
 
     const email = staffUsernameToEmail(data.username);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -71,10 +57,9 @@ export const createRxStaff = createServerFn({ method: "POST" })
       staffUserId = created.user!.id;
     }
 
-    await supabaseAdmin.from("profiles").upsert(
-      { id: staffUserId, email, first_name: data.name.trim() },
-      { onConflict: "id" },
-    );
+    await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: staffUserId, email, first_name: data.name.trim() }, { onConflict: "id" });
 
     const { error: buErr } = await supabaseAdmin.from("business_users").upsert(
       {
@@ -87,7 +72,7 @@ export const createRxStaff = createServerFn({ method: "POST" })
     );
     if (buErr) throw new Error(buErr.message);
 
-    // Assistant role (queue only)
+    // Assistant role — patient queue only.
     const { data: roleRow } = await supabaseAdmin
       .from("roles")
       .select("id")
@@ -95,7 +80,7 @@ export const createRxStaff = createServerFn({ method: "POST" })
       .ilike("name", "Assistant")
       .maybeSingle();
 
-    let roleId = roleRow?.id ?? null;
+    let roleId: string | null = roleRow?.id ?? null;
     if (!roleId) {
       const { data: newRole, error: nrErr } = await supabaseAdmin
         .from("roles")
@@ -144,17 +129,16 @@ export const createRxStaff = createServerFn({ method: "POST" })
 
 export const setRxStaffPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: SetPasswordInput) => {
+  .inputValidator((data: { staff_id: string; password: string }) => {
     if (!data?.staff_id) throw new Error("staff_id required");
     if (!data?.password || data.password.length < 6)
       throw new Error("Password must be at least 6 characters");
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: staff, error } = await supabase
+    const { data: staff, error } = await context.supabase
       .from("rx_staff")
-      .select("id, user_id, business_id")
+      .select("id, user_id")
       .eq("id", data.staff_id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -170,13 +154,12 @@ export const setRxStaffPassword = createServerFn({ method: "POST" })
 
 export const removeRxStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: RemoveStaffInput) => {
+  .inputValidator((data: { staff_id: string }) => {
     if (!data?.staff_id) throw new Error("staff_id required");
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: staff, error } = await supabase
+    const { data: staff, error } = await context.supabase
       .from("rx_staff")
       .select("id, user_id, business_id")
       .eq("id", data.staff_id)
