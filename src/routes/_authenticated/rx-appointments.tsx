@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, MapPin } from "lucide-react";
 
@@ -233,13 +233,56 @@ function AppointmentsPage() {
         </div>
       </div>
 
+      <QueueStats businessId={businessId} date={date} />
+
       <AppointmentQueue
         businessId={businessId}
         date={date}
         chamberId={chamberId || undefined}
         chambers={chamberList}
         allowDelete
+        allowEdit
       />
+    </div>
+  );
+}
+
+/** Small day summary so assistants have a dashboard on top of the queue. */
+function QueueStats({ businessId, date }: { businessId?: string; date: string }) {
+  const stats = useQuery({
+    queryKey: ["rx-appointment-stats", businessId, date],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rx_appointments")
+        .select("id, status, prescription_id")
+        .eq("business_id", businessId!)
+        .eq("appt_date", date);
+      if (error) throw error;
+      const rows = data ?? [];
+      return {
+        total: rows.length,
+        started: rows.filter((r: any) => !!r.prescription_id).length,
+        waiting: rows.filter((r: any) => !r.prescription_id && r.status !== "cancelled").length,
+        done: rows.filter((r: any) => r.status === "done").length,
+      };
+    },
+  });
+  const s = stats.data ?? { total: 0, started: 0, waiting: 0, done: 0 };
+  const cards = [
+    { label: "Patients today", value: s.total },
+    { label: "Waiting", value: s.waiting },
+    { label: "Rx started", value: s.started },
+    { label: "Completed", value: s.done },
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((c) => (
+        <div key={c.label} className="rounded-2xl border border-border/60 bg-card p-4">
+          <p className="text-xs text-muted-foreground">{c.label}</p>
+          <p className="mt-1 font-display text-2xl font-semibold">{c.value}</p>
+        </div>
+      ))}
     </div>
   );
 }
