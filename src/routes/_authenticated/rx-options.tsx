@@ -168,6 +168,7 @@ function ListCard({
 function RxOptionsPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading } = useCurrentRole();
+  const settings = useRxOptionSettings(business?.id);
 
   if (!isLoading && !isAdmin) {
     return (
@@ -184,13 +185,22 @@ function RxOptionsPage() {
         <h1 className="font-display text-2xl font-semibold">Manage Rx Options</h1>
         <p className="text-sm text-muted-foreground">
           Shared lists used by every doctor while writing a prescription — C/C, investigations, frequencies, instructions and advices.
+          Turn a list off if doctors should use only their own personal items.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {LISTS.map((l) => (
-          <ListCard key={l.table} {...l} businessId={business?.id} />
+          <ListCard
+            key={l.table}
+            {...l}
+            businessId={business?.id}
+            enabled={settings.isEnabled(l.kind)}
+            toggleDisabled={settings.isLoading || settings.isSaving || !business?.id}
+            onToggle={(next) => settings.setEnabled(l.kind, next)}
+          />
         ))}
       </div>
     </div>
   );
 }
+
