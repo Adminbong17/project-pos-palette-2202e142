@@ -724,19 +724,30 @@ function PrescriptionsPage() {
     setOpen(true);
   };
 
-  // Coming from the patient queue: ?rx=<id> opens that prescription straight away.
-  const { rx: rxParam } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  // Open the queued prescription by id — never depend on the (filtered/limited)
+  // list query, otherwise the wrong Rx (or none) is opened.
   const [autoOpened, setAutoOpened] = useState<string | null>(null);
   useEffect(() => {
-    if (!rxParam || autoOpened === rxParam) return;
-    const found = (list.data ?? []).find((r) => r.id === rxParam);
-    if (!found) return;
+    if (!rxParam || !businessId || autoOpened === rxParam) return;
     setAutoOpened(rxParam);
-    void openEdit(found);
-    navigate({ search: {} as any, replace: true });
+    (async () => {
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select(
+          "id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id",
+        )
+        .eq("id", rxParam)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Could not open that prescription");
+        return;
+      }
+      await openEdit(data as Rx);
+      navigate({ search: {} as any, replace: true });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rxParam, list.data]);
+  }, [rxParam, businessId]);
+
 
 
 
