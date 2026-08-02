@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { isRxMode } from "@/lib/rx-mode";
+
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +13,7 @@ export const Route = createFileRoute("/auth")({
     // getSession() reads the local session (no network round-trip) so the
     // auth page paints instantly instead of waiting on the auth server.
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    if (data.session) throw redirect({ to: isRxMode() ? "/prescriptions" : "/dashboard" });
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
@@ -54,7 +56,7 @@ function AuthPage() {
       // render stale rows (a common cause of the "hung" screen after login).
       await qc.cancelQueries();
       qc.clear();
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: isRxMode() ? "/prescriptions" : "/dashboard", replace: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Authentication failed");
       setLoading(false);

@@ -1,4 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { isRxMode } from "@/lib/rx-mode";
+
 import {
   ShoppingCart,
   Package,
@@ -31,8 +34,14 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isRxMode()) navigate({ to: "/prescriptions", replace: true });
+  }, [navigate]);
+
   return (
     <div
+
       className="min-h-screen text-foreground"
       style={{
         background:

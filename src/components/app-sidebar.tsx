@@ -9,6 +9,8 @@ import {
   Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
+import { isRxMode, RX_PATHS } from "@/lib/rx-mode";
+
 
 const sections = [
   {
@@ -72,7 +74,8 @@ const sections = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
-  const visibleSections = isLoading
+  const rxMode = isRxMode();
+  const base = isLoading
     ? []
     : isAdmin
       ? sections
@@ -82,6 +85,12 @@ export function AppSidebar() {
             items: sec.items.filter((it: any) => allowed!.includes(it.key)),
           }))
           .filter((sec) => sec.items.length > 0);
+  const visibleSections = rxMode
+    ? base
+        .map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
+        .filter((sec) => sec.items.length > 0)
+    : base;
+
   return (
     <Sidebar>
       <SidebarHeader>

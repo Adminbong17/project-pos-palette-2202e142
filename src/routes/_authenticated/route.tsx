@@ -5,6 +5,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useAllowedSections, isPathAllowed } from "@/hooks/use-allowed-sections";
+import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
+
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,16 +29,24 @@ function AuthedLayout() {
   
   const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
-  const canUsePos = isAdmin || !allowed || allowed.includes("pos");
-  const homePath = isAdmin || !allowed || allowed.includes("dashboard")
-    ? "/dashboard"
-    : `/${allowed[0] ?? "pos"}`;
+  const rxMode = isRxMode();
+  const canUsePos = !rxMode && (isAdmin || !allowed || allowed.includes("pos"));
+  const homePath = rxMode
+    ? "/prescriptions"
+    : isAdmin || !allowed || allowed.includes("dashboard")
+      ? "/dashboard"
+      : `/${allowed[0] ?? "pos"}`;
   const isHome = pathname === homePath;
+
+  if (rxMode && !isRxPathAllowed(pathname)) {
+    return <Navigate to="/prescriptions" replace />;
+  }
 
   if (!roleLoading && !sectionsLoading && !isAdmin && !isPathAllowed(pathname, allowed)) {
     const first = allowed && allowed.length ? allowed[0] : "pos";
     return <Navigate to={`/${first}` as any} replace />;
   }
+
 
   async function signOut() {
     await qc.cancelQueries();
