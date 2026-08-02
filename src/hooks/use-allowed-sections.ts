@@ -97,3 +97,14 @@ export function isPathAllowed(pathname: string, sections: string[] | null) {
     (s) => sections.includes(s.key) && (pathname === s.path || pathname.startsWith(s.path + "/")),
   );
 }
+
+// First landing path for a set of allowed sections (Assistant → Patient Queue).
+export function sectionHomePath(sections: string[] | null) {
+  if (!sections || sections.length === 0) return "/dashboard";
+  if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
+    return "/rx-appointments";
+  if (sections.includes("prescriptions")) return "/rx-dashboard";
+  if (sections.includes("dashboard")) return "/dashboard";
+  const match = ALL_SECTIONS.find((s) => sections.includes(s.key));
+  return match?.path ?? "/pos";
+}
