@@ -3661,6 +3661,7 @@ export type Database = {
         Args: { _business_id: string }
         Returns: string
       }
+      deactivate_rx_staff: { Args: { _staff_id: string }; Returns: undefined }
       delete_purchase: { Args: { _id: string }; Returns: undefined }
       delete_sale: { Args: { _id: string }; Returns: undefined }
       delete_stock_adjustment: { Args: { _id: string }; Returns: undefined }
@@ -3683,6 +3684,17 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      provision_rx_staff: {
+        Args: {
+          _business_id: string
+          _email: string
+          _name: string
+          _phone: string
+          _user_id: string
+          _username: string
+        }
+        Returns: undefined
+      }
       receive_stock_transfer: { Args: { _id: string }; Returns: undefined }
       reject_access_request: {
         Args: { _id: string; _notes?: string }
