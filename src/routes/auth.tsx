@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { isRxMode } from "@/lib/rx-mode";
+
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
