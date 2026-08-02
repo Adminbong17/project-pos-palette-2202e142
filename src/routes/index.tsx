@@ -34,7 +34,11 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
-  return (
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isRxMode()) navigate({ to: "/prescriptions", replace: true });
+  }, [navigate]);
+
     <div
       className="min-h-screen text-foreground"
       style={{
