@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Use the Vercel Nitro preset when building outside the Lovable sandbox.
+  // Inside the sandbox this is overridden to cloudflare-module automatically.
+  nitro: {
+    preset: "vercel",
+  },
 });
