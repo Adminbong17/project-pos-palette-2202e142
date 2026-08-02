@@ -24,5 +24,6 @@ export type RxStaff = {
   phone: string | null;
   username: string;
   is_active: boolean;
+  chamber_id: string | null;
   created_at: string;
 };
