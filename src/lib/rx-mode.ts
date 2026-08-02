@@ -12,30 +12,63 @@ const RX_HOST_MATCHERS = [
   /^dr\./i,
 ];
 
+/** Hosts that always serve the FULL app (POS + inventory + prescriptions). */
+const FULL_APP_HOSTS = [
+  /^sell\./i,
+  /^app\./i,
+  /^pos\./i,
+  /^www\./i,
+];
+
 /** Paths reachable while in prescription-only (Rx domain) mode. */
 export const RX_PATHS = ["/prescriptions", "/rx-lists", "/admin/prescriptions"];
 
 export function isRxHost(hostname?: string | null) {
   if (!hostname) return false;
   const h = hostname.toLowerCase();
-  // Allow local/preview testing with ?rx=1 handled separately in isRxMode().
+  if (FULL_APP_HOSTS.some((re) => re.test(h))) return false;
   return RX_HOST_MATCHERS.some((re) => re.test(h));
+}
+
+function isFullAppHost(hostname?: string | null) {
+  if (!hostname) return false;
+  const h = hostname.toLowerCase();
+  return FULL_APP_HOSTS.some((re) => re.test(h));
 }
 
 /** Client-only check. Returns false during SSR. */
 export function isRxMode() {
   if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+
+  // A production full-app host (e.g. sell.sheikhpharma.shop) is never Rx mode,
+  // and clears any stale local override left over from testing.
+  if (isFullAppHost(host)) {
+    try {
+      window.localStorage.removeItem("rx-mode");
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
+
   try {
-    if (window.localStorage.getItem("rx-mode") === "1") return true;
-    if (new URLSearchParams(window.location.search).get("rx") === "1") {
+    const param = new URLSearchParams(window.location.search).get("rx");
+    if (param === "0") {
+      window.localStorage.removeItem("rx-mode");
+      return isRxHost(host);
+    }
+    if (param === "1") {
       window.localStorage.setItem("rx-mode", "1");
       return true;
     }
+    if (window.localStorage.getItem("rx-mode") === "1") return true;
   } catch {
     /* storage blocked — fall back to hostname only */
   }
-  return isRxHost(window.location.hostname);
+  return isRxHost(host);
 }
+
 
 export function isRxPathAllowed(pathname: string) {
   return RX_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
