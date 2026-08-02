@@ -10,8 +10,12 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installChunkRecovery, isChunkLoadError, recoverFromChunkError } from "../lib/chunk-recovery";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionKeepAlive } from "@/components/session-keep-alive";
+
+installChunkRecovery();
+
 
 
 function NotFoundComponent() {
