@@ -6,7 +6,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks,
+  Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { isRxMode, RX_PATHS } from "@/lib/rx-mode";
@@ -58,6 +58,7 @@ const sections = [
       { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
 
+      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },

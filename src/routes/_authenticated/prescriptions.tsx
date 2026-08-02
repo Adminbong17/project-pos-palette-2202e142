@@ -26,6 +26,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { PrintSizeButton, type PrintSize } from "@/components/print-size-select";
 
 export const Route = createFileRoute("/_authenticated/prescriptions")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    rx: typeof search.rx === "string" ? search.rx : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Prescriptions — QweekPOS" },
@@ -714,6 +717,22 @@ function PrescriptionsPage() {
     setLines(((data ?? []) as Line[]).length ? (data as Line[]) : [emptyLine()]);
     setOpen(true);
   };
+
+  // Coming from the patient queue: ?rx=<id> opens that prescription straight away.
+  const { rx: rxParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [autoOpened, setAutoOpened] = useState<string | null>(null);
+  useEffect(() => {
+    if (!rxParam || autoOpened === rxParam) return;
+    const found = (list.data ?? []).find((r) => r.id === rxParam);
+    if (!found) return;
+    setAutoOpened(rxParam);
+    void openEdit(found);
+    navigate({ search: {} as any, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rxParam, list.data]);
+
+
 
   const save = useMutation({
     mutationFn: async () => {

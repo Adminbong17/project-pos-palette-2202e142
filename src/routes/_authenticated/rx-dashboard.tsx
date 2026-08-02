@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { formatDate } from "@/lib/utils";
+import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
+import { dhakaToday } from "@/lib/appointments";
 import { Users, FileText, CalendarClock, Stethoscope } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/rx-dashboard")({
@@ -28,6 +30,7 @@ function RxDashboard() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin } = useCurrentRole();
   const businessId = business?.id;
+  const chambers = useChambers(businessId);
 
   const { data, isLoading } = useQuery({
     queryKey: ["rx-dashboard", businessId, isAdmin],
@@ -85,9 +88,13 @@ function RxDashboard() {
         </div>
         <div className="flex gap-2">
           <Link to="/prescriptions" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">New / All Prescriptions</Link>
+          <Link to="/rx-appointments" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">Patient Queue</Link>
           <Link to="/rx-lists" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">My Rx Lists</Link>
         </div>
       </div>
+
+      <AppointmentQueue businessId={businessId} date={dhakaToday()} chambers={chambers.data ?? []} />
+
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((c) => (
