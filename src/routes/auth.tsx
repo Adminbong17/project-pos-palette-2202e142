@@ -106,15 +106,41 @@ function AuthPage() {
         </p>
         <form className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={submit}>
           {mode === "signup" && (
-            <input
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              autoComplete="name"
-              className={inputCls}
-            />
+            <>
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                autoComplete="name"
+                className={inputCls}
+              />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone (optional)"
+                inputMode="tel"
+                className={inputCls}
+              />
+              <select
+                value={requestedRole}
+                onChange={(e) => setRequestedRole(e.target.value as "Doctor" | "Salesman")}
+                className={inputCls}
+              >
+                <option value="Doctor">I am a Doctor (Prescriptions)</option>
+                <option value="Salesman">I am shop staff (POS)</option>
+              </select>
+              {requestedRole === "Doctor" && (
+                <input
+                  value={qualification}
+                  onChange={(e) => setQualification(e.target.value)}
+                  placeholder="Qualification / designation (optional)"
+                  className={inputCls}
+                />
+              )}
+            </>
           )}
+
           <input
             required
             type="email"
