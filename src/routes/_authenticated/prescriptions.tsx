@@ -811,7 +811,18 @@ function PrescriptionsPage() {
     onSuccess: () => {
       toast.success("Prescription saved");
       clearRxDraft();
-      qc.invalidateQueries({ queryKey: ["prescriptions"] });
+      // Every surface that shows this prescription must refetch, otherwise the
+      // dashboard / admin list / queue keep showing the old version.
+      for (const key of [
+        ["prescriptions"],
+        ["admin-prescriptions"],
+        ["admin-rx-lines"],
+        ["rx-dashboard"],
+        ["rx-appointments"],
+        ["appointments"],
+      ]) {
+        qc.invalidateQueries({ queryKey: key });
+      }
       setOpen(false);
       resetForm();
     },
