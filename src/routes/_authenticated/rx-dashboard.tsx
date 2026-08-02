@@ -38,6 +38,9 @@ function RxDashboard() {
   const { isAdmin } = useCurrentRole();
   const businessId = business?.id;
   const chambers = useChambers(businessId);
+  const [queueDate, setQueueDate] = useState(dhakaToday());
+
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["rx-dashboard", businessId, isAdmin],
