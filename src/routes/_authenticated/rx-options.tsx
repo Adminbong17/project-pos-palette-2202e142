@@ -10,6 +10,9 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useRxOptionSettings, type RxOptionKind } from "@/hooks/use-rx-option-settings";
 
 export const Route = createFileRoute("/_authenticated/rx-options")({
   head: () => ({
