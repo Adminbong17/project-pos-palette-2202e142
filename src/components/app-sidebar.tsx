@@ -65,6 +65,7 @@ const sections = [
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
+      { to: "/admin", label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
 
     ],
   },
