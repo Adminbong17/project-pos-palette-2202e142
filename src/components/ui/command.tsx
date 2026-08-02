@@ -7,6 +7,8 @@ import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useScrollableWheel } from "@/hooks/use-scrollable-wheel";
+
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -57,13 +59,17 @@ CommandInput.displayName = CommandPrimitive.Input.displayName;
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const setRef = useScrollableWheel<HTMLDivElement>(ref as React.Ref<HTMLDivElement>);
+  return (
+    <CommandPrimitive.List
+      ref={setRef}
+      className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden overscroll-contain", className)}
+      {...props}
+    />
+  );
+});
+
 
 CommandList.displayName = CommandPrimitive.List.displayName;
 
