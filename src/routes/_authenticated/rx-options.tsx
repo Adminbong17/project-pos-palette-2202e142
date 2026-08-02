@@ -39,7 +39,25 @@ const LISTS: { table: SharedTable; kind: RxOptionKind; title: string; hint: stri
 ];
 
 
-function ListCard({ table, title, hint, businessId }: { table: SharedTable; title: string; hint: string; businessId?: string }) {
+function ListCard({
+  table,
+  kind,
+  title,
+  hint,
+  businessId,
+  enabled,
+  onToggle,
+  toggleDisabled,
+}: {
+  table: SharedTable;
+  kind: RxOptionKind;
+  title: string;
+  hint: string;
+  businessId?: string;
+  enabled: boolean;
+  onToggle: (next: boolean) => void;
+  toggleDisabled?: boolean;
+}) {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
   const key = ["rx-shared-options", table, businessId];
