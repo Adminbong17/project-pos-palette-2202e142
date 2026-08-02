@@ -43,13 +43,26 @@ export async function startPrescriptionFromAppointment(
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
 
+  // An assistant starting a prescription must create it for their doctor,
+  // otherwise it never shows up on the doctor's dashboard.
+  let ownerId = uid;
+  if (uid) {
+    const { data: staff } = await supabase
+      .from("rx_staff")
+      .select("doctor_id")
+      .eq("user_id", uid)
+      .eq("business_id", businessId)
+      .maybeSingle();
+    if (staff?.doctor_id) ownerId = staff.doctor_id;
+  }
+
   let doctorName = "";
   let doctorQualification = "";
-  if (uid) {
+  if (ownerId) {
     const { data: p } = await supabase
       .from("profiles")
       .select("doctor_name, doctor_qualification, first_name, last_name")
-      .eq("id", uid)
+      .eq("id", ownerId)
       .maybeSingle();
     if (p) {
       doctorName =
@@ -70,7 +83,7 @@ export async function startPrescriptionFromAppointment(
       patient_gender: appointment.patient_gender,
       doctor_name: doctorName || null,
       doctor_qualification: doctorQualification || null,
-      created_by: uid,
+      created_by: ownerId,
     })
     .select("id")
     .single();

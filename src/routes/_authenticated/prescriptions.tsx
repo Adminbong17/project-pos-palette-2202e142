@@ -334,6 +334,10 @@ function PrescriptionsPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
 
+  // Coming from the patient queue: ?rx=<id> opens that exact prescription.
+  const { rx: rxParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const dialogScrollRef = useWheelScrollPassthrough<HTMLDivElement>();
@@ -370,6 +374,9 @@ function PrescriptionsPage() {
     businessId ? `prescription:${businessId}` : null,
     { form, lines, vitals, extraVitals, cc, nextDays },
     (d) => {
+      // Never let a stale local draft overwrite a prescription opened from the
+      // patient queue / list — that is what made the two views look different.
+      if (rxParam) return;
       if (d.form) setForm((f) => ({ ...f, ...d.form }));
       if (d.lines?.length) setLines(d.lines);
       if (d.vitals) setVitals(d.vitals);
@@ -380,7 +387,7 @@ function PrescriptionsPage() {
       setOpen(true);
     },
     {
-      enabled: !editing,
+      enabled: !editing && !rxParam,
       isEmpty: (d) =>
         !d.form?.patient_name?.trim() &&
         !d.form?.patient_phone?.trim() &&
@@ -720,19 +727,30 @@ function PrescriptionsPage() {
     setOpen(true);
   };
 
-  // Coming from the patient queue: ?rx=<id> opens that prescription straight away.
-  const { rx: rxParam } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  // Open the queued prescription by id — never depend on the (filtered/limited)
+  // list query, otherwise the wrong Rx (or none) is opened.
   const [autoOpened, setAutoOpened] = useState<string | null>(null);
   useEffect(() => {
-    if (!rxParam || autoOpened === rxParam) return;
-    const found = (list.data ?? []).find((r) => r.id === rxParam);
-    if (!found) return;
+    if (!rxParam || !businessId || autoOpened === rxParam) return;
     setAutoOpened(rxParam);
-    void openEdit(found);
-    navigate({ search: {} as any, replace: true });
+    (async () => {
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select(
+          "id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id",
+        )
+        .eq("id", rxParam)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Could not open that prescription");
+        return;
+      }
+      await openEdit(data as Rx);
+      navigate({ search: {} as any, replace: true });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rxParam, list.data]);
+  }, [rxParam, businessId]);
+
 
 
 
@@ -793,7 +811,18 @@ function PrescriptionsPage() {
     onSuccess: () => {
       toast.success("Prescription saved");
       clearRxDraft();
-      qc.invalidateQueries({ queryKey: ["prescriptions"] });
+      // Every surface that shows this prescription must refetch, otherwise the
+      // dashboard / admin list / queue keep showing the old version.
+      for (const key of [
+        ["prescriptions"],
+        ["admin-prescriptions"],
+        ["admin-rx-lines"],
+        ["rx-dashboard"],
+        ["rx-appointments"],
+        ["appointments"],
+      ]) {
+        qc.invalidateQueries({ queryKey: key });
+      }
       setOpen(false);
       resetForm();
     },
