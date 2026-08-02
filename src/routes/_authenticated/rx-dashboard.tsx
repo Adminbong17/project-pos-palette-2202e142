@@ -26,6 +26,13 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+
 function RxDashboard() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin } = useCurrentRole();
