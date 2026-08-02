@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { staffUsernameToEmail, normalizeStaffUsername } from "@/lib/rx-staff";
+import { SUPABASE_PUBLIC_URL, SUPABASE_PUBLIC_KEY } from "@/integrations/supabase/public-config";
 
 type CreateStaffInput = {
   business_id: string;
@@ -9,6 +11,21 @@ type CreateStaffInput = {
   password: string;
   phone?: string;
 };
+
+function hasServiceRole() {
+  return !!(process.env["SUPABASE_SERVICE_ROLE_KEY"] || process.env["SERVICE_ROLE_KEY"]);
+}
+
+function publicServerClient() {
+  const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"] || SUPABASE_PUBLIC_URL;
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    SUPABASE_PUBLIC_KEY;
+  return createClient(url, key, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+}
 
 export const createRxStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -36,96 +53,60 @@ export const createRxStaff = createServerFn({ method: "POST" })
     if (!member) throw new Error("You are not a member of this business");
 
     const email = staffUsernameToEmail(data.username);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const name = data.name.trim();
 
     let staffUserId: string | null = null;
-    const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { first_name: data.name.trim() },
-    });
-    if (cErr) {
-      const { data: existing } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
-      if (!existing) throw new Error(cErr.message);
-      staffUserId = existing.id;
+
+    if (hasServiceRole()) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: data.password,
+        email_confirm: true,
+        user_metadata: { first_name: name },
+      });
+      if (cErr) {
+        const { data: existing } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        if (!existing) throw new Error(cErr.message);
+        staffUserId = existing.id;
+      } else {
+        staffUserId = created.user!.id;
+      }
     } else {
-      staffUserId = created.user!.id;
+      // No service-role key available (e.g. self-hosted deploy): sign the staff
+      // account up with the public key instead, then wire it up via RPC.
+      const anon = publicServerClient();
+      const { data: signed, error: sErr } = await anon.auth.signUp({
+        email,
+        password: data.password,
+        options: { data: { first_name: name } },
+      });
+      if (sErr) {
+        if (/already/i.test(sErr.message))
+          throw new Error("This username is already taken. Choose another one.");
+        throw new Error(sErr.message);
+      }
+      staffUserId = signed.user?.id ?? null;
+      if (!staffUserId) throw new Error("Could not create the staff login. Try another username.");
     }
 
-    await supabaseAdmin
-      .from("profiles")
-      .upsert({ id: staffUserId, email, first_name: data.name.trim() }, { onConflict: "id" });
-
-    const { error: buErr } = await supabaseAdmin.from("business_users").upsert(
-      {
-        business_id: data.business_id,
-        user_id: staffUserId,
-        access_all_locations: true,
-        is_active: true,
-      },
-      { onConflict: "business_id,user_id" },
-    );
-    if (buErr) throw new Error(buErr.message);
-
-    // Assistant role — patient queue only.
-    const { data: roleRow } = await supabaseAdmin
-      .from("roles")
-      .select("id")
-      .eq("business_id", data.business_id)
-      .ilike("name", "Assistant")
-      .maybeSingle();
-
-    let roleId: string | null = roleRow?.id ?? null;
-    if (!roleId) {
-      const { data: newRole, error: nrErr } = await supabaseAdmin
-        .from("roles")
-        .insert({
-          business_id: data.business_id,
-          name: "Assistant",
-          is_default: false,
-          allowed_sections: ["rx-queue"],
-        })
-        .select("id")
-        .single();
-      if (nrErr) throw new Error(nrErr.message);
-      roleId = newRole.id;
-    }
-
-    await supabaseAdmin
-      .from("user_roles")
-      .delete()
-      .eq("user_id", staffUserId)
-      .eq("business_id", data.business_id);
-
-    const { error: urErr } = await supabaseAdmin.from("user_roles").insert({
-      user_id: staffUserId,
-      role_id: roleId,
-      business_id: data.business_id,
-      allowed_sections: ["rx-queue"],
+    const { error: pErr } = await supabase.rpc("provision_rx_staff", {
+      _business_id: data.business_id,
+      _user_id: staffUserId,
+      _email: email,
+      _name: name,
+      _phone: data.phone?.trim() || "",
+      _username: data.username,
     });
-    if (urErr) throw new Error(urErr.message);
-
-    const { error: sErr } = await supabaseAdmin.from("rx_staff").upsert(
-      {
-        business_id: data.business_id,
-        doctor_id: userId,
-        user_id: staffUserId,
-        name: data.name.trim(),
-        phone: data.phone?.trim() || null,
-        username: data.username,
-        is_active: true,
-      },
-      { onConflict: "business_id,username" },
-    );
-    if (sErr) throw new Error(sErr.message);
+    if (pErr) throw new Error(pErr.message);
 
     return { user_id: staffUserId, email };
   });
+
 
 export const setRxStaffPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -144,6 +125,11 @@ export const setRxStaffPassword = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!staff?.user_id) throw new Error("Staff not found or not accessible");
 
+    if (!hasServiceRole())
+      throw new Error(
+        "Password change needs the SUPABASE_SERVICE_ROLE_KEY on this deployment. Ask the staff member to use \"Forgot password\", or remove and re-create the account with a new password.",
+      );
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: uErr } = await supabaseAdmin.auth.admin.updateUserById(staff.user_id, {
       password: data.password,
@@ -159,28 +145,10 @@ export const removeRxStaff = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { data: staff, error } = await context.supabase
-      .from("rx_staff")
-      .select("id, user_id, business_id")
-      .eq("id", data.staff_id)
-      .maybeSingle();
+    const { error } = await context.supabase.rpc("deactivate_rx_staff", {
+      _staff_id: data.staff_id,
+    });
     if (error) throw new Error(error.message);
-    if (!staff) throw new Error("Staff not found or not accessible");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (staff.user_id) {
-      await supabaseAdmin
-        .from("business_users")
-        .update({ is_active: false })
-        .eq("business_id", staff.business_id)
-        .eq("user_id", staff.user_id);
-      await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("business_id", staff.business_id)
-        .eq("user_id", staff.user_id);
-    }
-    const { error: dErr } = await supabaseAdmin.from("rx_staff").delete().eq("id", staff.id);
-    if (dErr) throw new Error(dErr.message);
     return { ok: true };
   });
+
