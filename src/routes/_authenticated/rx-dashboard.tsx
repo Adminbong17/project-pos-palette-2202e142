@@ -40,7 +40,9 @@ function RxDashboard() {
         .eq("business_id", businessId!)
         .order("rx_date", { ascending: false })
         .limit(5000);
-      if (!isAdmin && u.user) q = q.eq("created_by", u.user.id);
+      // Older prescriptions were saved without created_by — keep them visible
+      // to non-admin doctors instead of hiding everything.
+      if (!isAdmin && u.user) q = q.or(`created_by.eq.${u.user.id},created_by.is.null`);
       const { data: rows, error } = await q;
       if (error) throw error;
       return rows ?? [];
