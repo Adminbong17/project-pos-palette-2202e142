@@ -183,6 +183,51 @@ function StaffPage() {
 
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <div className="mb-3 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">My locations (chambers)</h2>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <Input
+            placeholder="Location name"
+            value={newChamber.name}
+            onChange={(e) => setNewChamber((s) => ({ ...s, name: e.target.value }))}
+          />
+          <Input
+            placeholder="Address (optional)"
+            value={newChamber.address}
+            onChange={(e) => setNewChamber((s) => ({ ...s, address: e.target.value }))}
+          />
+          <Button onClick={() => addChamber.mutate()} disabled={addChamber.isPending}>
+            <MapPin className="mr-1 h-4 w-4" /> {addChamber.isPending ? "Adding…" : "Add location"}
+          </Button>
+        </div>
+        {chamberList.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {chamberList.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs"
+              >
+                <span>{c.name}</span>
+                <button
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => { if (confirm(`Remove ${c.name}?`)) delChamber.mutate(c.id); }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Add a location first — then assign it to each staff member below.
+          </p>
+        )}
+      </div>
+
+
+      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+        <div className="mb-3 flex items-center gap-2">
           <UserPlus className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Add staff</h2>
         </div>
