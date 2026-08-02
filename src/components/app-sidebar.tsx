@@ -6,7 +6,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText,
+  Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { isRxMode, RX_PATHS } from "@/lib/rx-mode";
