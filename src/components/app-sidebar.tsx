@@ -9,6 +9,8 @@ import {
   Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
+import { isRxMode, RX_PATHS } from "@/lib/rx-mode";
+
 
 const sections = [
   {
