@@ -27,5 +27,7 @@ export function useCurrentRole() {
     isLoading: bizLoading || q.isLoading,
     isSalesman: q.data === "Salesman",
     isAdmin: q.data === "Admin",
+    isDoctor: q.data === "Doctor",
+    isAssistant: q.data === "Assistant",
   };
 }

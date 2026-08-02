@@ -44,7 +44,8 @@ function withAlways(list: string[]) {
 
 export function useAllowedSections() {
   const { data: business } = useCurrentBusiness();
-  const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { isAdmin, isDoctor, isAssistant, isLoading: roleLoading } = useCurrentRole();
+  const clinicalOnlyRole = isDoctor || isAssistant;
 
   const q = useQuery({
     queryKey: ["allowed-sections", business?.id],
@@ -72,12 +73,24 @@ export function useAllowedSections() {
     },
   });
 
+  const raw = isAdmin ? null : (q.data ?? withAlways(DEFAULT_SALESMAN));
+  // A Doctor / Assistant account never gets POS, inventory or shop dashboard
+  // access, even if extra sections were toggled on for them by mistake.
+  const sections =
+    raw && clinicalOnlyRole
+      ? (() => {
+          const clinical = raw.filter((k) => CLINICAL_KEYS.includes(k));
+          return clinical.length ? clinical : ["prescriptions"];
+        })()
+      : raw;
+
   return {
     isAdmin,
     isLoading: roleLoading || (!isAdmin && q.isLoading),
-    sections: isAdmin ? null : (q.data ?? withAlways(DEFAULT_SALESMAN)),
+    sections,
   };
 }
+
 
 export function isPathAllowed(pathname: string, sections: string[] | null) {
   if (sections === null) return true;

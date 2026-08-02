@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { useAllowedSections, isPathAllowed } from "@/hooks/use-allowed-sections";
+import { useAllowedSections, isPathAllowed, isPrescriptionOnly } from "@/hooks/use-allowed-sections";
 import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
@@ -36,6 +36,8 @@ function AuthedLayout() {
 
     : allowed && allowed.length === 1 && allowed[0] === "rx-queue"
       ? "/rx-appointments"
+      : allowed && isPrescriptionOnly(allowed)
+      ? "/rx-dashboard"
       : isAdmin || !allowed || allowed.includes("dashboard")
       ? "/dashboard"
       : `/${allowed[0] ?? "pos"}`;
