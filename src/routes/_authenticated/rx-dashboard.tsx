@@ -30,6 +30,7 @@ function RxDashboard() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin } = useCurrentRole();
   const businessId = business?.id;
+  const chambers = useChambers(businessId);
 
   const { data, isLoading } = useQuery({
     queryKey: ["rx-dashboard", businessId, isAdmin],
