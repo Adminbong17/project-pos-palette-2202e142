@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          admin_notes: string | null
+          business_id: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          qualification: string | null
+          requested_role: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_id?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          qualification?: string | null
+          requested_role?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          business_id?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          qualification?: string | null
+          requested_role?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_transactions: {
         Row: {
           account_id: string
@@ -2444,6 +2503,44 @@ export type Database = {
         }
         Relationships: []
       }
+      rx_user_option_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          kind: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_user_option_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       selling_price_groups: {
         Row: {
           business_id: string
@@ -3365,6 +3462,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_access_request: {
+        Args: {
+          _business_id: string
+          _id: string
+          _notes?: string
+          _role?: string
+          _sections?: string[]
+        }
+        Returns: string
+      }
       approve_business_request: {
         Args: { _id: string; _notes?: string }
         Returns: string
@@ -3392,6 +3499,11 @@ export type Database = {
         Args: { _business_id: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      is_any_business_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_business_admin: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_business_member: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
@@ -3402,6 +3514,10 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       receive_stock_transfer: { Args: { _id: string }; Returns: undefined }
+      reject_access_request: {
+        Args: { _id: string; _notes?: string }
+        Returns: undefined
+      }
       reject_business_request: {
         Args: { _id: string; _notes?: string }
         Returns: undefined
