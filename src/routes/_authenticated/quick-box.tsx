@@ -132,13 +132,14 @@ function QuickBoxPage() {
   };
 
   // Product-level mirror so the products list and reports show the same values.
-  const productPatch = (patch: Record<string, unknown>) => {
-    const out: Record<string, unknown> = {};
-    if ('default_purchase_price' in patch) out['default_purchase_price'] = patch['default_purchase_price'];
-    if ('default_sell_price' in patch) out['default_sell_price'] = patch['default_sell_price'];
-    if ('mrp' in patch) out['mrp'] = patch['mrp'];
+  const productPatch = (patch: ReturnType<typeof buildPatch>) => {
+    const out: { default_purchase_price?: number; default_sell_price?: number; mrp?: number } = {};
+    if (patch.default_purchase_price !== undefined) out.default_purchase_price = patch.default_purchase_price;
+    if (patch.default_sell_price !== undefined) out.default_sell_price = patch.default_sell_price;
+    if (patch.mrp !== undefined) out.mrp = patch.mrp;
     return out;
   };
+
 
   const applyRow = async (r: Row) => {
     const patch = buildPatch(r);
