@@ -118,8 +118,8 @@ function baseReceiptCss(scope: string, fontSize: string, widthCss: string) {
   return `
     ${scope}, ${scope} * { color:#000 !important; background:#fff !important; box-shadow:none !important; text-shadow:none !important; filter:none !important; border-color:#000 !important; box-sizing:border-box !important; overflow-wrap:anywhere !important; word-break:break-word !important; font-family: Arial, Helvetica, sans-serif !important; }
     ${scope} { font-size:${fontSize} !important; line-height:1.35 !important; width:${widthCss} !important; max-width:${widthCss} !important; }
-    ${scope} .brand { text-align:left !important; font-weight:700 !important; font-size:1.35em !important; letter-spacing:0.5px !important; margin-bottom:2px !important; }
-    ${scope} .addr { text-align:left !important; font-size:0.95em !important; }
+    ${scope} .brand { text-align:center !important; font-weight:700 !important; font-size:1.35em !important; letter-spacing:0.5px !important; margin-bottom:2px !important; }
+    ${scope} .addr { text-align:center !important; font-size:0.95em !important; }
     ${scope} .meta { margin:6px 0 4px !important; border-top:1px solid #000 !important; border-bottom:1px solid #000 !important; padding:3px 0 !important; }
     ${scope} .meta .two { display:flex !important; justify-content:space-between !important; gap:8px !important; }
     ${scope} table.items { width:100% !important; border-collapse:collapse !important; margin:0 0 4px !important; }
@@ -137,7 +137,6 @@ function baseReceiptCss(scope: string, fontSize: string, widthCss: string) {
     ${scope} .paybox .row.sep { border-top:1px solid #000 !important; padding-top:3px !important; }
     ${scope} .thanks { text-align:center !important; margin-top:5px !important; font-size:0.95em !important; }
     ${scope} .note { text-align:center !important; font-size:0.85em !important; margin-top:2px !important; }
-    ${scope} .stars { text-align:center !important; font-size:1.25em !important; letter-spacing:1px !important; line-height:1.15 !important; margin-top:4px !important; }
   `;
 }
 
