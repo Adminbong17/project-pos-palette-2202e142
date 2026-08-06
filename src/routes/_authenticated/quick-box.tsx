@@ -102,23 +102,59 @@ function QuickBoxPage() {
 
   const buildPatch = (r: Row) => {
     const e = pending[r.variation_id] ?? {};
-    const patch: { pack_size?: number; default_purchase_price?: number; mrp?: number; default_sell_price?: number } = {};
+    const patch: {
+      pack_size?: number;
+      default_purchase_price?: number;
+      dpp_inc_tax?: number;
+      mrp?: number;
+      default_sell_price?: number;
+      sell_price_inc_tax?: number;
+      profit_percent?: number;
+    } = {};
     if (e.pack !== undefined && e.pack !== "") patch['pack_size'] = Math.max(1, Number(e.pack) || 1);
-    if (e.pp !== undefined && e.pp !== "") patch['default_purchase_price'] = Math.max(0, Number(e.pp) || 0);
-    if (e.mrp !== undefined && e.mrp !== "") {
-      const m = Math.max(0, Number(e.mrp) || 0);
+    const pp = e.pp !== undefined && e.pp !== "" ? Math.max(0, Number(e.pp) || 0) : undefined;
+    const m = e.mrp !== undefined && e.mrp !== "" ? Math.max(0, Number(e.mrp) || 0) : undefined;
+    if (pp !== undefined) {
+      patch['default_purchase_price'] = pp;
+      patch['dpp_inc_tax'] = pp;
+    }
+    if (m !== undefined) {
       patch['mrp'] = m;
       patch['default_sell_price'] = m;
+      patch['sell_price_inc_tax'] = m;
+    }
+    const finalPp = pp ?? r.purchase_price;
+    const finalMrp = m ?? r.mrp;
+    if (pp !== undefined || m !== undefined) {
+      patch['profit_percent'] = finalPp > 0 ? ((finalMrp - finalPp) / finalPp) * 100 : 0;
     }
     return patch;
   };
 
+  // Product-level mirror so the products list and reports show the same values.
+  const productPatch = (patch: Record<string, unknown>) => {
+    const out: Record<string, unknown> = {};
+    if ('default_purchase_price' in patch) out['default_purchase_price'] = patch['default_purchase_price'];
+    if ('default_sell_price' in patch) out['default_sell_price'] = patch['default_sell_price'];
+    if ('mrp' in patch) out['mrp'] = patch['mrp'];
+    return out;
+  };
+
+  const applyRow = async (r: Row) => {
+    const patch = buildPatch(r);
+    if (Object.keys(patch).length === 0) return;
+    const { error } = await supabase.from("variations").update(patch).eq("id", r.variation_id);
+    if (error) throw error;
+    const pPatch = productPatch(patch);
+    if (Object.keys(pPatch).length > 0) {
+      const { error: pErr } = await supabase.from("products").update(pPatch).eq("id", r.product_id);
+      if (pErr) throw pErr;
+    }
+  };
+
   const save = useMutation({
     mutationFn: async (row: Row) => {
-      const patch = buildPatch(row);
-      if (Object.keys(patch).length === 0) return { id: row.variation_id };
-      const { error } = await supabase.from("variations").update(patch).eq("id", row.variation_id);
-      if (error) throw error;
+      await applyRow(row);
       return { id: row.variation_id };
     },
     onSuccess: ({ id }) => {
@@ -129,6 +165,8 @@ function QuickBoxPage() {
       });
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["quick-box-rows"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["pos-products"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Failed to save"),
   });
@@ -136,21 +174,19 @@ function QuickBoxPage() {
   const saveAll = useMutation({
     mutationFn: async () => {
       const dirtyRows = rows.filter(isDirty);
-      for (const r of dirtyRows) {
-        const patch = buildPatch(r);
-        if (Object.keys(patch).length === 0) continue;
-        const { error } = await supabase.from("variations").update(patch).eq("id", r.variation_id);
-        if (error) throw error;
-      }
+      for (const r of dirtyRows) await applyRow(r);
       return dirtyRows.length;
     },
     onSuccess: (n) => {
       setPending({});
       toast.success(`Saved ${n} update${n === 1 ? "" : "s"}`);
       qc.invalidateQueries({ queryKey: ["quick-box-rows"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["pos-products"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Failed to save"),
   });
+
 
   const inputCls = "w-full h-9 rounded-lg border border-border bg-input px-3 text-sm";
   const pendingCount = rows.filter(isDirty).length;
