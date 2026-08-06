@@ -54,16 +54,20 @@ function splitDateTime(input: string): { date: string; time: string } {
 
 export function receiptHtml(sale: ReceiptSale, header: ReceiptHeader) {
   const { date, time } = splitDateTime(sale.date);
-  const vat = sale.vat ?? 0;
-  const paidCard = sale.payment_method?.toLowerCase() === "card" ? sale.paid : 0;
-  const paidCash = sale.payment_method?.toLowerCase() === "card" ? 0 : sale.paid;
+  const netQty = sale.lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
+  const isCard = sale.payment_method?.toLowerCase() === "card";
+  const payLabel = isCard ? "CARD" : sale.payment_method ? sale.payment_method.toUpperCase() : "CASH";
 
   const rows = sale.lines.map((l, i) => `
     <tr>
-      <td class="c">${i + 1}</td>
-      <td class="l">${escapeHtml(l.name)}</td>
-      <td class="r">${l.unit_price.toFixed(2)}</td>
+      <td class="c top">${i + 1}</td>
+      <td class="l top" colspan="4">${escapeHtml(l.name)}</td>
+    </tr>
+    <tr>
+      <td class="c"></td>
+      <td class="l"></td>
       <td class="c">${l.quantity}</td>
+      <td class="r">${l.unit_price.toFixed(2)}</td>
       <td class="r">${l.total_amount.toFixed(2)}</td>
     </tr>
   `).join("");
@@ -71,37 +75,40 @@ export function receiptHtml(sale: ReceiptSale, header: ReceiptHeader) {
   return `
     <div class="brand">${escapeHtml(header.businessName)}</div>
     ${header.businessAddress ? `<div class="addr">${escapeHtml(header.businessAddress)}</div>` : ""}
-    ${header.businessMobile ? `<div class="addr">Phone: ${escapeHtml(header.businessMobile)}</div>` : ""}
-    ${header.vatReg ? `<div class="addr">VAT Reg # ${escapeHtml(header.vatReg)}</div>` : ""}
-    <div class="title">Sales Receipt</div>
-    <div class="invoice">Invoice : ${escapeHtml(sale.invoice_no)}</div>
+    ${header.businessMobile ? `<div class="addr">Phone : ${escapeHtml(header.businessMobile)}</div>` : ""}
+    ${header.vatReg ? `<div class="addr">GST Reg No : ${escapeHtml(header.vatReg)}</div>` : ""}
 
     <div class="meta">
-      <div class="two"><span>Date: ${escapeHtml(date)}</span><span>Time: ${escapeHtml(time)}</span></div>
-      ${sale.counter_id || sale.served_by ? `<div class="two"><span>Counter ID: ${escapeHtml(sale.counter_id ?? "")}</span><span>Served By: ${escapeHtml(sale.served_by ?? "")}</span></div>` : ""}
-      <div>Customer Name: ${escapeHtml(sale.customer_name ?? "")}</div>
+      <div class="two"><span><b>Bill No</b> : <b>${escapeHtml(sale.invoice_no)}</b></span><span>Date : ${escapeHtml(date)} ${escapeHtml(time)}</span></div>
+      <div class="two"><span>Cashier : ${escapeHtml(sale.served_by ?? "")}</span><span>Counter : ${escapeHtml(sale.counter_id ?? "")}</span></div>
+      ${sale.customer_name ? `<div class="two"><span>Customer : ${escapeHtml(sale.customer_name)}</span><span></span></div>` : ""}
     </div>
 
     <table class="items">
       <thead>
-        <tr><th class="c">SL</th><th class="l">Item / Code</th><th class="r">Price</th><th class="c">Qty</th><th class="r">Total</th></tr>
+        <tr><th class="c">No.</th><th class="l">Item</th><th class="c">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
 
     <div class="totals">
-      <div class="row"><span>Total :</span><span>${sale.subtotal.toFixed(2)}</span></div>
-      <div class="row"><span>VAT :</span><span>${vat.toFixed(2)}</span></div>
-      ${sale.discount > 0 ? `<div class="row"><span>Less Amount :</span><span>${sale.discount.toFixed(2)}</span></div>` : ""}
-      <div class="row net"><span class="netlabel">Net Amount (TK)</span><span class="netbox">${sale.total.toFixed(2)}</span></div>
-      <div class="row"><span>Pay Type :</span><span>${escapeHtml(sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1))}</span></div>
-      <div class="row"><span>Paid By Card :</span><span>${paidCard.toFixed(2)}</span></div>
-      <div class="row"><span>Paid By Cash :</span><span>${paidCash.toFixed(2)}</span></div>
-      ${sale.change > 0 ? `<div class="row"><span>Change :</span><span>${sale.change.toFixed(2)}</span></div>` : ""}
-      ${sale.change < 0 ? `<div class="row"><span>Due :</span><span>${Math.abs(sale.change).toFixed(2)}</span></div>` : ""}
+      <div class="row"><span>Total Amount :</span><span>${sale.subtotal.toFixed(2)}</span></div>
+      ${sale.vat ? `<div class="row"><span>VAT :</span><span>${sale.vat.toFixed(2)}</span></div>` : ""}
+      ${sale.discount > 0 ? `<div class="row"><span>Discount :</span><span>${sale.discount.toFixed(2)}</span></div>` : ""}
+      <div class="row net"><span>Net Qty : ${netQty}</span><span>Net Total : ${sale.total.toFixed(2)}</span></div>
     </div>
 
-    <div class="thanks">Thank you!</div>
+    <div class="paybox">
+      <div class="row big"><span>${escapeHtml(payLabel)}</span><span>${sale.paid.toFixed(2)}</span></div>
+      <div class="row sep"><span>Amount Tendered</span><span>${sale.paid.toFixed(2)}</span></div>
+      <div class="row"><span>${sale.change < 0 ? "Due" : "Change Due"}</span><span>${Math.abs(sale.change).toFixed(2)}</span></div>
+    </div>
+
+    <div class="thanks">Thank You Very Much For Your Business!</div>
+    <div class="note">Store In A Cool, Dry Place Below 25 Deg Celsius. Refrigerate After Opening Goods Sold Are Not Returnable</div>
+    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
+    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
+    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
   `;
 }
 
@@ -111,28 +118,31 @@ export function receiptCss(scope: string, fontSize: string, widthCss: string) {
 
 function baseReceiptCss(scope: string, fontSize: string, widthCss: string) {
   return `
-    ${scope}, ${scope} * { color:#000 !important; background:#fff !important; box-shadow:none !important; text-shadow:none !important; filter:none !important; border-color:#000 !important; box-sizing:border-box !important; overflow-wrap:anywhere !important; word-break:break-word !important; font-family: Georgia, 'Times New Roman', serif !important; }
-    ${scope} { font-size:${fontSize} !important; line-height:1.3 !important; width:${widthCss} !important; max-width:${widthCss} !important; }
-    ${scope} .brand { text-align:center !important; font-weight:900 !important; font-size:1.7em !important; letter-spacing:0.3px !important; margin-bottom:2px !important; }
-    ${scope} .addr { text-align:center !important; font-size:0.95em !important; }
-    ${scope} .title { text-align:center !important; font-weight:900 !important; font-size:1.35em !important; margin-top:4px !important; }
-    ${scope} .invoice { text-align:center !important; font-weight:700 !important; font-size:1.05em !important; margin-bottom:4px !important; }
-    ${scope} .meta { margin:4px 0 !important; }
+    ${scope}, ${scope} * { color:#000 !important; background:#fff !important; box-shadow:none !important; text-shadow:none !important; filter:none !important; border-color:#000 !important; box-sizing:border-box !important; overflow-wrap:anywhere !important; word-break:break-word !important; font-family: Arial, Helvetica, sans-serif !important; }
+    ${scope} { font-size:${fontSize} !important; line-height:1.35 !important; width:${widthCss} !important; max-width:${widthCss} !important; }
+    ${scope} .brand { text-align:left !important; font-weight:700 !important; font-size:1.35em !important; letter-spacing:0.5px !important; margin-bottom:2px !important; }
+    ${scope} .addr { text-align:left !important; font-size:0.95em !important; }
+    ${scope} .meta { margin:6px 0 4px !important; border-top:1px solid #000 !important; border-bottom:1px solid #000 !important; padding:3px 0 !important; }
     ${scope} .meta .two { display:flex !important; justify-content:space-between !important; gap:8px !important; }
-    ${scope} table.items { width:100% !important; border-collapse:collapse !important; margin:4px 0 !important; }
-    ${scope} table.items thead th { border-top:1px solid #000 !important; border-bottom:1px solid #000 !important; padding:3px 2px !important; font-weight:700 !important; }
-    ${scope} table.items tbody td { padding:2px !important; vertical-align:top !important; }
-    ${scope} table.items tbody tr:last-child td { border-bottom:1px dashed #000 !important; }
+    ${scope} table.items { width:100% !important; border-collapse:collapse !important; margin:0 0 4px !important; }
+    ${scope} table.items thead th { border-bottom:1px solid #000 !important; padding:3px 2px !important; font-weight:700 !important; }
+    ${scope} table.items tbody td { padding:0 2px !important; vertical-align:top !important; }
+    ${scope} table.items tbody td.top { padding-top:3px !important; }
     ${scope} table.items .l { text-align:left !important; }
     ${scope} table.items .c { text-align:center !important; }
     ${scope} table.items .r { text-align:right !important; }
-    ${scope} .totals { margin-top:2px !important; }
-    ${scope} .totals .row { display:flex !important; justify-content:space-between !important; padding:1px 0 !important; }
-    ${scope} .totals .row.net { font-weight:900 !important; font-size:1.1em !important; margin:3px 0 !important; }
-    ${scope} .totals .netbox { border:1.5px solid #000 !important; padding:2px 8px !important; min-width:70px !important; text-align:right !important; }
-    ${scope} .thanks { text-align:center !important; margin-top:6px !important; font-style:italic !important; }
+    ${scope} .totals { border-top:1px solid #000 !important; padding-top:2px !important; }
+    ${scope} .totals .row, ${scope} .paybox .row { display:flex !important; justify-content:space-between !important; padding:1px 0 !important; }
+    ${scope} .totals .row.net { font-weight:700 !important; font-size:1.1em !important; border-top:1px solid #000 !important; margin-top:3px !important; padding-top:3px !important; }
+    ${scope} .paybox { border:1px solid #000 !important; padding:4px 6px !important; margin:5px 0 !important; }
+    ${scope} .paybox .row.big { font-weight:700 !important; font-size:1.05em !important; padding-bottom:14px !important; }
+    ${scope} .paybox .row.sep { border-top:1px solid #000 !important; padding-top:3px !important; }
+    ${scope} .thanks { text-align:center !important; margin-top:5px !important; font-size:0.95em !important; }
+    ${scope} .note { text-align:center !important; font-size:0.85em !important; margin-top:2px !important; }
+    ${scope} .stars { text-align:center !important; font-size:1.25em !important; letter-spacing:1px !important; line-height:1.15 !important; margin-top:4px !important; }
   `;
 }
+
 
 export function printReceiptInWhitePage(sale: ReceiptSale, width: "58" | "80" | "A4", header: ReceiptHeader) {
   const isA4 = width === "A4";
