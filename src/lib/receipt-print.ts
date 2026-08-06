@@ -106,9 +106,7 @@ export function receiptHtml(sale: ReceiptSale, header: ReceiptHeader) {
 
     <div class="thanks">Thank You Very Much For Your Business!</div>
     <div class="note">Store In A Cool, Dry Place Below 25 Deg Celsius. Refrigerate After Opening Goods Sold Are Not Returnable</div>
-    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
-    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
-    <div class="stars">*${escapeHtml(sale.invoice_no)}*</div>
+
   `;
 }
 
