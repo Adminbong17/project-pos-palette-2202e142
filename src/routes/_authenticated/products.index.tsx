@@ -429,8 +429,8 @@ function ProductsList() {
                 <td className="px-4 py-3 capitalize">{row.type}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.category?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.brand?.name ?? "—"}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{Number(row.default_purchase_price ?? 0).toFixed(2)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{Number(row.mrp ?? 0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{Number(row.default_purchase_price || (row.variations ?? []).map((v: any) => Number(v.default_purchase_price || 0)).find((n: number) => n > 0) || 0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{Number(row.mrp || (row.variations ?? []).map((v: any) => Number(v.mrp || 0)).find((n: number) => n > 0) || 0).toFixed(2)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{row.enable_stock ? stock : "—"}{row.unit?.short_name ? ` ${row.unit.short_name}` : ""}</td>
                 <td className="px-4 py-3">
                   {row.is_inactive
