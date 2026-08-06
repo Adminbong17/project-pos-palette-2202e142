@@ -102,7 +102,7 @@ function QuickBoxPage() {
 
   const buildPatch = (r: Row) => {
     const e = pending[r.variation_id] ?? {};
-    const patch: Record<string, number> = {};
+    const patch: { pack_size?: number; default_purchase_price?: number; mrp?: number; default_sell_price?: number } = {};
     if (e.pack !== undefined && e.pack !== "") patch['pack_size'] = Math.max(1, Number(e.pack) || 1);
     if (e.pp !== undefined && e.pp !== "") patch['default_purchase_price'] = Math.max(0, Number(e.pp) || 0);
     if (e.mrp !== undefined && e.mrp !== "") {
