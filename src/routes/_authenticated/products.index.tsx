@@ -42,7 +42,7 @@ function ProductsList() {
       const from = (pageParam as number) * PAGE_SIZE;
       let q = supabase
         .from("products")
-        .select("id, name, sku, barcode, type, is_inactive, enable_stock, image, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(variation_location_details(qty_available))")
+        .select("id, name, sku, barcode, type, is_inactive, enable_stock, image, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(default_purchase_price, mrp, variation_location_details(qty_available))")
         .eq("business_id", business!.id);
       if (search) {
         const esc = search.replace(/[%,()]/g, " ");
