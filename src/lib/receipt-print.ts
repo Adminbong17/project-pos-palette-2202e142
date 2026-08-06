@@ -73,10 +73,12 @@ export function receiptHtml(sale: ReceiptSale, header: ReceiptHeader) {
   `).join("");
 
   return `
-    <div class="brand">${escapeHtml(header.businessName)}</div>
-    ${header.businessAddress ? `<div class="addr">${escapeHtml(header.businessAddress)}</div>` : ""}
-    ${header.businessMobile ? `<div class="addr">Phone : ${escapeHtml(header.businessMobile)}</div>` : ""}
-    ${header.vatReg ? `<div class="addr">GST Reg No : ${escapeHtml(header.vatReg)}</div>` : ""}
+    <header class="receipt-header">
+      <div class="brand">${escapeHtml(header.businessName)}</div>
+      ${header.businessAddress ? `<div class="addr">${escapeHtml(header.businessAddress)}</div>` : ""}
+      ${header.businessMobile ? `<div class="addr">Phone : ${escapeHtml(header.businessMobile)}</div>` : ""}
+      ${header.vatReg ? `<div class="addr">GST Reg No : ${escapeHtml(header.vatReg)}</div>` : ""}
+    </header>
 
     <div class="meta">
       <div class="two"><span><b>Bill No</b> : <b>${escapeHtml(sale.invoice_no)}</b></span><span>Date : ${escapeHtml(date)} ${escapeHtml(time)}</span></div>
@@ -118,8 +120,9 @@ function baseReceiptCss(scope: string, fontSize: string, widthCss: string) {
   return `
     ${scope}, ${scope} * { color:#000 !important; background:#fff !important; box-shadow:none !important; text-shadow:none !important; filter:none !important; border-color:#000 !important; box-sizing:border-box !important; overflow-wrap:anywhere !important; word-break:break-word !important; font-family: Arial, Helvetica, sans-serif !important; }
     ${scope} { font-size:${fontSize} !important; line-height:1.35 !important; width:${widthCss} !important; max-width:${widthCss} !important; }
-    ${scope} .brand { text-align:center !important; font-weight:700 !important; font-size:1.35em !important; letter-spacing:0.5px !important; margin-bottom:2px !important; }
-    ${scope} .addr { text-align:center !important; font-size:0.95em !important; }
+    ${scope} .receipt-header { display:block !important; width:100% !important; text-align:center !important; margin:0 auto !important; }
+    ${scope} .brand { display:block !important; width:100% !important; text-align:center !important; font-weight:700 !important; font-size:1.35em !important; letter-spacing:0.5px !important; margin:0 auto 2px !important; }
+    ${scope} .addr { display:block !important; width:100% !important; text-align:center !important; font-size:0.95em !important; margin:0 auto !important; }
     ${scope} .meta { margin:6px 0 4px !important; border-top:1px solid #000 !important; border-bottom:1px solid #000 !important; padding:3px 0 !important; }
     ${scope} .meta .two { display:flex !important; justify-content:space-between !important; gap:8px !important; }
     ${scope} table.items { width:100% !important; border-collapse:collapse !important; margin:0 0 4px !important; }

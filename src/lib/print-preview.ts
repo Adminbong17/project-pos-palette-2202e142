@@ -106,7 +106,7 @@ export function showPrintPreview(opts: {
 
     doc.open();
     doc.write(
-      `<!doctype html><html><head><meta charset="utf-8"><title>${filename}</title>${linkHtml}${styleHtml}
+      `<!doctype html><html><head><meta charset="utf-8"><title></title>${linkHtml}${styleHtml}
       <style>
         html,body{margin:0;padding:0;background:#fff !important;color:#000 !important;}
         html body > *{display:block !important;visibility:visible !important;position:static !important;}
