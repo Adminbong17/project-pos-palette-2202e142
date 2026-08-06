@@ -42,7 +42,7 @@ function ProductsList() {
       const from = (pageParam as number) * PAGE_SIZE;
       let q = supabase
         .from("products")
-        .select("id, name, sku, barcode, type, is_inactive, enable_stock, image, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(variation_location_details(qty_available))")
+        .select("id, name, sku, barcode, type, is_inactive, enable_stock, image, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(default_purchase_price, mrp, variation_location_details(qty_available))")
         .eq("business_id", business!.id);
       if (search) {
         const esc = search.replace(/[%,()]/g, " ");
@@ -429,8 +429,8 @@ function ProductsList() {
                 <td className="px-4 py-3 capitalize">{row.type}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.category?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.brand?.name ?? "—"}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{Number(row.default_purchase_price ?? 0).toFixed(2)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{Number(row.mrp ?? 0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{Number(row.default_purchase_price || (row.variations ?? []).map((v: any) => Number(v.default_purchase_price || 0)).find((n: number) => n > 0) || 0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{Number(row.mrp || (row.variations ?? []).map((v: any) => Number(v.mrp || 0)).find((n: number) => n > 0) || 0).toFixed(2)}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{row.enable_stock ? stock : "—"}{row.unit?.short_name ? ` ${row.unit.short_name}` : ""}</td>
                 <td className="px-4 py-3">
                   {row.is_inactive
