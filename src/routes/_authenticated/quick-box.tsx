@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/quick-box")({
   head: () => ({
     meta: [
       { title: "Quick Box Add — QweekPOS" },
-      { name: "description", content: "Quickly set pieces per box for products." },
+      { name: "description", content: "Quickly set pieces per box, purchase price and MRP for products." },
     ],
   }),
   component: QuickBoxPage,
@@ -27,19 +27,23 @@ type Row = {
   sku: string;
   variation_name: string;
   pack_size: number;
+  purchase_price: number;
+  mrp: number;
 };
+
+type Edit = { pack?: string; pp?: string; mrp?: string };
 
 function QuickBoxPage() {
   const { data: business } = useCurrentBusiness();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [pending, setPending] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, Edit>>({});
 
-  // Keep unsaved pcs/box edits through a power cut or reload.
+  // Keep unsaved edits through a power cut or reload.
   useAutosaveDraft(
     business?.id ? `quick-box:${business.id}` : null,
     { pending },
-    (d) => { if (d.pending && Object.keys(d.pending).length) setPending(d.pending); },
+    (d) => { if (d.pending && Object.keys(d.pending).length) setPending(d.pending as Record<string, Edit>); },
     { isEmpty: (d) => !d.pending || Object.keys(d.pending).length === 0, restoreMessage: "Unsaved box edits restored" },
   );
 
@@ -50,7 +54,7 @@ function QuickBoxPage() {
       const products = await fetchAll<any>(() =>
         supabase
           .from("products")
-          .select("id, name, sku, variations(id, name, pack_size)")
+          .select("id, name, sku, variations(id, name, pack_size, default_purchase_price, mrp)")
           .eq("business_id", business!.id)
           .order("name", { ascending: true }),
       );
@@ -64,6 +68,8 @@ function QuickBoxPage() {
             sku: p.sku ?? "",
             variation_name: v.name && v.name !== "DUMMY" ? v.name : "",
             pack_size: Number(v.pack_size ?? 1),
+            purchase_price: Number(v.default_purchase_price ?? 0),
+            mrp: Number(v.mrp ?? 0),
           });
         }
       }
@@ -82,16 +88,38 @@ function QuickBoxPage() {
     );
   }, [rows, search]);
 
+  const setField = (id: string, key: keyof Edit, value: string) =>
+    setPending((p) => ({ ...p, [id]: { ...(p[id] ?? {}), [key]: value } }));
+
+  const isDirty = (r: Row) => {
+    const e = pending[r.variation_id];
+    if (!e) return false;
+    const packChanged = e.pack !== undefined && e.pack !== "" && Number(e.pack) !== r.pack_size;
+    const ppChanged = e.pp !== undefined && e.pp !== "" && Number(e.pp) !== r.purchase_price;
+    const mrpChanged = e.mrp !== undefined && e.mrp !== "" && Number(e.mrp) !== r.mrp;
+    return packChanged || ppChanged || mrpChanged;
+  };
+
+  const buildPatch = (r: Row) => {
+    const e = pending[r.variation_id] ?? {};
+    const patch: { pack_size?: number; default_purchase_price?: number; mrp?: number; default_sell_price?: number } = {};
+    if (e.pack !== undefined && e.pack !== "") patch['pack_size'] = Math.max(1, Number(e.pack) || 1);
+    if (e.pp !== undefined && e.pp !== "") patch['default_purchase_price'] = Math.max(0, Number(e.pp) || 0);
+    if (e.mrp !== undefined && e.mrp !== "") {
+      const m = Math.max(0, Number(e.mrp) || 0);
+      patch['mrp'] = m;
+      patch['default_sell_price'] = m;
+    }
+    return patch;
+  };
+
   const save = useMutation({
     mutationFn: async (row: Row) => {
-      const raw = pending[row.variation_id];
-      const val = Math.max(1, Number(raw ?? row.pack_size) || 1);
-      const { error } = await supabase
-        .from("variations")
-        .update({ pack_size: val })
-        .eq("id", row.variation_id);
+      const patch = buildPatch(row);
+      if (Object.keys(patch).length === 0) return { id: row.variation_id };
+      const { error } = await supabase.from("variations").update(patch).eq("id", row.variation_id);
       if (error) throw error;
-      return { id: row.variation_id, val };
+      return { id: row.variation_id };
     },
     onSuccess: ({ id }) => {
       setPending((p) => {
@@ -107,13 +135,14 @@ function QuickBoxPage() {
 
   const saveAll = useMutation({
     mutationFn: async () => {
-      const entries = Object.entries(pending);
-      for (const [id, raw] of entries) {
-        const val = Math.max(1, Number(raw) || 1);
-        const { error } = await supabase.from("variations").update({ pack_size: val }).eq("id", id);
+      const dirtyRows = rows.filter(isDirty);
+      for (const r of dirtyRows) {
+        const patch = buildPatch(r);
+        if (Object.keys(patch).length === 0) continue;
+        const { error } = await supabase.from("variations").update(patch).eq("id", r.variation_id);
         if (error) throw error;
       }
-      return entries.length;
+      return dirtyRows.length;
     },
     onSuccess: (n) => {
       setPending({});
@@ -124,7 +153,13 @@ function QuickBoxPage() {
   });
 
   const inputCls = "w-full h-9 rounded-lg border border-border bg-input px-3 text-sm";
-  const pendingCount = Object.keys(pending).length;
+  const pendingCount = rows.filter(isDirty).length;
+  const money = (n: number) =>
+    new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n || 0);
+
+  const packVal = (r: Row) => pending[r.variation_id]?.pack ?? (r.pack_size > 1 ? String(r.pack_size) : "");
+  const ppVal = (r: Row) => pending[r.variation_id]?.pp ?? (r.purchase_price > 0 ? String(r.purchase_price) : "");
+  const mrpVal = (r: Row) => pending[r.variation_id]?.mrp ?? (r.mrp > 0 ? String(r.mrp) : "");
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -132,7 +167,7 @@ function QuickBoxPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">Quick Box Add</h1>
           <p className="text-sm text-muted-foreground">
-            Search a product and set pieces per box quickly.
+            Search a product and set pieces per box, purchase price and MRP quickly.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -142,12 +177,12 @@ function QuickBoxPage() {
             </span>
           )}
           <Button
-          onClick={() => saveAll.mutate()}
-          disabled={pendingCount === 0 || saveAll.isPending}
-          size="sm"
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Save all {pendingCount > 0 ? `(${pendingCount})` : ""}
+            onClick={() => saveAll.mutate()}
+            disabled={pendingCount === 0 || saveAll.isPending}
+            size="sm"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            Save all {pendingCount > 0 ? `(${pendingCount})` : ""}
           </Button>
         </div>
       </div>
@@ -165,7 +200,7 @@ function QuickBoxPage() {
         </div>
       </FloatingSearch>
 
-      {/* Mobile: 2-row card layout */}
+      {/* Mobile: card layout */}
       <div className="sm:hidden space-y-2">
         {isLoading ? (
           <div className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-muted-foreground">Loading…</div>
@@ -173,8 +208,7 @@ function QuickBoxPage() {
           <div className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-muted-foreground">No products</div>
         ) : (
           filtered.slice(0, 500).map((r) => {
-            const dirty = (pending[r.variation_id] ?? "") !== ""
-              && Number(pending[r.variation_id]) !== r.pack_size;
+            const dirty = isDirty(r);
             const added = r.pack_size > 1;
             return (
               <div
@@ -195,24 +229,58 @@ function QuickBoxPage() {
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">Not set</span>
                     )}
+                    <span>PP: {money(r.purchase_price)}</span>
+                    <span>MRP: {money(r.mrp)}</span>
                   </div>
                 </div>
-                {/* Row 2: input + save */}
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    step="1"
-                    className={`${inputCls} flex-1`}
-                    placeholder="Pcs / box"
-                    value={pending[r.variation_id] ?? (r.pack_size > 1 ? String(r.pack_size) : "")}
-                    onChange={(e) => setPending((p) => ({ ...p, [r.variation_id]: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
-                  />
+                {/* Row 2: inputs */}
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <label className="block">
+                    <span className="block text-[11px] text-muted-foreground mb-1">Pcs / box</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      className={inputCls}
+                      placeholder="Pcs / box"
+                      value={packVal(r)}
+                      onChange={(e) => setField(r.variation_id, "pack", e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] text-muted-foreground mb-1">Purchase price</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      className={inputCls}
+                      placeholder="0"
+                      value={ppVal(r)}
+                      onChange={(e) => setField(r.variation_id, "pp", e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] text-muted-foreground mb-1">MRP</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      className={inputCls}
+                      placeholder="0"
+                      value={mrpVal(r)}
+                      onChange={(e) => setField(r.variation_id, "mrp", e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                    />
+                  </label>
+                </div>
+                <div className="mt-2 flex justify-end">
                   <Button
                     size="sm"
-                    className="shrink-0"
                     variant={dirty ? "default" : "outline"}
                     disabled={!dirty || save.isPending}
                     onClick={() => save.mutate(r)}
@@ -233,26 +301,26 @@ function QuickBoxPage() {
 
       <div className="hidden sm:block rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-
+          <table className="w-full text-sm min-w-[860px]">
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-2">Product</th>
                 <th className="text-left px-4 py-2">SKU</th>
                 <th className="text-left px-4 py-2">Status</th>
-                <th className="text-left px-4 py-2 w-40">Pcs / box</th>
+                <th className="text-left px-4 py-2 w-32">Pcs / box</th>
+                <th className="text-left px-4 py-2 w-36">Purchase price</th>
+                <th className="text-left px-4 py-2 w-36">MRP</th>
                 <th className="px-4 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No products</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No products</td></tr>
               ) : (
                 filtered.slice(0, 500).map((r) => {
-                  const dirty = (pending[r.variation_id] ?? "") !== ""
-                    && Number(pending[r.variation_id]) !== r.pack_size;
+                  const dirty = isDirty(r);
                   const added = r.pack_size > 1;
                   return (
                     <tr key={r.variation_id} className={`border-t border-border/60 ${added ? "bg-emerald-500/5" : ""}`}>
@@ -281,13 +349,31 @@ function QuickBoxPage() {
                           min="1"
                           step="1"
                           className={inputCls}
-                          value={pending[r.variation_id] ?? (r.pack_size > 1 ? String(r.pack_size) : "")}
-                          onChange={(e) =>
-                            setPending((p) => ({ ...p, [r.variation_id]: e.target.value }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") save.mutate(r);
-                          }}
+                          value={packVal(r)}
+                          onChange={(e) => setField(r.variation_id, "pack", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          className={inputCls}
+                          value={ppVal(r)}
+                          onChange={(e) => setField(r.variation_id, "pp", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          className={inputCls}
+                          value={mrpVal(r)}
+                          onChange={(e) => setField(r.variation_id, "mrp", e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") save.mutate(r); }}
                         />
                       </td>
                       <td className="px-4 py-2 text-right">
