@@ -59,10 +59,6 @@ export function showPrintPreview(opts: {
   cancelBtn.onclick = close;
 
   printBtn.onclick = () => {
-    // Print via an isolated iframe. This avoids the fragile @media print
-    // + `body > *:not(#printId){display:none}` approach used by callers,
-    // which caused blank prints in some browsers even though Save-as-JPG
-    // (which renders the clone directly) worked fine.
     printBtn.setAttribute("disabled", "true");
     printBtn.textContent = "Preparing…";
 
@@ -72,24 +68,9 @@ export function showPrintPreview(opts: {
     printClone.style.cssText =
       "position:static;left:auto;top:auto;opacity:1;pointer-events:auto;z-index:auto;width:auto;max-width:none;background:#fff;color:#000;";
 
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument;
-    if (!doc) {
-      iframe.remove();
-      alert("Unable to open print window.");
-      close();
-      return;
-    }
-
     // Copy <link rel="stylesheet"> tags and every <style> block from the
-    // host document. Strip the caller's `body > *:not(#printId){display:none}`
-    // rules — inside the iframe everything IS the printable content, and
-    // those rules would blank the page.
+    // host document, stripping the caller's `body > *:not(#printId)` rules
+    // which would blank the iframe page.
     const linkHtml = Array.from(
       document.head.querySelectorAll("link[rel='stylesheet']"),
     )
@@ -98,57 +79,99 @@ export function showPrintPreview(opts: {
     const styleHtml = Array.from(document.head.querySelectorAll("style"))
       .map((s) => {
         let css = s.textContent ?? "";
-        // Remove any `body > * ... { ... }` rule (with or without :not()).
         css = css.replace(/body\s*>\s*\*[^{]*\{[^}]*\}/g, "");
         return `<style>${css}</style>`;
       })
       .join("");
 
-    doc.open();
-    doc.write(
-      `<!doctype html><html><head><meta charset="utf-8"><title></title>${linkHtml}${styleHtml}
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title></title>${linkHtml}${styleHtml}
       <style>
         html,body{margin:0;padding:0;background:#fff !important;color:#000 !important;}
         html body > *{display:block !important;visibility:visible !important;position:static !important;}
       </style>
-      </head><body></body></html>`,
-    );
-    doc.close();
-    doc.body.appendChild(printClone);
+      </head><body>${printClone.outerHTML}</body></html>`;
 
-    const doPrint = () => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch (err) {
-        console.error("Print failed", err);
-      }
-      // Give the browser time to open the print dialog before removing.
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    // Keep it in the layout flow but invisible: zero-size iframes are skipped
+    // by some browsers' print pipeline.
+    iframe.style.cssText =
+      "position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0.01;border:0;";
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
       setTimeout(() => {
         iframe.remove();
+        close();
+      }, 1500);
+    };
+
+    const fallbackPrint = () => {
+      // Last resort: print the host document, which already carries the
+      // caller's @media print rules for #printId.
+      iframe.remove();
+      overlay.style.display = "none";
+      try {
+        window.focus();
+        window.print();
+      } catch (err) {
+        console.error("Host print failed", err);
+      }
+      setTimeout(() => {
+        overlay.style.display = "";
         close();
       }, 1000);
     };
 
-    // Wait for images (barcodes, data URLs) inside the clone to be ready.
-    const imgs = Array.from(doc.images);
-    const pending = imgs.filter((i) => !i.complete);
-    if (pending.length === 0) {
-      setTimeout(doPrint, 100);
-    } else {
-      let remaining = pending.length;
-      const onDone = () => {
-        remaining -= 1;
-        if (remaining <= 0) setTimeout(doPrint, 100);
-      };
-      pending.forEach((img) => {
-        img.addEventListener("load", onDone, { once: true });
-        img.addEventListener("error", onDone, { once: true });
-      });
-      // Safety timeout in case images stall.
-      setTimeout(doPrint, 1500);
-    }
+    const doPrint = () => {
+      if (done) return;
+      const win = iframe.contentWindow;
+      if (!win) {
+        done = true;
+        fallbackPrint();
+        return;
+      }
+      try {
+        win.focus();
+        if (typeof win.print !== "function") throw new Error("print unavailable");
+        win.print();
+        finish();
+      } catch (err) {
+        console.error("Iframe print failed", err);
+        done = true;
+        fallbackPrint();
+      }
+    };
+
+    iframe.onload = () => {
+      const doc = iframe.contentDocument;
+      const imgs = doc ? Array.from(doc.images) : [];
+      const pending = imgs.filter((i) => !i.complete);
+      if (pending.length === 0) {
+        setTimeout(doPrint, 150);
+      } else {
+        let remaining = pending.length;
+        const onDone = () => {
+          remaining -= 1;
+          if (remaining <= 0) setTimeout(doPrint, 150);
+        };
+        pending.forEach((img) => {
+          img.addEventListener("load", onDone, { once: true });
+          img.addEventListener("error", onDone, { once: true });
+        });
+        setTimeout(doPrint, 2000);
+      }
+    };
+
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+
+    // Safety: if onload never fires, still attempt a print.
+    setTimeout(doPrint, 3000);
   };
+
 
   saveBtn.onclick = async () => {
     saveBtn.textContent = "Saving…";
