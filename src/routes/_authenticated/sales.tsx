@@ -172,8 +172,11 @@ function SalesPage() {
   }
 
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["sales", business?.id, fromISO, toISO],
+  const term = search.trim();
+  const searching = term.length > 0;
+
+  const { data: allRows = [], isLoading } = useQuery({
+    queryKey: ["sales", business?.id, searching ? "search" : fromISO, searching ? "search" : toISO],
     enabled: !!business?.id,
     queryFn: async () => {
       let q = supabase
@@ -183,15 +186,26 @@ function SalesPage() {
         )
         .eq("business_id", business!.id)
         .eq("type", "sell");
-      if (fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
+      // When searching, look across all time so old invoices are findable.
+      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
       const { data, error } = await q.order("transaction_date", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as SaleRow[];
     },
   });
 
+  const rows = useMemo(() => {
+    if (!searching) return allRows;
+    const t = term.toLowerCase();
+    return allRows.filter((r) =>
+      [r.invoice_no, r.ref_no, r.contact?.name, r.location?.name]
+        .some((v) => (v ?? "").toLowerCase().includes(t)),
+    );
+  }, [allRows, searching, term]);
+
 
   const saleIds = useMemo(() => rows.map((r) => r.id), [rows]);
+
 
   const { data: profitByInvoice = {} } = useQuery({
     queryKey: ["sales-profit", business?.id, saleIds.length],
