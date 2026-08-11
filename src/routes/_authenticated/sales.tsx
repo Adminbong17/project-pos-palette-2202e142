@@ -43,6 +43,8 @@ function SalesPage() {
   const [range, setRange] = useState<RangeKey>("30d");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
+  const [search, setSearch] = useState("");
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<SaleRow | null>(null);
   const [editForm, setEditForm] = useState({ invoice_no: "", transaction_date: "", total_paid: "", additional_notes: "" });
