@@ -301,6 +301,30 @@ function SalesPage() {
         )}
       </div>
 
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search invoice no, customer or location…"
+          className="h-9 w-full rounded-lg border border-border bg-input pl-9 pr-8 text-sm"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      {searching && (
+        <p className="text-xs text-muted-foreground">
+          Searching all time — {rows.length} invoice(s) found.
+        </p>
+      )}
 
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
