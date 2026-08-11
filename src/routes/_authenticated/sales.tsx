@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, Printer, Trash2, Pencil } from "lucide-react";
+import { Plus, Receipt, Printer, Trash2, Pencil, Search, X } from "lucide-react";
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
