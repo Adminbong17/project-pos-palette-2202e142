@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, Printer, Trash2, Pencil } from "lucide-react";
+import { Plus, Receipt, Printer, Trash2, Pencil, Search, X } from "lucide-react";
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
@@ -43,6 +43,8 @@ function SalesPage() {
   const [range, setRange] = useState<RangeKey>("30d");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
+  const [search, setSearch] = useState("");
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<SaleRow | null>(null);
   const [editForm, setEditForm] = useState({ invoice_no: "", transaction_date: "", total_paid: "", additional_notes: "" });
@@ -170,8 +172,11 @@ function SalesPage() {
   }
 
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["sales", business?.id, fromISO, toISO],
+  const term = search.trim();
+  const searching = term.length > 0;
+
+  const { data: allRows = [], isLoading } = useQuery({
+    queryKey: ["sales", business?.id, searching ? "search" : fromISO, searching ? "search" : toISO],
     enabled: !!business?.id,
     queryFn: async () => {
       let q = supabase
@@ -181,15 +186,26 @@ function SalesPage() {
         )
         .eq("business_id", business!.id)
         .eq("type", "sell");
-      if (fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
+      // When searching, look across all time so old invoices are findable.
+      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
       const { data, error } = await q.order("transaction_date", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as SaleRow[];
     },
   });
 
+  const rows = useMemo(() => {
+    if (!searching) return allRows;
+    const t = term.toLowerCase();
+    return allRows.filter((r) =>
+      [r.invoice_no, r.ref_no, r.contact?.name, r.location?.name]
+        .some((v) => (v ?? "").toLowerCase().includes(t)),
+    );
+  }, [allRows, searching, term]);
+
 
   const saleIds = useMemo(() => rows.map((r) => r.id), [rows]);
+
 
   const { data: profitByInvoice = {} } = useQuery({
     queryKey: ["sales-profit", business?.id, saleIds.length],
@@ -285,6 +301,30 @@ function SalesPage() {
         )}
       </div>
 
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search invoice no, customer or location…"
+          className="h-9 w-full rounded-lg border border-border bg-input pl-9 pr-8 text-sm"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      {searching && (
+        <p className="text-xs text-muted-foreground">
+          Searching all time — {rows.length} invoice(s) found.
+        </p>
+      )}
 
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
