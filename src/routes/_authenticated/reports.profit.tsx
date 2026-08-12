@@ -107,7 +107,7 @@ function ProfitReportPage() {
     const productCostFallback = new Map(products.map((p: any) => [p.id, Number(p.default_purchase_price || 0)]));
     const nameById = new Map(products.map((p: any) => [p.id, p.name]));
     const invoiceNoById = new Map((sales as any[]).map((s) => [s.id, s.invoice_no ?? s.ref_no ?? "—"]));
-    const finalTotalById = new Map((sales as any[]).map((s) => [s.id, Number(s.final_total || 0)]));
+    
 
     // Revenue = the prices entered at POS (quantity x unit price). Invoice-level
     // discount is NOT subtracted from revenue; it is only shown for reference.
