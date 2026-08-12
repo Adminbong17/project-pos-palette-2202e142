@@ -99,7 +99,7 @@ function RxDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link to="/prescriptions" search={{ rx: undefined }} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">New / All Prescriptions</Link>
+          <Link to="/prescriptions" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">New / All Prescriptions</Link>
           <Link to="/rx-appointments" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">Patient Queue</Link>
           <Link to="/rx-lists" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">My Rx Lists</Link>
         </div>

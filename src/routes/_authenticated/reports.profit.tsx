@@ -107,24 +107,6 @@ function ProfitReportPage() {
     const productCostFallback = new Map(products.map((p: any) => [p.id, Number(p.default_purchase_price || 0)]));
     const nameById = new Map(products.map((p: any) => [p.id, p.name]));
     const invoiceNoById = new Map((sales as any[]).map((s) => [s.id, s.invoice_no ?? s.ref_no ?? "—"]));
-    const finalTotalById = new Map((sales as any[]).map((s) => [s.id, Number(s.final_total || 0)]));
-
-    // Pass 1: gross line revenue per invoice (before invoice-level discount).
-    const grossByInvoice = new Map<string, number>();
-    for (const l of sellLines as any[]) {
-      grossByInvoice.set(
-        l.transaction_id,
-        (grossByInvoice.get(l.transaction_id) || 0) + Number(l.quantity || 0) * Number(l.unit_price || 0),
-      );
-    }
-    // Ratio that scales line revenue down to the amount actually billed (final_total),
-    // so Revenue here matches the Sales page "Total Amount".
-    const ratioByInvoice = new Map<string, number>();
-    for (const [id, gross] of grossByInvoice) {
-      const finalTotal = finalTotalById.get(id);
-      ratioByInvoice.set(id, gross > 0 && finalTotal !== undefined ? finalTotal / gross : 1);
-    }
-
     const map = new Map<string, { qty: number; revenue: number; cost: number; invoices: Set<string> }>();
     const byInvoice = new Map<string, { revenue: number; cost: number }>();
     for (const l of sellLines as any[]) {
@@ -134,8 +116,7 @@ function ProfitReportPage() {
       const unitCost = varCostById.has(l.variation_id)
         ? Number(varCostById.get(l.variation_id) || 0)
         : Number(productCostFallback.get(l.product_id) || 0);
-      const ratio = ratioByInvoice.get(l.transaction_id) ?? 1;
-      const rev = qty * Number(l.unit_price || 0) * ratio;
+      const rev = qty * Number(l.unit_price || 0);
       const cost = qty * unitCost;
       cur.qty += qty; cur.revenue += rev; cur.cost += cost;
       map.set(l.product_id, cur);
@@ -152,9 +133,8 @@ function ProfitReportPage() {
     })).sort((a, b) => b.profit - a.profit);
     const invoiceRows = (sales as any[]).map((s) => {
       const v = byInvoice.get(s.id) || { revenue: 0, cost: 0 };
-      const gross = grossByInvoice.get(s.id) || 0;
-      const discount = Math.max(0, gross - Number(s.final_total || 0));
-      const profit = v.revenue - v.cost;
+      const discount = Number(s.discount_amount || 0);
+      const profit = v.revenue - v.cost - discount;
       return {
         id: s.id,
         date: s.transaction_date,
@@ -166,11 +146,11 @@ function ProfitReportPage() {
     });
     const totalRevenue = rows.reduce((a, r) => a + r.revenue, 0);
     const totalCost = rows.reduce((a, r) => a + r.cost, 0);
-    const totalDiscount = invoiceRows.reduce((a, r) => a + r.discount, 0);
-    const netProfit = totalRevenue - totalCost;
-    return { rows, invoiceRows, totalRevenue, totalCost, grossProfit: netProfit, netProfit, totalDiscount };
+    const totalDiscount = sales.reduce((a: number, s: any) => a + Number(s.discount_amount || 0), 0);
+    const grossProfit = totalRevenue - totalCost;
+    const netProfit = grossProfit - totalDiscount;
+    return { rows, invoiceRows, totalRevenue, totalCost, grossProfit, netProfit, totalDiscount };
   }, [sellLines, products, variations, sales]);
-
 
   if (!roleLoading && !isAdmin) {
     return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
@@ -209,11 +189,10 @@ function ProfitReportPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Revenue (billed)", value: fmt(profit.totalRevenue), color: "text-foreground" },
+          { label: "Revenue", value: fmt(profit.totalRevenue), color: "text-foreground" },
           { label: "Cost (COGS)", value: fmt(profit.totalCost), color: "text-foreground" },
-          { label: "Discount given", value: fmt(profit.totalDiscount), color: "text-muted-foreground" },
-          { label: "Net Profit", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
-
+          { label: "Gross Profit", value: fmt(profit.grossProfit), color: profit.grossProfit >= 0 ? "text-emerald-600" : "text-destructive" },
+          { label: "Net Profit (after discount)", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
         ].map((c) => (
           <div key={c.label} className="rounded-2xl border border-border/60 bg-card p-5">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{c.label}</div>
@@ -255,7 +234,7 @@ function ProfitReportPage() {
           </TableBody>
         </Table>
         <p className="px-4 py-3 text-[11px] text-muted-foreground border-t">
-          Cost uses each product's default purchase price. Revenue is the billed amount (after invoice discount), so it matches the Sales page total.
+          Cost uses each product's default purchase price. Net profit = Gross profit − total invoice discount.
         </p>
       </div>
 
