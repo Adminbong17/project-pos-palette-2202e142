@@ -109,7 +109,8 @@ function ProfitReportPage() {
     const invoiceNoById = new Map((sales as any[]).map((s) => [s.id, s.invoice_no ?? s.ref_no ?? "—"]));
     const finalTotalById = new Map((sales as any[]).map((s) => [s.id, Number(s.final_total || 0)]));
 
-    // Pass 1: gross line revenue per invoice (before invoice-level discount).
+    // Revenue = the prices entered at POS (quantity x unit price). Invoice-level
+    // discount is NOT subtracted from revenue; it is only shown for reference.
     const grossByInvoice = new Map<string, number>();
     for (const l of sellLines as any[]) {
       grossByInvoice.set(
@@ -117,13 +118,7 @@ function ProfitReportPage() {
         (grossByInvoice.get(l.transaction_id) || 0) + Number(l.quantity || 0) * Number(l.unit_price || 0),
       );
     }
-    // Ratio that scales line revenue down to the amount actually billed (final_total),
-    // so Revenue here matches the Sales page "Total Amount".
-    const ratioByInvoice = new Map<string, number>();
-    for (const [id, gross] of grossByInvoice) {
-      const finalTotal = finalTotalById.get(id);
-      ratioByInvoice.set(id, gross > 0 && finalTotal !== undefined ? finalTotal / gross : 1);
-    }
+
 
     const map = new Map<string, { qty: number; revenue: number; cost: number; invoices: Set<string> }>();
     const byInvoice = new Map<string, { revenue: number; cost: number }>();
