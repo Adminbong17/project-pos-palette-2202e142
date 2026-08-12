@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const navigate = useNavigate();
   useEffect(() => {
-    if (isRxMode()) navigate({ to: "/prescriptions", replace: true });
+    if (isRxMode()) navigate({ to: "/prescriptions", search: {}, replace: true });
   }, [navigate]);
 
   return (
