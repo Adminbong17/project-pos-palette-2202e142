@@ -107,9 +107,10 @@ function ProfitReportPage() {
     const productCostFallback = new Map(products.map((p: any) => [p.id, Number(p.default_purchase_price || 0)]));
     const nameById = new Map(products.map((p: any) => [p.id, p.name]));
     const invoiceNoById = new Map((sales as any[]).map((s) => [s.id, s.invoice_no ?? s.ref_no ?? "—"]));
-    const finalTotalById = new Map((sales as any[]).map((s) => [s.id, Number(s.final_total || 0)]));
+    
 
-    // Pass 1: gross line revenue per invoice (before invoice-level discount).
+    // Revenue = the prices entered at POS (quantity x unit price). Invoice-level
+    // discount is NOT subtracted from revenue; it is only shown for reference.
     const grossByInvoice = new Map<string, number>();
     for (const l of sellLines as any[]) {
       grossByInvoice.set(
@@ -117,13 +118,7 @@ function ProfitReportPage() {
         (grossByInvoice.get(l.transaction_id) || 0) + Number(l.quantity || 0) * Number(l.unit_price || 0),
       );
     }
-    // Ratio that scales line revenue down to the amount actually billed (final_total),
-    // so Revenue here matches the Sales page "Total Amount".
-    const ratioByInvoice = new Map<string, number>();
-    for (const [id, gross] of grossByInvoice) {
-      const finalTotal = finalTotalById.get(id);
-      ratioByInvoice.set(id, gross > 0 && finalTotal !== undefined ? finalTotal / gross : 1);
-    }
+
 
     const map = new Map<string, { qty: number; revenue: number; cost: number; invoices: Set<string> }>();
     const byInvoice = new Map<string, { revenue: number; cost: number }>();
@@ -134,8 +129,8 @@ function ProfitReportPage() {
       const unitCost = varCostById.has(l.variation_id)
         ? Number(varCostById.get(l.variation_id) || 0)
         : Number(productCostFallback.get(l.product_id) || 0);
-      const ratio = ratioByInvoice.get(l.transaction_id) ?? 1;
-      const rev = qty * Number(l.unit_price || 0) * ratio;
+      const rev = qty * Number(l.unit_price || 0);
+
       const cost = qty * unitCost;
       cur.qty += qty; cur.revenue += rev; cur.cost += cost;
       map.set(l.product_id, cur);
@@ -209,7 +204,7 @@ function ProfitReportPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Revenue (billed)", value: fmt(profit.totalRevenue), color: "text-foreground" },
+          { label: "Revenue", value: fmt(profit.totalRevenue), color: "text-foreground" },
           { label: "Cost (COGS)", value: fmt(profit.totalCost), color: "text-foreground" },
           { label: "Discount given", value: fmt(profit.totalDiscount), color: "text-muted-foreground" },
           { label: "Net Profit", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
@@ -255,7 +250,7 @@ function ProfitReportPage() {
           </TableBody>
         </Table>
         <p className="px-4 py-3 text-[11px] text-muted-foreground border-t">
-          Cost uses each product's default purchase price. Revenue is the billed amount (after invoice discount), so it matches the Sales page total.
+          Cost uses each product's default purchase price. Revenue is the price entered at POS (qty x unit price); invoice discount is shown separately and not deducted from revenue.
         </p>
       </div>
 
