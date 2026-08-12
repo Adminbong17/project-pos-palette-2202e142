@@ -255,7 +255,7 @@ function ProfitReportPage() {
           </TableBody>
         </Table>
         <p className="px-4 py-3 text-[11px] text-muted-foreground border-t">
-          Cost uses each product's default purchase price. Net profit = Gross profit − total invoice discount.
+          Cost uses each product's default purchase price. Revenue is the billed amount (after invoice discount), so it matches the Sales page total.
         </p>
       </div>
 
