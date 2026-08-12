@@ -129,8 +129,8 @@ function ProfitReportPage() {
       const unitCost = varCostById.has(l.variation_id)
         ? Number(varCostById.get(l.variation_id) || 0)
         : Number(productCostFallback.get(l.product_id) || 0);
-      const ratio = ratioByInvoice.get(l.transaction_id) ?? 1;
-      const rev = qty * Number(l.unit_price || 0) * ratio;
+      const rev = qty * Number(l.unit_price || 0);
+
       const cost = qty * unitCost;
       cur.qty += qty; cur.revenue += rev; cur.cost += cost;
       map.set(l.product_id, cur);
