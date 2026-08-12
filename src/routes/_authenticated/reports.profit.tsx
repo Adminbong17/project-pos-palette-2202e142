@@ -209,10 +209,11 @@ function ProfitReportPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Revenue", value: fmt(profit.totalRevenue), color: "text-foreground" },
+          { label: "Revenue (billed)", value: fmt(profit.totalRevenue), color: "text-foreground" },
           { label: "Cost (COGS)", value: fmt(profit.totalCost), color: "text-foreground" },
-          { label: "Gross Profit", value: fmt(profit.grossProfit), color: profit.grossProfit >= 0 ? "text-emerald-600" : "text-destructive" },
-          { label: "Net Profit (after discount)", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
+          { label: "Discount given", value: fmt(profit.totalDiscount), color: "text-muted-foreground" },
+          { label: "Net Profit", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
+
         ].map((c) => (
           <div key={c.label} className="rounded-2xl border border-border/60 bg-card p-5">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{c.label}</div>
