@@ -241,14 +241,14 @@ function SalesPage() {
   const fmt = (n: number) =>
     new Intl.NumberFormat(undefined, { style: "currency", currency: "BDT", maximumFractionDigits: 2 }).format(n || 0);
 
-  // Revenue is the actual billed amount (final_total, i.e. after discount) so this
-  // matches the Profit Report and the Total Amount card exactly.
+  // Revenue = POS line prices (qty x unit price), gross — no discount deducted.
+  // This matches the Profit Report exactly.
   const totals = rows.reduce(
     (a, r) => {
       a.total += Number(r.final_total || 0);
       a.paid += Number(r.total_paid || 0);
       const p = (profitByInvoice as any)[r.id];
-      if (p) { a.revenue += Number(r.final_total || 0); a.cost += p.cost; }
+      if (p) { a.revenue += p.revenue; a.cost += p.cost; }
       return a;
     },
     { total: 0, paid: 0, revenue: 0, cost: 0 }
