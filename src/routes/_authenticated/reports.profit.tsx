@@ -204,7 +204,7 @@ function ProfitReportPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Revenue (billed)", value: fmt(profit.totalRevenue), color: "text-foreground" },
+          { label: "Revenue", value: fmt(profit.totalRevenue), color: "text-foreground" },
           { label: "Cost (COGS)", value: fmt(profit.totalCost), color: "text-foreground" },
           { label: "Discount given", value: fmt(profit.totalDiscount), color: "text-muted-foreground" },
           { label: "Net Profit", value: fmt(profit.netProfit), color: profit.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
@@ -250,7 +250,7 @@ function ProfitReportPage() {
           </TableBody>
         </Table>
         <p className="px-4 py-3 text-[11px] text-muted-foreground border-t">
-          Cost uses each product's default purchase price. Revenue is the billed amount (after invoice discount), so it matches the Sales page total.
+          Cost uses each product's default purchase price. Revenue is the price entered at POS (qty x unit price); invoice discount is shown separately and not deducted from revenue.
         </p>
       </div>
 
