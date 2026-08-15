@@ -38,7 +38,7 @@ function ViewPurchasePage() {
       if (error) throw error;
       const { data: lines, error: le } = await supabase
         .from("transaction_purchase_lines")
-        .select("id, quantity, purchase_price, product:products(name, sku), variation:variations(name)")
+        .select("id, quantity, purchase_price, product:products(name, sku), variation:variations(name, pack_size)")
         .eq("transaction_id", id);
       if (le) throw le;
       return { tx, lines: lines ?? [] };
@@ -127,7 +127,16 @@ function ViewPurchasePage() {
                   {l.variation?.name && l.variation.name !== "DUMMY" ? ` (${l.variation.name})` : ""}
                   <div className="text-xs text-muted-foreground thermal-hide">SKU: {l.product?.sku}</div>
                 </td>
-                <td className="p-3 text-right">{Number(l.quantity)}</td>
+                <td className="p-3 text-right">
+                  {Number(l.quantity)}
+                  {(() => {
+                    const ps = Math.max(1, Math.floor(Number(l.variation?.pack_size ?? 1)));
+                    const qty = Number(l.quantity);
+                    if (ps > 1 && qty > 0 && qty % ps === 0)
+                      return <div className="text-xs text-muted-foreground">{qty / ps} box × {ps} pcs</div>;
+                    return null;
+                  })()}
+                </td>
                 <td className="p-3 text-right thermal-hide">{fmt(Number(l.purchase_price))}</td>
                 <td className="p-3 text-right">{fmt(Number(l.quantity) * Number(l.purchase_price))}</td>
               </tr>
