@@ -50,6 +50,7 @@ function InventoryMovementPage() {
           .eq("business_id", businessId!)
           .eq("type", "purchase")
           .eq("status", "received")
+          .is("deleted_at", null)
       ),
   });
 
