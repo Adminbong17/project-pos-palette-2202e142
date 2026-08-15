@@ -292,18 +292,21 @@ function NewPurchasePage() {
       }
 
 
-      // Persist any changed pack_size values back to variations
+      // Persist explicitly changed pack_size values back to variations.
+      // A blank box field means "leave as is" — never overwrite it with 1.
       const packUpdates = lines
-        .map((l) => ({ id: l.variation_id, ps: Math.max(1, Math.floor(Number(l.pack_size || 1))) }))
-        .filter((x, i, arr) => x.ps !== lines[i].original_pack_size && arr.findIndex((y) => y.id === x.id) === i);
+        .filter((l) => String(l.pack_size).trim() !== "" && Number(l.pack_size) > 0)
+        .map((l) => ({ id: l.variation_id, ps: Math.max(1, Math.floor(Number(l.pack_size))), orig: l.original_pack_size }))
+        .filter((x, i, arr) => x.ps !== x.orig && arr.findIndex((y) => y.id === x.id) === i);
       for (const u of packUpdates) {
         await supabase.from("variations").update({ pack_size: u.ps }).eq("id", u.id);
       }
 
-      // Persist any changed MRP values back to variations
+      // Persist explicitly changed MRP values back to variations (blank = keep old)
       const mrpUpdates = lines
-        .map((l) => ({ id: l.variation_id, mrp: Number(l.mrp || 0) }))
-        .filter((x, i, arr) => x.mrp !== lines[i].original_mrp && arr.findIndex((y) => y.id === x.id) === i);
+        .filter((l) => String(l.mrp ?? "").trim() !== "" && Number(l.mrp) > 0)
+        .map((l) => ({ id: l.variation_id, mrp: Number(l.mrp), orig: l.original_mrp }))
+        .filter((x, i, arr) => x.mrp !== x.orig && arr.findIndex((y) => y.id === x.id) === i);
       for (const u of mrpUpdates) {
         await supabase.from("variations").update({ mrp: u.mrp }).eq("id", u.id);
       }
