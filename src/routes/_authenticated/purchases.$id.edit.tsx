@@ -124,16 +124,21 @@ function EditPurchasePage() {
         const qty = Number(l.quantity ?? 0);
         const pp = Number(l.purchase_price ?? 0);
         const ps = Math.max(1, Math.floor(Number(l.variation?.pack_size ?? 1)));
+        // Purchases are stored in pieces. If the item has a box size and the
+        // stored quantity is a whole number of boxes, show it back as boxes.
+        const asBox = ps > 1 && qty > 0 && qty % ps === 0;
+        const shownQty = asBox ? qty / ps : qty;
+        const shownPrice = asBox ? pp * ps : pp;
         return {
           product_id: l.product_id,
           variation_id: l.variation_id,
           name: `${l.product?.name ?? ""}${l.variation?.name && l.variation.name !== "DUMMY" ? ` (${l.variation.name})` : ""}`,
-          quantity: String(l.quantity ?? ""),
-          purchase_price: String(l.purchase_price ?? ""),
-          line_total: qty > 0 && pp > 0 ? (qty * pp).toFixed(2) : "",
+          quantity: shownQty ? String(shownQty) : "",
+          purchase_price: shownPrice ? String(Number(shownPrice.toFixed(4))) : "",
+          line_total: shownQty > 0 && shownPrice > 0 ? (shownQty * shownPrice).toFixed(2) : "",
           expire_date: l.expire_date ?? "",
           previous_purchase_price: null,
-          unit: "pcs" as const,
+          unit: (asBox ? "box" : "pcs") as "pcs" | "box",
           pack_size: String(ps),
           original_pack_size: ps,
         };
