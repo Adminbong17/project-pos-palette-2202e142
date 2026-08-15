@@ -3288,6 +3288,8 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           discount_amount: number
           discount_type: string | null
           final_total: number
@@ -3313,6 +3315,8 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           discount_amount?: number
           discount_type?: string | null
           final_total?: number
@@ -3338,6 +3342,8 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           discount_amount?: number
           discount_type?: string | null
           final_total?: number
@@ -3724,6 +3730,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      purge_purchase: { Args: { _id: string }; Returns: undefined }
       receive_stock_transfer: { Args: { _id: string }; Returns: undefined }
       reject_access_request: {
         Args: { _id: string; _notes?: string }
@@ -3733,6 +3740,7 @@ export type Database = {
         Args: { _id: string; _notes?: string }
         Returns: undefined
       }
+      restore_purchase: { Args: { _id: string }; Returns: undefined }
       transfer_between_accounts: {
         Args: { _amount: number; _from: string; _note: string; _to: string }
         Returns: undefined
