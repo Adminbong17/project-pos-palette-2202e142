@@ -3129,6 +3129,7 @@ export type Database = {
           item_tax: number
           lot_no: string | null
           pp_without_discount: number
+          prev_pack_size: number | null
           prev_purchase_price: number | null
           product_id: string
           purchase_price: number
@@ -3146,6 +3147,7 @@ export type Database = {
           item_tax?: number
           lot_no?: string | null
           pp_without_discount?: number
+          prev_pack_size?: number | null
           prev_purchase_price?: number | null
           product_id: string
           purchase_price?: number
@@ -3163,6 +3165,7 @@ export type Database = {
           item_tax?: number
           lot_no?: string | null
           pp_without_discount?: number
+          prev_pack_size?: number | null
           prev_purchase_price?: number | null
           product_id?: string
           purchase_price?: number
