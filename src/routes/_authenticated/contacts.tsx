@@ -203,6 +203,7 @@ function ContactsPage() {
         .select("contact_id,type,final_total,total_paid")
         .eq("business_id", business!.id)
         .not("contact_id", "is", null)
+        .is("deleted_at", null)
         .limit(10000);
       if (error) throw error;
       const map: Record<string, { sell: number; sellPaid: number; purchase: number; purchasePaid: number }> = {};
