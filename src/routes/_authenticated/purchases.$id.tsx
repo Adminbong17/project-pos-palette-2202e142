@@ -38,7 +38,7 @@ function ViewPurchasePage() {
       if (error) throw error;
       const { data: lines, error: le } = await supabase
         .from("transaction_purchase_lines")
-        .select("id, quantity, purchase_price, product:products(name, sku), variation:variations(name)")
+        .select("id, quantity, purchase_price, product:products(name, sku), variation:variations(name, pack_size)")
         .eq("transaction_id", id);
       if (le) throw le;
       return { tx, lines: lines ?? [] };
