@@ -108,7 +108,9 @@ function LeavesPage() {
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
           <Plus className="h-3.5 w-3.5" /> New leave request
         </button>
+        </div>
       </div>
+
 
       {showForm && (
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(new FormData(e.currentTarget)); }}
