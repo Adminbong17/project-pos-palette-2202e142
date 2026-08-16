@@ -89,15 +89,15 @@ export function useAllowedSections() {
   const raw = isAdmin
     ? (q.data ?? null)
     : (q.data ?? withAlways(DEFAULT_SALESMAN));
-  // A Doctor / Assistant account never gets POS, inventory or shop dashboard
-  // access, even if extra sections were toggled on for them by mistake.
+  // A Doctor / Assistant account with no explicit grant stays clinical-only.
+  // When the super admin has explicitly picked sections for that user, those
+  // picks win — that is how POS-only or POS + Rx access is handed out.
+  const hasExplicitGrant = Array.isArray(q.data) && q.data.length > 0;
   const sections =
-    raw && clinicalOnlyRole
-      ? (() => {
-          const clinical = raw.filter((k) => CLINICAL_KEYS.includes(k));
-          return clinical.length ? clinical : ["prescriptions"];
-        })()
+    raw && clinicalOnlyRole && !hasExplicitGrant
+      ? ["prescriptions"]
       : raw;
+
 
   return {
     isAdmin,
