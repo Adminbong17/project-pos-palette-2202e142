@@ -339,6 +339,22 @@ function PrescriptionsPage() {
   const navigate = Route.useNavigate();
 
   const [search, setSearch] = useState("");
+
+  // "Own pad" mode: doctor prints on a pre-printed letterhead, so A4 print/PDF
+  // keeps a 2 inch (50.8mm) blank top area and skips the printed header block.
+  const [ownPad, setOwnPad] = useState(false);
+  useEffect(() => {
+    try {
+      setOwnPad(window.localStorage.getItem("rx-own-pad") === "1");
+    } catch { /* storage blocked */ }
+  }, []);
+  const toggleOwnPad = (next: boolean) => {
+    setOwnPad(next);
+    try {
+      window.localStorage.setItem("rx-own-pad", next ? "1" : "0");
+    } catch { /* storage blocked */ }
+  };
+
   const [open, setOpen] = useState(false);
   const dialogScrollRef = useWheelScrollPassthrough<HTMLDivElement>();
   const [editing, setEditing] = useState<Rx | null>(null);
