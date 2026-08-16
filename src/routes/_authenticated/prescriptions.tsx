@@ -1266,7 +1266,30 @@ function PrescriptionsPage() {
                 className="font-mono"
                 value={form.patient_code}
                 onChange={(e) => setForm({ ...form, patient_code: e.target.value.toUpperCase() })}
-                placeholder="From token / queue"
+                placeholder="Auto-generated if left blank"
+              />
+            </div>
+            <div>
+              <Label>Patient type</Label>
+              <Select
+                value={form.patient_type || "new"}
+                onValueChange={(v) => setForm({ ...form, patient_type: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New patient</SelectItem>
+                  <SelectItem value="old">Old patient</SelectItem>
+                  <SelectItem value="medical">Medical person</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Visit fee (৳)</Label>
+              <Input
+                inputMode="numeric"
+                value={form.fee_amount}
+                onChange={(e) => setForm({ ...form, fee_amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                placeholder="From location fee setup"
               />
             </div>
             <div>
