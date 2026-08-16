@@ -973,6 +973,9 @@ function PrescriptionsPage() {
               ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
+              ${ownPad
+    ? `<div class="sign-name">${rx.doctor_name ? `<strong>Dr. ${esc(rx.doctor_name)}</strong>` : ""}${rx.doctor_qualification ? `<div>${esc(rx.doctor_qualification)}</div>` : ""}</div>`
+    : ""}
             </div>
           </div>
         </div>
