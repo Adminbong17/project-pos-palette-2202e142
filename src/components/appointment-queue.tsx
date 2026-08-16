@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Trash2, Stethoscope, Pencil } from "lucide-react";
+import { FileText, Trash2, Stethoscope, Pencil, Printer } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/utils";
@@ -11,6 +11,7 @@ import {
   type Appointment,
   type Chamber,
 } from "@/lib/appointments";
+import { printPatientToken, type TokenSize } from "@/lib/token-print";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,8 @@ export function AppointmentQueue({
   chambers,
   allowDelete = false,
   allowEdit = false,
+  allowStart = true,
+  clinicName,
 }: {
   businessId?: string;
   date: string;
@@ -51,11 +54,16 @@ export function AppointmentQueue({
   chambers: Chamber[];
   allowDelete?: boolean;
   allowEdit?: boolean;
+  /** Assistants only print tokens — the doctor starts the prescription. */
+  allowStart?: boolean;
+  clinicName?: string | null;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
+  const [tokenSize, setTokenSize] = useState<TokenSize>("80mm");
+
 
   const list = useQuery({
     queryKey: ["rx-appointments", businessId, date, chamberId ?? "all"],
@@ -64,7 +72,7 @@ export function AppointmentQueue({
       let q = supabase
         .from("rx_appointments")
         .select(
-          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id",
+          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id, patient_code, is_new_patient, fee_amount, doctor_id",
         )
         .eq("business_id", businessId!)
         .eq("appt_date", date)
@@ -116,7 +124,60 @@ export function AppointmentQueue({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const rowsForDoctors = list.data ?? [];
+  const doctorIds = Array.from(
+    new Set(rowsForDoctors.map((a) => a.doctor_id).filter(Boolean) as string[]),
+  );
+  const doctors = useQuery({
+    queryKey: ["queue-doctors", doctorIds.sort().join(",")],
+    enabled: doctorIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, doctor_name, doctor_qualification, first_name, last_name")
+        .in("id", doctorIds);
+      if (error) throw error;
+      const map: Record<string, { name: string; qualification: string }> = {};
+      for (const p of (data ?? []) as any[]) {
+        map[p.id] = {
+          name:
+            (p.doctor_name ?? "").trim() ||
+            [p.first_name, p.last_name].filter(Boolean).join(" "),
+          qualification: (p.doctor_qualification ?? "").trim(),
+        };
+      }
+      return map;
+    },
+  });
+
   const chamberName = (id: string | null) => chambers.find((c) => c.id === id)?.name ?? "—";
+
+  const printToken = (a: Appointment) => {
+    const doc = a.doctor_id ? doctors.data?.[a.doctor_id] : undefined;
+    const chamber = chambers.find((c) => c.id === a.chamber_id);
+    const fee =
+      a.fee_amount ??
+      (a.is_new_patient === false ? chamber?.fee_old ?? null : chamber?.fee_new ?? null);
+    printPatientToken(
+      {
+        clinicName: clinicName ?? null,
+        doctorName: doc?.name ?? null,
+        doctorQualification: doc?.qualification ?? null,
+        serialNo: a.serial_no,
+        patientCode: a.patient_code ?? null,
+        fee,
+        isNewPatient: a.is_new_patient !== false,
+        patientName: a.patient_name,
+        age: a.patient_age,
+        gender: a.patient_gender,
+        phone: a.patient_phone,
+        location: chamber?.name ?? null,
+        date: formatDate(a.appt_date),
+        time: a.appt_time ? a.appt_time.slice(0, 5) : null,
+      },
+      tokenSize,
+    );
+  };
 
   const start = async (a: Appointment) => {
     if (!businessId) return;
@@ -142,7 +203,21 @@ export function AppointmentQueue({
           <Stethoscope className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Patient queue · {formatDate(date)}</h2>
         </div>
-        <span className="text-xs text-muted-foreground">{rows.length} patient(s)</span>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            Token
+            <select
+              value={tokenSize}
+              onChange={(e) => setTokenSize(e.target.value as TokenSize)}
+              className="h-7 rounded-md border border-border bg-input px-1.5 text-[11px]"
+            >
+              <option value="58mm">58mm</option>
+              <option value="80mm">80mm</option>
+              <option value="A5">Half A4</option>
+            </select>
+          </label>
+          <span className="text-xs text-muted-foreground">{rows.length} patient(s)</span>
+        </div>
       </div>
 
       {list.isLoading ? (
@@ -157,6 +232,11 @@ export function AppointmentQueue({
                 {a.serial_no ?? "—"}
               </span>
               <span className="font-medium">{a.patient_name}</span>
+              {a.patient_code && (
+                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                  {a.patient_code}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
                 {a.patient_age ? `${a.patient_age}y` : ""} {a.patient_gender ?? ""}
               </span>
@@ -169,10 +249,21 @@ export function AppointmentQueue({
                 <Badge variant="outline" className="text-[10px]">Rx started</Badge>
               ) : null}
               <div className="ml-auto flex items-center gap-1.5">
-                <Button size="sm" disabled={busy === a.id} onClick={() => start(a)} className="h-8 text-xs">
-                  <FileText className="mr-1 h-3.5 w-3.5" />
-                  {a.prescription_id ? "Open prescription" : "Start prescription"}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  title="Print patient token"
+                  onClick={() => printToken(a)}
+                >
+                  <Printer className="mr-1 h-3.5 w-3.5" /> Token
                 </Button>
+                {allowStart && (
+                  <Button size="sm" disabled={busy === a.id} onClick={() => start(a)} className="h-8 text-xs">
+                    <FileText className="mr-1 h-3.5 w-3.5" />
+                    {a.prescription_id ? "Open prescription" : "Start prescription"}
+                  </Button>
+                )}
                 {allowEdit && (
                   <Button
                     size="icon"
@@ -317,7 +408,7 @@ export function useChambers(businessId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_chambers")
-        .select("id, name, address, is_active")
+        .select("id, name, address, is_active, fee_new, fee_old")
         .eq("business_id", businessId!)
         .order("name");
       if (error) throw error;

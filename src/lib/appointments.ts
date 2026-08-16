@@ -1,6 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type Chamber = { id: string; name: string; address: string | null; is_active: boolean };
+export type Chamber = {
+  id: string;
+  name: string;
+  address: string | null;
+  is_active: boolean;
+  fee_new?: number | null;
+  fee_old?: number | null;
+};
 
 export type Appointment = {
   id: string;
@@ -15,6 +22,10 @@ export type Appointment = {
   status: string;
   notes: string | null;
   prescription_id: string | null;
+  patient_code?: string | null;
+  is_new_patient?: boolean | null;
+  fee_amount?: number | null;
+  doctor_id?: string | null;
 };
 
 /** Dhaka-local date as YYYY-MM-DD. */
@@ -81,6 +92,7 @@ export async function startPrescriptionFromAppointment(
       patient_age: appointment.patient_age,
       patient_phone: appointment.patient_phone,
       patient_gender: appointment.patient_gender,
+      patient_code: appointment.patient_code ?? null,
       doctor_name: doctorName || null,
       doctor_qualification: doctorQualification || null,
       created_by: ownerId,

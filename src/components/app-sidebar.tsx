@@ -9,6 +9,7 @@ import {
   Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
+import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 
 
@@ -55,6 +56,7 @@ const sections = [
       { to: "/repair", label: "Repair", icon: Wrench, enabled: true, key: "repair" },
       { to: "/crm", label: "CRM", icon: HeartHandshake, enabled: true, key: "crm" },
       { to: "/hrm", label: "HRM", icon: Users, enabled: true, key: "hrm" },
+      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "prescriptions" },
       { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
 
@@ -84,6 +86,10 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
   const rxMode = isRxMode();
+  const { data: business } = useCurrentBusiness();
+  // Doctor mode and clinic mode are separate: the clinic dashboard only
+  // appears for businesses marked as a clinic (multi-doctor + reception).
+  const clinicMode = !!business?.clinic_mode;
   const base = isLoading
     ? []
     : isAdmin
@@ -98,7 +104,11 @@ export function AppSidebar() {
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
     : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
   // Same destination can be listed under multiple permission keys — show it once.
-  const visibleSections = scoped
+  const modeScoped = scoped.map((sec) => ({
+    ...sec,
+    items: sec.items.filter((it) => (it.to === "/clinic-dashboard" ? clinicMode : true)),
+  }));
+  const visibleSections = modeScoped
     .map((sec) => {
       const seen = new Set<string>();
       return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };

@@ -474,6 +474,7 @@ export type Database = {
       businesses: {
         Row: {
           accounting_method: string
+          clinic_mode: boolean
           created_at: string
           currency_id: number
           default_profit_percent: number
@@ -501,6 +502,7 @@ export type Database = {
         }
         Insert: {
           accounting_method?: string
+          clinic_mode?: boolean
           created_at?: string
           currency_id: number
           default_profit_percent?: number
@@ -528,6 +530,7 @@ export type Database = {
         }
         Update: {
           accounting_method?: string
+          clinic_mode?: boolean
           created_at?: string
           currency_id?: number
           default_profit_percent?: number
@@ -1785,6 +1788,7 @@ export type Database = {
           next_visit: string | null
           notes: string | null
           patient_age: string | null
+          patient_code: string | null
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
@@ -1809,6 +1813,7 @@ export type Database = {
           next_visit?: string | null
           notes?: string | null
           patient_age?: string | null
+          patient_code?: string | null
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
@@ -1833,6 +1838,7 @@ export type Database = {
           next_visit?: string | null
           notes?: string | null
           patient_age?: string | null
+          patient_code?: string | null
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
@@ -2399,9 +2405,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           doctor_id: string | null
+          fee_amount: number | null
           id: string
+          is_new_patient: boolean
           notes: string | null
           patient_age: string | null
+          patient_code: string | null
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
@@ -2418,9 +2427,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           doctor_id?: string | null
+          fee_amount?: number | null
           id?: string
+          is_new_patient?: boolean
           notes?: string | null
           patient_age?: string | null
+          patient_code?: string | null
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
@@ -2437,9 +2449,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           doctor_id?: string | null
+          fee_amount?: number | null
           id?: string
+          is_new_patient?: boolean
           notes?: string | null
           patient_age?: string | null
+          patient_code?: string | null
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
@@ -2587,6 +2602,8 @@ export type Database = {
           business_id: string
           created_at: string
           created_by: string | null
+          fee_new: number
+          fee_old: number
           id: string
           is_active: boolean
           name: string
@@ -2597,6 +2614,8 @@ export type Database = {
           business_id: string
           created_at?: string
           created_by?: string | null
+          fee_new?: number
+          fee_old?: number
           id?: string
           is_active?: boolean
           name: string
@@ -2607,6 +2626,8 @@ export type Database = {
           business_id?: string
           created_at?: string
           created_by?: string | null
+          fee_new?: number
+          fee_old?: number
           id?: string
           is_active?: boolean
           name?: string
