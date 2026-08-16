@@ -723,6 +723,8 @@ function PrescriptionsPage() {
       patient_gender: rx.patient_gender ?? "",
       patient_phone: rx.patient_phone ?? "",
       patient_code: rx.patient_code ?? "",
+      patient_type: (rx as any).patient_type ?? "new",
+      fee_amount: (rx as any).fee_amount != null ? String((rx as any).fee_amount) : "",
       contact_id: rx.contact_id ?? "",
       doctor_name: rx.doctor_name ?? "",
       doctor_qualification: rx.doctor_qualification ?? "",
