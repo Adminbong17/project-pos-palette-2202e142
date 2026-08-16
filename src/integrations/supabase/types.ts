@@ -1851,6 +1851,7 @@ export type Database = {
           doctor_id: string | null
           doctor_name: string | null
           doctor_qualification: string | null
+          fee_amount: number | null
           id: string
           investigation: string | null
           location_id: string | null
@@ -1861,6 +1862,7 @@ export type Database = {
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
+          patient_type: string
           rx_date: string
           rx_no: string | null
           sale_id: string | null
@@ -1877,6 +1879,7 @@ export type Database = {
           doctor_id?: string | null
           doctor_name?: string | null
           doctor_qualification?: string | null
+          fee_amount?: number | null
           id?: string
           investigation?: string | null
           location_id?: string | null
@@ -1887,6 +1890,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
+          patient_type?: string
           rx_date?: string
           rx_no?: string | null
           sale_id?: string | null
@@ -1903,6 +1907,7 @@ export type Database = {
           doctor_id?: string | null
           doctor_name?: string | null
           doctor_qualification?: string | null
+          fee_amount?: number | null
           id?: string
           investigation?: string | null
           location_id?: string | null
@@ -1913,6 +1918,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
+          patient_type?: string
           rx_date?: string
           rx_no?: string | null
           sale_id?: string | null
@@ -2677,6 +2683,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           doctor_id: string | null
+          fee_medical: number
           fee_new: number
           fee_old: number
           id: string
@@ -2690,6 +2697,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           doctor_id?: string | null
+          fee_medical?: number
           fee_new?: number
           fee_old?: number
           id?: string
@@ -2703,6 +2711,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           doctor_id?: string | null
+          fee_medical?: number
           fee_new?: number
           fee_old?: number
           id?: string
@@ -3936,10 +3945,12 @@ export type Database = {
         }
         Returns: string
       }
-      approve_business_request: {
-        Args: { _id: string; _notes?: string }
-        Returns: string
-      }
+      approve_business_request:
+        | { Args: { _id: string; _notes?: string }; Returns: string }
+        | {
+            Args: { _id: string; _notes?: string; _sections?: string[] }
+            Returns: string
+          }
       backup_business_snapshot: {
         Args: { _business_id: string }
         Returns: Json

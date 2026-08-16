@@ -367,6 +367,7 @@ function PrescriptionsPage() {
     rx_no: "", rx_date: dhakaLocalInput(),
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", patient_code: "", contact_id: "",
+    patient_type: "new", fee_amount: "",
     doctor_name: "", doctor_qualification: "",
     diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
   });
@@ -668,6 +669,7 @@ function PrescriptionsPage() {
       rx_no: genRxNo(), rx_date: dhakaLocalInput(),
       patient_name: "", patient_age: "", patient_gender: "",
       patient_phone: "", patient_code: "", contact_id: "",
+      patient_type: "new", fee_amount: "",
       doctor_name: me.data?.doctor_name ?? "",
       doctor_qualification: me.data?.doctor_qualification ?? "",
       diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
@@ -721,6 +723,8 @@ function PrescriptionsPage() {
       patient_gender: rx.patient_gender ?? "",
       patient_phone: rx.patient_phone ?? "",
       patient_code: rx.patient_code ?? "",
+      patient_type: (rx as any).patient_type ?? "new",
+      fee_amount: (rx as any).fee_amount != null ? String((rx as any).fee_amount) : "",
       contact_id: rx.contact_id ?? "",
       doctor_name: rx.doctor_name ?? "",
       doctor_qualification: rx.doctor_qualification ?? "",
@@ -792,6 +796,8 @@ function PrescriptionsPage() {
         patient_gender: form.patient_gender || null,
         patient_phone: form.patient_phone.trim() || null,
         patient_code: form.patient_code.trim() || null,
+        patient_type: form.patient_type || "new",
+        fee_amount: form.fee_amount.trim() === "" ? null : Number(form.fee_amount),
         contact_id: form.contact_id || null,
         doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
@@ -1260,7 +1266,30 @@ function PrescriptionsPage() {
                 className="font-mono"
                 value={form.patient_code}
                 onChange={(e) => setForm({ ...form, patient_code: e.target.value.toUpperCase() })}
-                placeholder="From token / queue"
+                placeholder="Auto-generated if left blank"
+              />
+            </div>
+            <div>
+              <Label>Patient type</Label>
+              <Select
+                value={form.patient_type || "new"}
+                onValueChange={(v) => setForm({ ...form, patient_type: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New patient</SelectItem>
+                  <SelectItem value="old">Old patient</SelectItem>
+                  <SelectItem value="medical">Medical person</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Visit fee (৳)</Label>
+              <Input
+                inputMode="numeric"
+                value={form.fee_amount}
+                onChange={(e) => setForm({ ...form, fee_amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                placeholder="From location fee setup"
               />
             </div>
             <div>

@@ -50,7 +50,7 @@ export function useAllowedSections() {
 
   const q = useQuery({
     queryKey: ["allowed-sections", business?.id],
-    enabled: !!business?.id && !roleLoading && !isAdmin,
+    enabled: !!business?.id && !roleLoading,
     queryFn: async () => {
       const { data: uid } = await supabase.auth.getUser();
       const userId = uid.user?.id;
@@ -61,20 +61,25 @@ export function useAllowedSections() {
         .eq("user_id", userId)
         .eq("business_id", business!.id)
         .maybeSingle();
-      if (!ur) return withAlways(DEFAULT_SALESMAN);
+      if (!ur) return isAdmin ? null : withAlways(DEFAULT_SALESMAN);
       const userOverride = (ur as any).allowed_sections as string[] | null;
       if (userOverride && userOverride.length) return withAlways(userOverride);
+      if (isAdmin && !ur.role_id) return null;
       const { data: role } = await supabase
         .from("roles")
         .select("allowed_sections")
         .eq("id", ur.role_id)
         .maybeSingle();
       const list = (role as any)?.allowed_sections as string[] | null;
-      return withAlways(list && list.length ? list : DEFAULT_SALESMAN);
+      if (list && list.length) return withAlways(list);
+      // Admins with no section limit configured keep full access.
+      return isAdmin ? null : withAlways(DEFAULT_SALESMAN);
     },
   });
 
-  const raw = isAdmin ? null : (q.data ?? withAlways(DEFAULT_SALESMAN));
+  const raw = isAdmin
+    ? (q.data ?? null)
+    : (q.data ?? withAlways(DEFAULT_SALESMAN));
   // A Doctor / Assistant account never gets POS, inventory or shop dashboard
   // access, even if extra sections were toggled on for them by mistake.
   const sections =
@@ -87,7 +92,7 @@ export function useAllowedSections() {
 
   return {
     isAdmin,
-    isLoading: roleLoading || (!isAdmin && q.isLoading),
+    isLoading: roleLoading || q.isLoading,
     sections,
   };
 }

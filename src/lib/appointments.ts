@@ -7,6 +7,7 @@ export type Chamber = {
   is_active: boolean;
   fee_new?: number | null;
   fee_old?: number | null;
+  fee_medical?: number | null;
 };
 
 export type Appointment = {
