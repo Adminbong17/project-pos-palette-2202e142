@@ -135,7 +135,7 @@ export async function runFullBackup(businessId?: string) {
         row.file_name = fileName;
       }
 
-      const { data: inserted, error: insErr } = await supabaseAdmin
+      const { data: inserted, error: insErr } = await (supabaseAdmin as any)
         .from("backup_runs")
         .insert(row)
         .select("id, business_name, storage, size_bytes")
@@ -160,7 +160,7 @@ export async function runFullBackup(businessId?: string) {
 
 /** Pull a vault-stored snapshot back into the run row so it can be restored. */
 export async function rehydrateFromVault(runId: string) {
-  const { data: run, error } = await supabaseAdmin
+  const { data: run, error } = await (supabaseAdmin as any)
     .from("backup_runs")
     .select("id, share_token, payload")
     .eq("id", runId)
@@ -173,7 +173,7 @@ export async function rehydrateFromVault(runId: string) {
   const res = await fetch(`${VAULT_BASE}/share.php?t=${run.share_token}`);
   if (!res.ok) throw new Error(`Vault download failed [${res.status}]`);
   const payload = await res.json();
-  const { error: upErr } = await supabaseAdmin
+  const { error: upErr } = await (supabaseAdmin as any)
     .from("backup_runs")
     .update({ payload })
     .eq("id", runId);
