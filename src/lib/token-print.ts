@@ -12,6 +12,7 @@ export type TokenData = {
   patientCode?: string | null;
   fee?: number | null;
   isNewPatient?: boolean;
+  patientType?: string | null;
   patientName?: string | null;
   age?: string | null;
   gender?: string | null;
@@ -23,6 +24,13 @@ export type TokenData = {
 
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+
+export function patientTypeLabel(type?: string | null, isNew?: boolean) {
+  const t = (type ?? (isNew === false ? "old" : "new")).toLowerCase();
+  if (t === "medical") return "Medical person";
+  if (t === "old") return "Old patient";
+  return "New patient";
+}
 
 export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
   const width = size === "A5" ? "148mm" : size === "80mm" ? "76mm" : "54mm";
@@ -71,7 +79,9 @@ export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
       ${data.patientCode ? `<div style="margin-top:4px;font-size:12px;font-weight:700;">ID: ${esc(data.patientCode)}</div>` : ""}
     </div>
     <table style="margin-top:6px;">
+      ${row("Patient ID", data.patientCode)}
       ${row("Patient", data.patientName)}
+      ${row("Type", patientTypeLabel(data.patientType, data.isNewPatient))}
       ${row("Age", data.age)}
       ${row("Sex", data.gender)}
       ${row("Phone", data.phone)}
@@ -79,7 +89,7 @@ export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
       ${row("Date", data.date)}
       ${row("Time", data.time)}
       ${row(
-        data.isNewPatient === false ? "Fee (old patient)" : "Fee (new patient)",
+        `Fee (${patientTypeLabel(data.patientType, data.isNewPatient).toLowerCase()})`,
         data.fee === null || data.fee === undefined ? "" : `৳ ${Number(data.fee).toFixed(2)}`,
       )}
     </table>
