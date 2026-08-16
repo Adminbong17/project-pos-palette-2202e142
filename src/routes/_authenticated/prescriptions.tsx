@@ -997,7 +997,8 @@ function PrescriptionsPage() {
       .med-name { font-weight:bold; }
       .med-sub { padding-left:10px; }
       .rx-mark { font-size:18px; font-weight:bold; }
-      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }`;
+      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }
+      .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:0.8em; }`;
 
     const body = `
     <div class="page">
@@ -1012,7 +1013,9 @@ function PrescriptionsPage() {
       ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
+      ${creditHtml}
     </div>`;
+
 
     return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
   };
