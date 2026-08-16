@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, MapPin } from "lucide-react";
+import { Plus, Trash2, MapPin, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -49,7 +49,8 @@ function AppointmentsPage() {
 
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
-  const [newChamber, setNewChamber] = useState({ name: "", address: "" });
+  const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "" });
+  const [history, setHistory] = useState("");
   const [form, setForm] = useState({
     patient_name: "",
     patient_age: "",
@@ -71,13 +72,15 @@ function AppointmentsPage() {
         business_id: businessId,
         name: newChamber.name.trim(),
         address: newChamber.address.trim() || null,
+        fee_new: Number(newChamber.fee_new) || 0,
+        fee_old: Number(newChamber.fee_old) || 0,
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Location added");
-      setNewChamber({ name: "", address: "" });
+      setNewChamber({ name: "", address: "", fee_new: "", fee_old: "" });
       qc.invalidateQueries({ queryKey: ["rx-chambers"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -93,6 +96,43 @@ function AppointmentsPage() {
       qc.invalidateQueries({ queryKey: ["rx-chambers"] });
     },
     onError: (e: any) => toast.error(e.message),
+  });
+
+  const saveFees = useMutation({
+    mutationFn: async (v: { id: string; fee_new: number; fee_old: number }) => {
+      const { error } = await supabase
+        .from("rx_chambers")
+        .update({ fee_new: v.fee_new, fee_old: v.fee_old })
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Fees updated");
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Patient history: search any patient id / name / phone across every day.
+  const historyQ = useQuery({
+    queryKey: ["patient-history", businessId, history],
+    enabled: !!businessId && history.trim().length >= 2,
+    queryFn: async () => {
+      const term = history.trim();
+      const { data, error } = await supabase
+        .from("rx_appointments")
+        .select(
+          "id, patient_code, patient_name, patient_age, patient_gender, patient_phone, appt_date, serial_no, chamber_id, fee_amount, is_new_patient, prescription_id",
+        )
+        .eq("business_id", businessId!)
+        .or(
+          `patient_code.ilike.%${term}%,patient_name.ilike.%${term}%,patient_phone.ilike.%${term}%`,
+        )
+        .order("appt_date", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
   const addPatient = useMutation({
@@ -136,7 +176,7 @@ function AppointmentsPage() {
           <MapPin className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Chamber locations</h2>
         </div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto]">
           <Input
             placeholder="Location name"
             value={newChamber.name}
@@ -147,23 +187,64 @@ function AppointmentsPage() {
             value={newChamber.address}
             onChange={(e) => setNewChamber((s) => ({ ...s, address: e.target.value }))}
           />
+          <Input
+            placeholder="New patient fee"
+            inputMode="numeric"
+            value={newChamber.fee_new}
+            onChange={(e) => setNewChamber((s) => ({ ...s, fee_new: e.target.value.replace(/[^0-9.]/g, "") }))}
+          />
+          <Input
+            placeholder="Old patient fee"
+            inputMode="numeric"
+            value={newChamber.fee_old}
+            onChange={(e) => setNewChamber((s) => ({ ...s, fee_old: e.target.value.replace(/[^0-9.]/g, "") }))}
+          />
           <Button onClick={() => addChamber.mutate()} disabled={addChamber.isPending}>
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>
         {chamberList.length > 0 && (
-          <ul className="mt-3 flex flex-wrap gap-2">
+          <ul className="mt-3 space-y-2">
             {chamberList.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs"
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs"
               >
-                <span>{c.name}</span>
+                <span className="font-medium">{c.name}</span>
+                {c.address && <span className="text-muted-foreground">{c.address}</span>}
+                <span className="ml-auto flex items-center gap-1.5">
+                  <span className="text-muted-foreground">New ৳</span>
+                  <Input
+                    className="h-8 w-20"
+                    inputMode="numeric"
+                    defaultValue={String(c.fee_new ?? 0)}
+                    onBlur={(e) =>
+                      saveFees.mutate({
+                        id: c.id,
+                        fee_new: Number(e.target.value) || 0,
+                        fee_old: Number(c.fee_old ?? 0),
+                      })
+                    }
+                  />
+                  <span className="text-muted-foreground">Old ৳</span>
+                  <Input
+                    className="h-8 w-20"
+                    inputMode="numeric"
+                    defaultValue={String(c.fee_old ?? 0)}
+                    onBlur={(e) =>
+                      saveFees.mutate({
+                        id: c.id,
+                        fee_new: Number(c.fee_new ?? 0),
+                        fee_old: Number(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </span>
                 <button
                   className="text-muted-foreground hover:text-destructive"
                   onClick={() => { if (confirm(`Remove ${c.name}?`)) delChamber.mutate(c.id); }}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}
