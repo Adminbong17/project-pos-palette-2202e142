@@ -11,6 +11,7 @@ import {
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 
 const sections = [
@@ -65,12 +66,12 @@ const sections = [
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
       { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "prescriptions" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
-      { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
+      { to: "/admin/prescriptions", superOnly: true, label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/rx-billing", label: "Rx Billing Admin", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/users", label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/backups", label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
-      { to: "/admin", label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
+      { to: "/admin/rx-billing", superOnly: true, label: "Rx Billing Admin", icon: Wallet, enabled: true, key: "__admin" },
+      { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
+      { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
+      { to: "/admin", superOnly: true, label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
 
     ],
   },
@@ -92,6 +93,7 @@ export function AppSidebar() {
   // Doctor mode and clinic mode are separate: the clinic dashboard only
   // appears for businesses marked as a clinic (multi-doctor + reception).
   const clinicMode = !!business?.clinic_mode;
+  const { isSuperAdmin } = useIsSuperAdmin();
   const base = isLoading
     ? []
     : isAdmin
@@ -108,7 +110,10 @@ export function AppSidebar() {
   // Same destination can be listed under multiple permission keys — show it once.
   const modeScoped = scoped.map((sec) => ({
     ...sec,
-    items: sec.items.filter((it) => (it.to === "/clinic-dashboard" ? clinicMode : true)),
+    // Platform-wide admin tools belong to the super admin only; a business
+    // owner is an admin of their own business, not of the whole platform.
+    items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
+      .filter((it) => (it.to === "/clinic-dashboard" ? clinicMode : true)),
   }));
   const visibleSections = modeScoped
     .map((sec) => {
