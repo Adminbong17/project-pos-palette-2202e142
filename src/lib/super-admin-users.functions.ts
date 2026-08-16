@@ -115,3 +115,47 @@ export const setUserPassword = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, password: data.password };
   });
+
+export const setUserDisabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; disabled: boolean }) => {
+    if (!data?.user_id) throw new Error("user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.user_id === context.userId) throw new Error("You cannot disable your own account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      // 100 years = effectively disabled; "none" re-enables.
+      ban_duration: data.disabled ? "876000h" : "none",
+    } as any);
+    if (error) throw new Error(error.message);
+
+    // Also flag business memberships so app-side checks match.
+    await supabaseAdmin
+      .from("business_users")
+      .update({ is_active: !data.disabled })
+      .eq("user_id", data.user_id);
+
+    return { ok: true, disabled: data.disabled };
+  });
+
+export const deleteUserAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string }) => {
+    if (!data?.user_id) throw new Error("user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.user_id === context.userId) throw new Error("You cannot delete your own account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
+    await supabaseAdmin.from("business_users").delete().eq("user_id", data.user_id);
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
