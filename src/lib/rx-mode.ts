@@ -21,7 +21,7 @@ const FULL_APP_HOSTS = [
 ];
 
 /** Paths reachable while in prescription-only (Rx domain) mode. */
-export const RX_PATHS = ["/admin", "/rx-dashboard", "/rx-appointments", "/prescriptions", "/rx-lists", "/rx-staff", "/rx-options", "/rx-billing", "/admin/prescriptions", "/admin/doctors", "/admin/rx-billing"];
+export const RX_PATHS = ["/admin", "/clinic-dashboard", "/rx-dashboard", "/rx-appointments", "/prescriptions", "/rx-lists", "/rx-staff", "/rx-options", "/rx-billing", "/admin/prescriptions", "/admin/doctors", "/admin/rx-billing"];
 
 export function isRxHost(hostname?: string | null) {
   if (!hostname) return false;
@@ -38,6 +38,7 @@ export function isFullAppHost(hostname?: string | null) {
 
 /** Doctor-facing pages that should only appear on the Rx domain. */
 export const RX_ONLY_PATHS = [
+  "/clinic-dashboard",
   "/rx-dashboard",
   "/rx-appointments",
   "/prescriptions",

@@ -63,6 +63,7 @@ type Rx = {
   patient_age: string | null;
   patient_gender: string | null;
   patient_phone: string | null;
+  patient_code: string | null;
   doctor_name: string | null;
   doctor_qualification: string | null;
   diagnosis: string | null;
@@ -365,7 +366,7 @@ function PrescriptionsPage() {
   const [form, setForm] = useState({
     rx_no: "", rx_date: dhakaLocalInput(),
     patient_name: "", patient_age: "", patient_gender: "",
-    patient_phone: "", contact_id: "",
+    patient_phone: "", patient_code: "", contact_id: "",
     doctor_name: "", doctor_qualification: "",
     diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
   });
@@ -454,12 +455,12 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       let q = supabase.from("prescriptions")
-        .select("id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id")
+        .select("id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, patient_code, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id")
         .eq("business_id", businessId!)
         .order("rx_date", { ascending: false })
         .limit(500);
       if (search.trim()) {
-        q = q.or(`patient_name.ilike.%${search}%,rx_no.ilike.%${search}%,patient_phone.ilike.%${search}%`);
+        q = q.or(`patient_name.ilike.%${search}%,rx_no.ilike.%${search}%,patient_phone.ilike.%${search}%,patient_code.ilike.%${search}%`);
       }
       const { data, error } = await q;
       if (error) throw error;
@@ -666,7 +667,7 @@ function PrescriptionsPage() {
     setForm({
       rx_no: genRxNo(), rx_date: dhakaLocalInput(),
       patient_name: "", patient_age: "", patient_gender: "",
-      patient_phone: "", contact_id: "",
+      patient_phone: "", patient_code: "", contact_id: "",
       doctor_name: me.data?.doctor_name ?? "",
       doctor_qualification: me.data?.doctor_qualification ?? "",
       diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
@@ -719,6 +720,7 @@ function PrescriptionsPage() {
       patient_age: rx.patient_age ?? "",
       patient_gender: rx.patient_gender ?? "",
       patient_phone: rx.patient_phone ?? "",
+      patient_code: rx.patient_code ?? "",
       contact_id: rx.contact_id ?? "",
       doctor_name: rx.doctor_name ?? "",
       doctor_qualification: rx.doctor_qualification ?? "",
@@ -757,7 +759,7 @@ function PrescriptionsPage() {
       const { data, error } = await supabase
         .from("prescriptions")
         .select(
-          "id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id",
+          "id, rx_no, rx_date, patient_name, patient_age, patient_gender, patient_phone, patient_code, doctor_name, doctor_qualification, diagnosis, vitals, advice, next_visit, notes, contact_id",
         )
         .eq("id", rxParam)
         .maybeSingle();
@@ -789,6 +791,7 @@ function PrescriptionsPage() {
         patient_age: form.patient_age.trim() || null,
         patient_gender: form.patient_gender || null,
         patient_phone: form.patient_phone.trim() || null,
+        patient_code: form.patient_code.trim() || null,
         contact_id: form.contact_id || null,
         doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
@@ -1134,7 +1137,7 @@ function PrescriptionsPage() {
           <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search patient / Rx no / phone…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+              <Input placeholder="Search patient / Rx no / phone / patient ID…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
             </div>
           </FloatingSearch>
           <Button onClick={openNew} disabled={rxBilling.blocked}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
@@ -1150,6 +1153,7 @@ function PrescriptionsPage() {
               <TableHead>Date</TableHead>
               <TableHead>Rx No</TableHead>
               <TableHead>Patient</TableHead>
+              <TableHead>Patient ID</TableHead>
               <TableHead>Age / Sex</TableHead>
               <TableHead>Doctor</TableHead>
               <TableHead>C/C</TableHead>
@@ -1158,14 +1162,15 @@ function PrescriptionsPage() {
           </TableHeader>
           <TableBody>
             {list.isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : !list.data?.length ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No prescriptions yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No prescriptions yet.</TableCell></TableRow>
             ) : list.data.map((rx) => (
               <TableRow key={rx.id}>
                 <TableCell className="whitespace-nowrap">{fmtDate(rx.rx_date)}</TableCell>
                 <TableCell>{rx.rx_no ?? <Badge variant="outline">—</Badge>}</TableCell>
                 <TableCell className="font-medium">{rx.patient_name}</TableCell>
+                <TableCell className="font-mono text-xs">{rx.patient_code ?? "—"}</TableCell>
                 <TableCell className="text-sm">{rx.patient_age ?? "—"}{rx.patient_gender ? ` / ${rx.patient_gender}` : ""}</TableCell>
                 <TableCell className="text-sm">{rx.doctor_name ?? "—"}</TableCell>
                 <TableCell className="text-sm max-w-[240px] truncate">{rx.diagnosis ?? "—"}</TableCell>
@@ -1246,6 +1251,15 @@ function PrescriptionsPage() {
             <div>
               <Label>Phone</Label>
               <Input value={form.patient_phone} onChange={(e) => setForm({ ...form, patient_phone: e.target.value })} />
+            </div>
+            <div>
+              <Label>Patient ID</Label>
+              <Input
+                className="font-mono"
+                value={form.patient_code}
+                onChange={(e) => setForm({ ...form, patient_code: e.target.value.toUpperCase() })}
+                placeholder="From token / queue"
+              />
             </div>
             <div>
               <Label>Next Visit (after days)</Label>
