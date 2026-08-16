@@ -1112,7 +1112,16 @@ function PrescriptionsPage() {
           <h1 className="text-2xl font-semibold flex items-center gap-2"><FileText className="h-6 w-6" /> Prescriptions</h1>
           <p className="text-sm text-muted-foreground">Create, manage, and print patient prescriptions.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border px-3 py-1.5">
+            <Switch id="own-pad" checked={ownPad} onCheckedChange={toggleOwnPad} />
+            <Label htmlFor="own-pad" className="text-xs leading-tight">
+              Own pad
+              <span className="block text-[10px] text-muted-foreground">
+                {ownPad ? "2 inch top space, no header" : "Default header"}
+              </span>
+            </Label>
+          </div>
           <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
