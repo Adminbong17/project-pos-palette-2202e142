@@ -25,6 +25,13 @@ export type TokenData = {
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 
+/** Always show doctors with a "Dr." prefix (without doubling it). */
+function withDrPrefix(name?: string | null) {
+  const n = String(name ?? "").trim();
+  if (!n) return "Doctor";
+  return /^(dr\.?|doctor|prof\.?)\s/i.test(n) ? n : `Dr. ${n}`;
+}
+
 export function patientTypeLabel(type?: string | null, isNew?: boolean) {
   const t = (type ?? (isNew === false ? "old" : "new")).toLowerCase();
   if (t === "medical") return "Medical person";
@@ -69,7 +76,7 @@ export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
   page.innerHTML = `
     <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;">
       ${data.clinicName ? `<div style="font-size:11px;letter-spacing:.5px;">${esc(data.clinicName)}</div>` : ""}
-      <div style="font-size:${size === "A5" ? "22px" : "16px"};font-weight:800;">${esc(data.doctorName || "Doctor")}</div>
+      <div style="font-size:${size === "A5" ? "22px" : "16px"};font-weight:800;">${esc(withDrPrefix(data.doctorName))}</div>
       ${data.doctorQualification ? `<div style="font-size:10px;">${esc(data.doctorQualification)}</div>` : ""}
       <div style="margin-top:4px;font-size:11px;font-weight:700;">PATIENT TOKEN</div>
     </div>

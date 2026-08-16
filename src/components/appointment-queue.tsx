@@ -279,12 +279,16 @@ export function AppointmentQueue({
                 >
                   <Printer className="mr-1 h-3.5 w-3.5" /> Token
                 </Button>
-                {allowStart && (
-                  <Button size="sm" disabled={busy === a.id} onClick={() => start(a)} className="h-8 text-xs">
-                    <FileText className="mr-1 h-3.5 w-3.5" />
-                    {a.prescription_id ? "Open prescription" : "Start prescription"}
-                  </Button>
-                )}
+                {allowStart &&
+                  (a.prescription_id ? (
+                    <Button size="sm" disabled className="h-8 text-xs" title="Prescription already created">
+                      <FileText className="mr-1 h-3.5 w-3.5" /> Rx created
+                    </Button>
+                  ) : (
+                    <Button size="sm" disabled={busy === a.id} onClick={() => start(a)} className="h-8 text-xs">
+                      <FileText className="mr-1 h-3.5 w-3.5" /> Start prescription
+                    </Button>
+                  ))}
                 {allowEdit && (
                   <Button
                     size="icon"
