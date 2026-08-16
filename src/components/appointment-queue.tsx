@@ -37,6 +37,7 @@ type EditState = {
   status: string;
   notes: string;
   patient_type: string;
+  fee_amount: string;
 };
 
 export function AppointmentQueue({
@@ -114,7 +115,7 @@ export function AppointmentQueue({
           status: e.status || "waiting",
           notes: e.notes.trim() || null,
           patient_type: e.patient_type || "new",
-          fee_amount: null,
+          fee_amount: e.fee_amount.trim() === "" ? null : Number(e.fee_amount),
         })
         .eq("id", e.id);
       if (error) throw error;
@@ -161,7 +162,11 @@ export function AppointmentQueue({
     const type = (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")).toLowerCase();
     const fee =
       a.fee_amount ??
-      (type === "medical" ? 0 : type === "old" ? chamber?.fee_old ?? null : chamber?.fee_new ?? null);
+      (type === "medical"
+        ? chamber?.fee_medical ?? 0
+        : type === "old"
+          ? chamber?.fee_old ?? null
+          : chamber?.fee_new ?? null);
     printPatientToken(
       {
         clinicName: clinicName ?? null,
@@ -301,6 +306,7 @@ export function AppointmentQueue({
                         notes: (a as any).notes ?? "",
                         patient_type:
                           (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")) as string,
+                        fee_amount: a.fee_amount != null ? String(a.fee_amount) : "",
                       })
                     }
                   >
@@ -371,6 +377,15 @@ export function AppointmentQueue({
                 </select>
               </div>
               <div>
+                <Label className="mb-1.5 block text-xs">Visit fee (৳)</Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="From location fee setup"
+                  value={edit.fee_amount}
+                  onChange={(e) => setEdit({ ...edit, fee_amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                />
+              </div>
+              <div>
                 <Label className="mb-1.5 block text-xs">Serial no</Label>
                 <Input
                   inputMode="numeric"
@@ -438,7 +453,7 @@ export function useChambers(businessId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_chambers")
-        .select("id, name, address, is_active, fee_new, fee_old")
+        .select("id, name, address, is_active, fee_new, fee_old, fee_medical")
         .eq("business_id", businessId!)
         .order("name");
       if (error) throw error;

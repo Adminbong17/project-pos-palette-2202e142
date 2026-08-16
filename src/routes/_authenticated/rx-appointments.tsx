@@ -50,7 +50,7 @@ function AppointmentsPage() {
 
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
-  const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "" });
+  const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
   const [history, setHistory] = useState("");
   const [form, setForm] = useState({
     patient_name: "",
@@ -76,13 +76,14 @@ function AppointmentsPage() {
         address: newChamber.address.trim() || null,
         fee_new: Number(newChamber.fee_new) || 0,
         fee_old: Number(newChamber.fee_old) || 0,
+        fee_medical: Number(newChamber.fee_medical) || 0,
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Location added");
-      setNewChamber({ name: "", address: "", fee_new: "", fee_old: "" });
+      setNewChamber({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
       qc.invalidateQueries({ queryKey: ["rx-chambers"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -101,10 +102,10 @@ function AppointmentsPage() {
   });
 
   const saveFees = useMutation({
-    mutationFn: async (v: { id: string; fee_new: number; fee_old: number }) => {
+    mutationFn: async (v: { id: string; fee_new: number; fee_old: number; fee_medical: number }) => {
       const { error } = await supabase
         .from("rx_chambers")
-        .update({ fee_new: v.fee_new, fee_old: v.fee_old })
+        .update({ fee_new: v.fee_new, fee_old: v.fee_old, fee_medical: v.fee_medical })
         .eq("id", v.id);
       if (error) throw error;
     },
@@ -186,7 +187,7 @@ function AppointmentsPage() {
           <MapPin className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Chamber locations</h2>
         </div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto]">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto_auto]">
           <Input
             placeholder="Location name"
             value={newChamber.name}
@@ -208,6 +209,12 @@ function AppointmentsPage() {
             inputMode="numeric"
             value={newChamber.fee_old}
             onChange={(e) => setNewChamber((s) => ({ ...s, fee_old: e.target.value.replace(/[^0-9.]/g, "") }))}
+          />
+          <Input
+            placeholder="Medical person fee"
+            inputMode="numeric"
+            value={newChamber.fee_medical}
+            onChange={(e) => setNewChamber((s) => ({ ...s, fee_medical: e.target.value.replace(/[^0-9.]/g, "") }))}
           />
           <Button onClick={() => addChamber.mutate()} disabled={addChamber.isPending}>
             <Plus className="mr-1 h-4 w-4" /> Add
@@ -233,6 +240,7 @@ function AppointmentsPage() {
                         id: c.id,
                         fee_new: Number(e.target.value) || 0,
                         fee_old: Number(c.fee_old ?? 0),
+                        fee_medical: Number(c.fee_medical ?? 0),
                       })
                     }
                   />
@@ -246,6 +254,21 @@ function AppointmentsPage() {
                         id: c.id,
                         fee_new: Number(c.fee_new ?? 0),
                         fee_old: Number(e.target.value) || 0,
+                        fee_medical: Number(c.fee_medical ?? 0),
+                      })
+                    }
+                  />
+                  <span className="text-muted-foreground">Medical ৳</span>
+                  <Input
+                    className="h-8 w-20"
+                    inputMode="numeric"
+                    defaultValue={String(c.fee_medical ?? 0)}
+                    onBlur={(e) =>
+                      saveFees.mutate({
+                        id: c.id,
+                        fee_new: Number(c.fee_new ?? 0),
+                        fee_old: Number(c.fee_old ?? 0),
+                        fee_medical: Number(e.target.value) || 0,
                       })
                     }
                   />
