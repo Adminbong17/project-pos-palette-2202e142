@@ -21,6 +21,7 @@ import { Route as AuthenticatedRxStaffRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRxOptionsRouteImport } from './routes/_authenticated/rx-options'
 import { Route as AuthenticatedRxListsRouteImport } from './routes/_authenticated/rx-lists'
 import { Route as AuthenticatedRxDashboardRouteImport } from './routes/_authenticated/rx-dashboard'
+import { Route as AuthenticatedRxBillingRouteImport } from './routes/_authenticated/rx-billing'
 import { Route as AuthenticatedRxAppointmentsRouteImport } from './routes/_authenticated/rx-appointments'
 import { Route as AuthenticatedRestaurantRouteImport } from './routes/_authenticated/restaurant'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -139,6 +140,11 @@ const AuthenticatedRxDashboardRoute =
     path: '/rx-dashboard',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRxBillingRoute = AuthenticatedRxBillingRouteImport.update({
+  id: '/rx-billing',
+  path: '/rx-billing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRxAppointmentsRoute =
   AuthenticatedRxAppointmentsRouteImport.update({
     id: '/rx-appointments',
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
+  '/rx-billing': typeof AuthenticatedRxBillingRoute
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
@@ -537,6 +544,7 @@ export interface FileRoutesByTo {
   '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/quick-box': typeof AuthenticatedQuickBoxRoute
   '/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
+  '/rx-billing': typeof AuthenticatedRxBillingRoute
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
   '/rx-options': typeof AuthenticatedRxOptionsRoute
@@ -607,6 +615,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/_authenticated/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
+  '/_authenticated/rx-billing': typeof AuthenticatedRxBillingRoute
   '/_authenticated/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/_authenticated/rx-lists': typeof AuthenticatedRxListsRoute
   '/_authenticated/rx-options': typeof AuthenticatedRxOptionsRoute
@@ -678,6 +687,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/restaurant'
     | '/rx-appointments'
+    | '/rx-billing'
     | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
@@ -741,6 +751,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/quick-box'
     | '/rx-appointments'
+    | '/rx-billing'
     | '/rx-dashboard'
     | '/rx-lists'
     | '/rx-options'
@@ -810,6 +821,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/restaurant'
     | '/_authenticated/rx-appointments'
+    | '/_authenticated/rx-billing'
     | '/_authenticated/rx-dashboard'
     | '/_authenticated/rx-lists'
     | '/_authenticated/rx-options'
@@ -951,6 +963,13 @@ declare module '@tanstack/react-router' {
       path: '/rx-dashboard'
       fullPath: '/rx-dashboard'
       preLoaderRoute: typeof AuthenticatedRxDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rx-billing': {
+      id: '/_authenticated/rx-billing'
+      path: '/rx-billing'
+      fullPath: '/rx-billing'
+      preLoaderRoute: typeof AuthenticatedRxBillingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rx-appointments': {
@@ -1530,6 +1549,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedRestaurantRoute: typeof AuthenticatedRestaurantRouteWithChildren
   AuthenticatedRxAppointmentsRoute: typeof AuthenticatedRxAppointmentsRoute
+  AuthenticatedRxBillingRoute: typeof AuthenticatedRxBillingRoute
   AuthenticatedRxDashboardRoute: typeof AuthenticatedRxDashboardRoute
   AuthenticatedRxListsRoute: typeof AuthenticatedRxListsRoute
   AuthenticatedRxOptionsRoute: typeof AuthenticatedRxOptionsRoute
@@ -1563,6 +1583,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedRestaurantRoute: AuthenticatedRestaurantRouteWithChildren,
   AuthenticatedRxAppointmentsRoute: AuthenticatedRxAppointmentsRoute,
+  AuthenticatedRxBillingRoute: AuthenticatedRxBillingRoute,
   AuthenticatedRxDashboardRoute: AuthenticatedRxDashboardRoute,
   AuthenticatedRxListsRoute: AuthenticatedRxListsRoute,
   AuthenticatedRxOptionsRoute: AuthenticatedRxOptionsRoute,
