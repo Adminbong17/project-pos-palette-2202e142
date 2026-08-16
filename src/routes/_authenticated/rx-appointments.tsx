@@ -343,9 +343,70 @@ function AppointmentsPage() {
         date={date}
         chamberId={chamberId || undefined}
         chambers={chamberList}
+        clinicName={business?.name ?? null}
         allowDelete
         allowEdit
+        allowStart={!isAssistant}
       />
+
+      <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Search className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Patient history</h2>
+        </div>
+        <Input
+          placeholder="Search patient ID (e.g. JOY258369), name or phone…"
+          value={history}
+          onChange={(e) => setHistory(e.target.value)}
+        />
+        {history.trim().length >= 2 && (
+          <div className="mt-3 overflow-x-auto">
+            {historyQ.isLoading ? (
+              <p className="text-sm text-muted-foreground">Searching…</p>
+            ) : !historyQ.data?.length ? (
+              <p className="text-sm text-muted-foreground">No visits found.</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr className="border-b border-border/60 text-left">
+                    <th className="py-1.5 pr-2">Date</th>
+                    <th className="py-1.5 pr-2">Patient ID</th>
+                    <th className="py-1.5 pr-2">Name</th>
+                    <th className="py-1.5 pr-2">Age / Sex</th>
+                    <th className="py-1.5 pr-2">Phone</th>
+                    <th className="py-1.5 pr-2">Location</th>
+                    <th className="py-1.5 pr-2">Serial</th>
+                    <th className="py-1.5 pr-2">Fee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyQ.data.map((h: any) => (
+                    <tr key={h.id} className="border-b border-border/40">
+                      <td className="py-1.5 pr-2 whitespace-nowrap">{h.appt_date}</td>
+                      <td className="py-1.5 pr-2 font-mono">{h.patient_code ?? "—"}</td>
+                      <td className="py-1.5 pr-2 font-medium">{h.patient_name}</td>
+                      <td className="py-1.5 pr-2">
+                        {h.patient_age ?? "—"}
+                        {h.patient_gender ? ` / ${h.patient_gender}` : ""}
+                      </td>
+                      <td className="py-1.5 pr-2">{h.patient_phone ?? "—"}</td>
+                      <td className="py-1.5 pr-2">
+                        {chamberList.find((c) => c.id === h.chamber_id)?.name ?? "—"}
+                      </td>
+                      <td className="py-1.5 pr-2">{h.serial_no ?? "—"}</td>
+                      <td className="py-1.5 pr-2">
+                        {h.fee_amount != null ? `৳ ${Number(h.fee_amount).toFixed(2)}` : "—"}
+                        {h.is_new_patient === false ? " (old)" : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
