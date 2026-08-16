@@ -12,6 +12,7 @@ import {
   backupDownload,
 } from "@/lib/backups.functions";
 import { toast } from "sonner";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import { Input } from "@/components/ui/input";
 import { DatabaseBackup, Download, History, Loader2, RefreshCw, Trash2, Search } from "lucide-react";
 
@@ -56,6 +57,7 @@ function fmtDhaka(iso: string) {
 }
 
 function BackupsPage() {
+  const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const qc = useQueryClient();
   const runNow = useServerFn(backupRunNow);
   const restore = useServerFn(backupRestore);
@@ -178,6 +180,9 @@ function BackupsPage() {
     );
   }, [runs.data, search]);
 
+  if (superLoading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (!isSuperAdmin)
+    return <div className="p-8 text-sm text-muted-foreground">Only the super admin can access this page.</div>;
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
