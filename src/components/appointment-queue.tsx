@@ -64,7 +64,7 @@ export function AppointmentQueue({
       let q = supabase
         .from("rx_appointments")
         .select(
-          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id",
+          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id, patient_code, is_new_patient, fee_amount, doctor_id",
         )
         .eq("business_id", businessId!)
         .eq("appt_date", date)
@@ -317,7 +317,7 @@ export function useChambers(businessId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_chambers")
-        .select("id, name, address, is_active")
+        .select("id, name, address, is_active, fee_new, fee_old")
         .eq("business_id", businessId!)
         .order("name");
       if (error) throw error;
