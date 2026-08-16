@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, UserCog, ListChecks, Building2 } from "lucide-react";
+import { ClipboardList, UserCog, ListChecks, Building2, KeyRound } from "lucide-react";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { isRxMode } from "@/lib/rx-mode";
 
@@ -44,6 +44,13 @@ const CARDS = [
     label: "Manage Rx Options",
     desc: "C/C, investigations, frequencies, instructions and advice lists.",
     icon: ListChecks,
+    rx: true,
+  },
+  {
+    to: "/admin/users",
+    label: "All Users & Logins",
+    desc: "Every account with email, username, role and password control.",
+    icon: KeyRound,
     rx: true,
   },
   {

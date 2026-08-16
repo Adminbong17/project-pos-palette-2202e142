@@ -57,7 +57,7 @@ function RxDashboard() {
         .limit(5000);
       // Older prescriptions were saved without created_by — keep them visible
       // to non-admin doctors instead of hiding everything.
-      if (!isAdmin && u.user) q = q.or(`created_by.eq.${u.user.id},created_by.is.null`);
+      if (!isAdmin && u.user) q = q.or(`doctor_id.eq.${doctorId ?? u.user.id},doctor_id.is.null`);
       const { data: rows, error } = await q;
       if (error) throw error;
       return rows ?? [];
