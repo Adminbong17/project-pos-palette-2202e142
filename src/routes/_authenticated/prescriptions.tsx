@@ -367,6 +367,7 @@ function PrescriptionsPage() {
     rx_no: "", rx_date: dhakaLocalInput(),
     patient_name: "", patient_age: "", patient_gender: "",
     patient_phone: "", patient_code: "", contact_id: "",
+    patient_type: "new", fee_amount: "",
     doctor_name: "", doctor_qualification: "",
     diagnosis: "", vitals: "", investigation: "", advice: "", next_visit: "", notes: "",
   });
