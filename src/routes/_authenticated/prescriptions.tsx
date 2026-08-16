@@ -945,6 +945,8 @@ function PrescriptionsPage() {
         .med-sub { padding-left:14px; }
         .qty { font-weight:normal; }
         .sign { margin-top:10px; text-align:right; }
+        .sign-name { text-align:right; font-size:10px; line-height:1.25; margin-top:2px; }
+        .sign-name strong { font-size:11px; }
         .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:10px; color:#333; }`;
 
       const body = `
@@ -971,6 +973,9 @@ function PrescriptionsPage() {
               ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
+              ${ownPad
+    ? `<div class="sign-name">${rx.doctor_name ? `<strong>Dr. ${esc(rx.doctor_name)}</strong>` : ""}${rx.doctor_qualification ? `<div>${esc(rx.doctor_qualification)}</div>` : ""}</div>`
+    : ""}
             </div>
           </div>
         </div>
