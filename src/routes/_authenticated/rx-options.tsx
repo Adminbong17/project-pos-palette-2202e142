@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -60,6 +60,7 @@ function ListCard({
 }) {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
+  const [search, setSearch] = useState("");
   const key = ["rx-shared-options", table, businessId];
 
   const list = useQuery({
@@ -99,6 +100,13 @@ function ListCard({
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
+
+  const filteredList = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const items = list.data ?? [];
+    if (!q) return items;
+    return items.filter((r) => r.name.toLowerCase().includes(q));
+  }, [list.data, search]);
 
   return (
     <Card className={enabled ? undefined : "opacity-90"}>
@@ -144,13 +152,26 @@ function ListCard({
             <span className="ml-1 hidden sm:inline">Add</span>
           </Button>
         </form>
+        {(list.data ?? []).length > 0 && (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-8 pl-9 text-xs"
+              placeholder="Search…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
         {list.isLoading ? (
           <p className="text-xs text-muted-foreground">Loading…</p>
         ) : (list.data ?? []).length === 0 ? (
           <p className="text-xs text-muted-foreground">Nothing added yet.</p>
+        ) : filteredList.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No match</p>
         ) : (
           <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
-            {(list.data ?? []).map((r) => (
+            {filteredList.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-2 py-1 text-sm">
                 <span className="truncate">{r.name}</span>
                 <button type="button" title="Remove" onClick={() => remove.mutate(r.id)} className="text-muted-foreground hover:text-destructive">

@@ -1,10 +1,12 @@
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll } from "@/lib/fetch-all";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/reports/expiry")({
   head: () => ({ meta: [{ title: "Expiring Batches — QweekPOS" }] }),
@@ -19,6 +21,7 @@ function daysLeft(d: string) {
 function ExpiryPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
+  const [search, setSearch] = useState("");
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["expiry-batches-full", businessId],
@@ -32,6 +35,23 @@ function ExpiryPage() {
         .order("expire_date", { ascending: true })),
   });
 
+  const q = search.trim().toLowerCase();
+  const filteredRows = useMemo(() => {
+    if (!q) return rows;
+    return (rows as any[]).filter((b) => {
+      const dl = daysLeft(b.expire_date);
+      return [
+        b.product?.name,
+        b.product?.sku,
+        b.lot_no,
+        b.quantity,
+        b.transaction?.transaction_date,
+        b.expire_date,
+        dl,
+      ].some((v) => String(v ?? "").toLowerCase().includes(q));
+    });
+  }, [rows, q]);
+
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
@@ -42,6 +62,16 @@ function ExpiryPage() {
         <Link to="/reports" className="text-xs underline text-muted-foreground hover:text-foreground">← Back to Reports</Link>
       </div>
       <p className="text-sm text-muted-foreground">Showing all batches, sorted by nearest expiry.</p>
+
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search batches…"
+          className="pl-9"
+        />
+      </div>
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
         <table className="w-full text-sm">
@@ -60,10 +90,10 @@ function ExpiryPage() {
             {isLoading && (
               <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
             )}
-            {!isLoading && rows.length === 0 && (
-              <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No batches with expiry dates.</td></tr>
+            {!isLoading && filteredRows.length === 0 && (
+              <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{q ? "No match." : "No batches with expiry dates."}</td></tr>
             )}
-            {rows.map((b: any) => {
+            {filteredRows.map((b: any) => {
               const dl = daysLeft(b.expire_date);
               const cls = dl < 0 ? "text-destructive" : dl <= 30 ? "text-amber-600" : "text-muted-foreground";
               return (

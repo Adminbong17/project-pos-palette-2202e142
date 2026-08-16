@@ -1,11 +1,12 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { vaultUpload, vaultDelete } from "@/lib/vault.functions";
 import { vaultShareUrl } from "@/lib/vault";
-import { Upload, Trash2, FileIcon, Loader2 } from "lucide-react";
+import { Upload, Trash2, FileIcon, Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 type Props = {
@@ -19,6 +20,7 @@ export function AttachmentsPanel({ entityType, entityId, accept, title = "Attach
   const { data: business } = useCurrentBusiness();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
   const upload = useServerFn(vaultUpload);
   const del = useServerFn(vaultDelete);
 
@@ -58,6 +60,13 @@ export function AttachmentsPanel({ entityType, entityId, accept, title = "Attach
     onError: (e: any) => toast.error(e.message ?? "Upload failed"),
   });
 
+  const q = search.trim().toLowerCase();
+  const filteredRows = q
+    ? (rows as any[]).filter((r) =>
+        [r.file_name, r.mime, formatBytes(r.size ?? 0)].some((v) => String(v ?? "").toLowerCase().includes(q)),
+      )
+    : (rows as any[]);
+
   const deleteMut = useMutation({
     mutationFn: (attachment_id: string) => del({ data: { attachment_id } }),
     onSuccess: () => {
@@ -93,13 +102,27 @@ export function AttachmentsPanel({ entityType, entityId, accept, title = "Attach
         />
       </div>
 
+      {rows.length > 0 && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search files…"
+            className="h-9 pl-9"
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
         <p className="text-xs text-muted-foreground">No files yet.</p>
+      ) : filteredRows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No match.</p>
       ) : (
         <ul className="divide-y divide-border/60">
-          {rows.map((r: any) => {
+          {filteredRows.map((r: any) => {
             const url = vaultShareUrl(r.share_token);
             const isImg = (r.mime ?? "").startsWith("image/");
             return (

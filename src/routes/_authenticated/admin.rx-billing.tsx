@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Wallet, Receipt, CalendarClock } from "lucide-react";
+import { Wallet, Receipt, CalendarClock, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -51,6 +51,8 @@ function AdminRxBillingPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
   const [month, setMonth] = useState("");
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [billSearch, setBillSearch] = useState("");
 
   const accounts = useQuery({
     queryKey: ["rx-billing-accounts", businessId],
@@ -209,6 +211,32 @@ function AdminRxBillingPage() {
   const pool = (accounts.data ?? []).find((a) => a.user_id === null) ?? null;
   const byUser = new Map((accounts.data ?? []).filter((a) => a.user_id).map((a) => [a.user_id!, a]));
 
+  const filteredDoctors = useMemo(() => {
+    const q = doctorSearch.trim().toLowerCase();
+    const list = doctors.data ?? [];
+    if (!q) return list;
+    return list.filter((d) => {
+      const acc = byUser.get(d.id);
+      return [d.label, acc?.mode, acc?.phone, acc?.payment_link, acc?.helpline]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q);
+    });
+  }, [doctors.data, doctorSearch, byUser]);
+
+  const filteredBills = useMemo(() => {
+    const q = billSearch.trim().toLowerCase();
+    const list = bills.data ?? [];
+    if (!q) return list;
+    return list.filter((b) => {
+      const label = b.user_id ? (doctors.data ?? []).find((d) => d.id === b.user_id)?.label ?? "Doctor" : "Whole clinic";
+      return [label, String(b.period_start).slice(0, 7), b.prescriptions_count, b.amount, b.status, b.due_date]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q);
+    });
+  }, [bills.data, billSearch, doctors.data]);
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
@@ -248,10 +276,16 @@ function AdminRxBillingPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search doctors…" value={doctorSearch} onChange={(e) => setDoctorSearch(e.target.value)} />
+          </div>
           {doctors.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (doctors.data ?? []).length > 0 && filteredDoctors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match</p>
           ) : (
-            (doctors.data ?? []).map((d) => (
+            filteredDoctors.map((d) => (
               <AccountEditor
                 key={d.id}
                 label={d.label}
@@ -292,12 +326,18 @@ function AdminRxBillingPage() {
               (super admin only — subscription accounts)
             </span>
           </div>
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search bills…" value={billSearch} onChange={(e) => setBillSearch(e.target.value)} />
+          </div>
           {bills.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !bills.data?.length ? (
             <p className="text-sm text-muted-foreground">No bills generated yet.</p>
+          ) : filteredBills.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match</p>
           ) : (
-            bills.data.map((b) => (
+            filteredBills.map((b) => (
               <BillRow
                 key={b.id}
                 bill={b}

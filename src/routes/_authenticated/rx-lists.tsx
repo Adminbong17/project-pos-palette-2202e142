@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ const KINDS: { kind: PresetKind; title: string; hint: string }[] = [
 function PresetCard({ kind, title, hint, businessId }: { kind: PresetKind; title: string; hint: string; businessId?: string }) {
   const { items, isLoading, add, remove } = useRxPresets(kind, businessId);
   const [value, setValue] = useState("");
+  const [search, setSearch] = useState("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +41,12 @@ function PresetCard({ kind, title, hint, businessId }: { kind: PresetKind; title
     add(n);
     setValue("");
   };
+
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((p) => p.name.toLowerCase().includes(q));
+  }, [items, search]);
 
   return (
     <Card>
@@ -55,13 +62,26 @@ function PresetCard({ kind, title, hint, businessId }: { kind: PresetKind; title
             <span className="ml-1 hidden sm:inline">Add</span>
           </Button>
         </form>
+        {items.length > 0 && (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-8 pl-9 text-xs"
+              placeholder="Search…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
         {isLoading ? (
           <p className="text-xs text-muted-foreground">Loading…</p>
         ) : items.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nothing saved yet.</p>
+        ) : filteredItems.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No match</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {items.map((p) => (
+            {filteredItems.map((p) => (
               <span key={p.id} className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
                 <span className="max-w-[220px] truncate">{p.name}</span>
                 <button type="button" onClick={() => remove(p.id)} title="Remove" className="text-muted-foreground hover:text-destructive">

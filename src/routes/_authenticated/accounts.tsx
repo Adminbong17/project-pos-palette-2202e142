@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, BookOpen } from "lucide-react";
+import { Plus, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, BookOpen, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -62,6 +62,8 @@ function AccountsPage() {
   const [openTx, setOpenTx] = useState<null | "deposit" | "withdraw" | "transfer">(null);
   const [editing, setEditing] = useState<Account | null>(null);
   const [selectedId, setSelectedId] = useState<string>("");
+  const [acctSearch, setAcctSearch] = useState("");
+  const [txSearch, setTxSearch] = useState("");
 
   const accounts = useQuery({
     queryKey: ["accounts", businessId],
@@ -95,6 +97,30 @@ function AccountsPage() {
   });
 
   const acctName = (id: string | null) => accounts.data?.find((a) => a.id === id)?.name ?? "—";
+
+  const filteredAccounts = useMemo(() => {
+    const q = acctSearch.trim().toLowerCase();
+    const list = accounts.data ?? [];
+    if (!q) return list;
+    return list.filter((a) =>
+      [a.name, a.account_type, a.account_number, money(a.opening_balance), money(a.current_balance), a.is_active ? "active" : "inactive"]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [accounts.data, acctSearch]);
+
+  const filteredTxs = useMemo(() => {
+    const q = txSearch.trim().toLowerCase();
+    const list = txs.data ?? [];
+    if (!q) return list;
+    return list.filter((t) =>
+      [fmtDate(t.tx_date), acctName(t.account_id), t.tx_type, t.reference_type, acctName(t.linked_account_id), money(t.amount), t.note]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [txs.data, txSearch, accounts.data]);
 
   const totalBalance = useMemo(
     () => (accounts.data ?? []).reduce((s, a) => s + Number(a.current_balance || 0), 0),
@@ -142,6 +168,11 @@ function AccountsPage() {
             <Button variant="outline" onClick={() => setOpenTx("transfer")}><ArrowLeftRight className="mr-2 h-4 w-4" /> Transfer</Button>
           </div>
 
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search accounts…" value={acctSearch} onChange={(e) => setAcctSearch(e.target.value)} />
+          </div>
+
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
@@ -156,7 +187,11 @@ function AccountsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {accounts.data?.length ? accounts.data.map((a) => (
+                {!accounts.data?.length ? (
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No accounts yet</TableCell></TableRow>
+                ) : filteredAccounts.length === 0 ? (
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No match</TableCell></TableRow>
+                ) : filteredAccounts.map((a) => (
                   <TableRow key={a.id} className="cursor-pointer" onClick={() => { setSelectedId(a.id); setTab("ledger"); }}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell><Badge variant="outline">{a.account_type}</Badge></TableCell>
@@ -170,16 +205,14 @@ function AccountsPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                )) : (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No accounts yet</TableCell></TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
         </TabsContent>
 
         <TabsContent value="ledger" className="mt-4 space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Label>Account</Label>
             <Select value={selectedId || "all"} onValueChange={(v) => setSelectedId(v === "all" ? "" : v)}>
               <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
@@ -188,6 +221,10 @@ function AccountsPage() {
                 {accounts.data?.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <div className="relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search transactions…" value={txSearch} onChange={(e) => setTxSearch(e.target.value)} />
+            </div>
           </div>
 
           <div className="rounded-lg border">
@@ -203,7 +240,11 @@ function AccountsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {txs.data?.length ? txs.data.map((t) => {
+                {!txs.data?.length ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No transactions</TableCell></TableRow>
+                ) : filteredTxs.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No match</TableCell></TableRow>
+                ) : filteredTxs.map((t) => {
                   const sign = TX_SIGN[t.tx_type] ?? 1;
                   const isCredit = sign > 0;
                   return (
@@ -221,9 +262,7 @@ function AccountsPage() {
                       <TableCell className="text-sm">{t.note ?? "—"}</TableCell>
                     </TableRow>
                   );
-                }) : (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No transactions</TableCell></TableRow>
-                )}
+                })}
               </TableBody>
             </Table>
           </div>

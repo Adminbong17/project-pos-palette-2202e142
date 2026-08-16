@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { UserPlus, Trash2, KeyRound, Users, MapPin } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, MapPin, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -57,6 +57,7 @@ function StaffPage() {
   });
   const [newChamber, setNewChamber] = useState({ name: "", address: "" });
   const [pwEdit, setPwEdit] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
 
   const addChamber = useMutation({
     mutationFn: async () => {
@@ -171,6 +172,18 @@ function StaffPage() {
   });
 
   const rows = staff.data ?? [];
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((s) => {
+      const chamber = chamberList.find((c) => c.id === s.chamber_id)?.name;
+      return [s.name, s.username, staffUsernameToEmail(s.username), s.phone, chamber, s.is_active ? "active" : "inactive"]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q);
+    });
+  }, [rows, search, chamberList]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -292,13 +305,21 @@ function StaffPage() {
           <h2 className="text-sm font-semibold">Staff accounts</h2>
           <span className="ml-auto text-xs text-muted-foreground">{rows.length}</span>
         </div>
+        {rows.length > 0 && (
+          <div className="relative m-4 max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search staff…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+        )}
         {staff.isLoading ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Loading…</p>
         ) : rows.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">No staff yet.</p>
+        ) : filteredRows.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">No match</p>
         ) : (
           <ul className="divide-y divide-border/60">
-            {rows.map((s) => (
+            {filteredRows.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
                 <div className="min-w-40">
                   <div className="font-medium">{s.name}</div>

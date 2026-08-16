@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export type FieldDef = {
   key: string;
@@ -97,7 +98,10 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
 
   const q = search.trim().toLowerCase();
   const filteredRows = q
-    ? (rows as any[]).filter((r) => String(r[orderBy] ?? r.name ?? "").toLowerCase().includes(q))
+    ? (rows as any[]).filter((r) =>
+        listColumns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(q))
+        || String(r[orderBy] ?? r.name ?? "").toLowerCase().includes(q),
+      )
     : (rows as any[]);
 
   const allIds = filteredRows.map((r) => r.id);
@@ -128,12 +132,15 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
         <h2 className="font-display text-lg font-semibold">{title}</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name…"
-              className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm" />
+            <div className="relative w-full">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="h-9 pl-9" />
+            </div>
           </FloatingSearch>
           {selected.size > 0 && (
             <>
@@ -217,7 +224,7 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
             {isLoading ? (
               <tr><td colSpan={listColumns.length + 2} className="p-8 text-center text-muted-foreground">Loading…</td></tr>
             ) : filteredRows.length === 0 ? (
-              <tr><td colSpan={listColumns.length + 2} className="p-8 text-center text-muted-foreground">{q ? "No matches." : "No records yet."}</td></tr>
+              <tr><td colSpan={listColumns.length + 2} className="p-8 text-center text-muted-foreground">{q ? "No match." : "No records yet."}</td></tr>
             ) : filteredRows.map((row: any) => (
               <tr key={row.id} className="hover:bg-muted/20">
                 <td className="px-4 py-3">

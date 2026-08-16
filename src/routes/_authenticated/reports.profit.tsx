@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { Wallet } from "lucide-react";
+import { Wallet, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/reports/profit")({
@@ -25,6 +26,7 @@ function ProfitReportPage() {
   const [range, setRange] = useState<"today" | "7d" | "30d" | "all" | "custom">("30d");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
+  const [search, setSearch] = useState("");
 
   const { fromDate, toDate } = useMemo(() => {
     const now = new Date();
@@ -167,6 +169,20 @@ function ProfitReportPage() {
   }, [sellLines, products, variations, sales]);
 
 
+  const q = search.trim().toLowerCase();
+  const filteredProductRows = q
+    ? profit.rows.filter((r) =>
+        [r.name, r.invoices.join(", "), r.qty, r.revenue, r.cost, r.profit, r.margin.toFixed(1)]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)),
+      )
+    : profit.rows;
+  const filteredInvoiceRows = q
+    ? profit.invoiceRows.filter((r) =>
+        [r.invoice, r.customer, new Date(r.date).toLocaleDateString("en-GB"), r.revenue, r.cost, r.discount, r.profit, r.margin.toFixed(1)]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)),
+      )
+    : profit.invoiceRows;
+
   if (!roleLoading && !isAdmin) {
     return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
   }
@@ -202,6 +218,16 @@ function ProfitReportPage() {
         </div>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products or invoices…"
+          className="pl-9"
+        />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Revenue", value: fmt(profit.totalRevenue), color: "text-foreground" },
@@ -231,10 +257,10 @@ function ProfitReportPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {profit.rows.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">No sales in this period.</TableCell></TableRow>
+            {filteredProductRows.length === 0 && (
+              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">{q ? "No match." : "No sales in this period."}</TableCell></TableRow>
             )}
-            {profit.rows.map((r) => (
+            {filteredProductRows.map((r) => (
               <TableRow key={r.pid}>
                 <TableCell className="font-medium">{r.name}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground max-w-[220px]">
@@ -271,10 +297,10 @@ function ProfitReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {profit.invoiceRows.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">No sales in this period.</TableCell></TableRow>
+              {filteredInvoiceRows.length === 0 && (
+                <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">{q ? "No match." : "No sales in this period."}</TableCell></TableRow>
               )}
-              {profit.invoiceRows.map((r) => (
+              {filteredInvoiceRows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap">{new Date(r.date).toLocaleDateString("en-GB")}</TableCell>
                   <TableCell className="font-mono text-xs">{r.invoice}</TableCell>

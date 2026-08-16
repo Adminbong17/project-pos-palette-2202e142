@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2, Printer } from "lucide-react";
+import { Plus, Check, X, Trash2, Printer, Search } from "lucide-react";
 import { printHrmReport } from "@/lib/hrm-print";
 import { PrintSizeButton } from "@/components/print-size-select";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/hrm/leaves")({
   component: LeavesPage,
@@ -16,6 +17,7 @@ function LeavesPage() {
   const { data: business } = useCurrentBusiness();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hrm_employees_active", business?.id],
@@ -72,9 +74,21 @@ function LeavesPage() {
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["hrm_leaves"] }); },
   });
 
+  const q = search.trim().toLowerCase();
+  const filteredRows = q
+    ? rows.filter((r: any) =>
+        [r.hrm_employees?.name, r.leave_type, r.from_date, r.to_date, r.reason, r.status]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : rows;
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leave requests…" className="pl-9" />
+        </div>
+        <div className="ml-auto flex gap-2">
         <PrintSizeButton onPrint={(size) => printHrmReport({
           title: "Leave Requests",
           business,
@@ -149,7 +163,9 @@ function LeavesPage() {
           <tbody className="divide-y divide-border/60">
             {rows.length === 0 ? (
               <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No leave requests yet.</td></tr>
-            ) : rows.map((r: any) => (
+            ) : filteredRows.length === 0 ? (
+              <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No match.</td></tr>
+            ) : filteredRows.map((r: any) => (
               <tr key={r.id}>
                 <td className="px-4 py-3">{r.hrm_employees?.name ?? "—"}</td>
                 <td className="px-4 py-3">{r.leave_type}</td>

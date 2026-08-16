@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -12,7 +12,8 @@ import {
   backupDownload,
 } from "@/lib/backups.functions";
 import { toast } from "sonner";
-import { DatabaseBackup, Download, History, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DatabaseBackup, Download, History, Loader2, RefreshCw, Trash2, Search } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/backups")({
   head: () => ({
@@ -65,6 +66,7 @@ function BackupsPage() {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [restoreUser, setRestoreUser] = useState<string>("");
+  const [search, setSearch] = useState("");
 
   const settings = useQuery({
     queryKey: ["backup-settings"],
@@ -156,6 +158,26 @@ function BackupsPage() {
   const s = settings.data as any;
   const current = (runs.data ?? []).find((r) => r.id === selected);
 
+  const filteredRuns = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = runs.data ?? [];
+    if (!q) return list;
+    return list.filter((r) =>
+      [
+        fmtDhaka(r.created_at),
+        r.business_name,
+        r.status,
+        r.storage === "vault" ? "FileVault" : "Database",
+        fmtBytes(Number(r.size_bytes ?? 0)),
+        fmtDhaka(r.expires_at),
+        r.error,
+      ]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [runs.data, search]);
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -236,6 +258,11 @@ function BackupsPage() {
       </div>
 
       {/* runs */}
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input className="pl-9" placeholder="Search backups…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
@@ -262,8 +289,14 @@ function BackupsPage() {
                   No backups yet — press “Backup now”.
                 </td>
               </tr>
+            ) : filteredRuns.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                  No match
+                </td>
+              </tr>
             ) : (
-              (runs.data ?? []).map((r) => (
+              filteredRuns.map((r) => (
                 <tr key={r.id} className="border-t border-border/60">
                   <td className="px-3 py-2 whitespace-nowrap">{fmtDhaka(r.created_at)}</td>
                   <td className="px-3 py-2">{r.business_name ?? "—"}</td>
