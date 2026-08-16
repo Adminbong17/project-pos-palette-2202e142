@@ -19,6 +19,7 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
   { key: "prescriptions", label: "My Staff", path: "/rx-staff" },
   { key: "rx-queue", label: "Patient Queue", path: "/rx-appointments" },
+  { key: "prescriptions", label: "Rx Billing", path: "/rx-billing" },
 
 ];
 
