@@ -4,7 +4,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const SUPER_ADMIN_EMAIL = "admin@bongbangla.top";
 
 async function assertSuperAdmin(context: any) {
-  const email = (context?.claims?.email ?? "").toLowerCase();
+  let email = String((context?.claims as any)?.email ?? "").toLowerCase();
+  if (!email) {
+    const { data } = await context.supabase.auth.getUser();
+    email = String(data?.user?.email ?? "").toLowerCase();
+  }
   if (email !== SUPER_ADMIN_EMAIL) throw new Error("Only the super admin can do this");
 }
 
