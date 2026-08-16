@@ -3935,9 +3935,19 @@ export type Database = {
         Args: { _business_id: string }
         Returns: Json
       }
+      backup_db_size: { Args: never; Returns: number }
       backup_purge_expired: { Args: never; Returns: Json }
       backup_restore: {
         Args: { _run_id: string; _tables?: string[]; _user_id?: string }
+        Returns: Json
+      }
+      backup_settings: { Args: never; Returns: Json }
+      backup_settings_update: {
+        Args: {
+          _app_base_url?: string
+          _retention_days?: number
+          _vault_threshold_mb?: number
+        }
         Returns: Json
       }
       backup_snapshot_stats: { Args: { _payload: Json }; Returns: Json }
