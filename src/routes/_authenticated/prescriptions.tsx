@@ -878,7 +878,8 @@ function PrescriptionsPage() {
     } catch { /* column may not exist */ }
 
     const biz = business as any;
-    const bizName = biz?.name ?? "";
+    // Clinic name only shows for a clinic business; an independent doctor's pad stays blank.
+    const clinicName = biz?.clinic_mode ? (biz?.name ?? "") : "";
     const bizAddr = biz?.address ?? "";
     const bizPhone = biz?.mobile ?? "";
 
@@ -893,7 +894,8 @@ function PrescriptionsPage() {
 
     const headerHtml = `
       <div class="header center">
-        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : esc(bizName)}</h2>
+        ${clinicName ? `<div style="font-size:0.95em;letter-spacing:.4px;">${esc(clinicName)}</div>` : ""}
+        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : "&nbsp;"}</h2>
         ${rx.doctor_qualification ? `<div class="desig">${esc(rx.doctor_qualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
@@ -905,7 +907,7 @@ function PrescriptionsPage() {
         <div><span class="label">Date:</span> ${fmtDate(rx.rx_date)}</div>
       </div>
       <div class="pbox">
-        <div class="row"><div><strong>${esc(rx.patient_name)}</strong></div>
+        <div class="row"><div><strong>${esc(rx.patient_name)}</strong>${(rx as any).patient_code ? ` <span class="label">(ID: ${esc((rx as any).patient_code)})</span>` : ""}</div>
           <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
       </div>`;

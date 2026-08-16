@@ -10,6 +10,7 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { useMyStaffChamber } from "@/hooks/use-my-staff-chamber";
 import { dhakaToday } from "@/lib/appointments";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
+import { patientTypeLabel } from "@/lib/token-print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,7 +124,7 @@ function AppointmentsPage() {
       const { data, error } = await supabase
         .from("rx_appointments")
         .select(
-          "id, patient_code, patient_name, patient_age, patient_gender, patient_phone, appt_date, serial_no, chamber_id, fee_amount, is_new_patient, prescription_id",
+          "id, patient_code, patient_name, patient_age, patient_gender, patient_phone, appt_date, serial_no, chamber_id, fee_amount, is_new_patient, patient_type, prescription_id",
         )
         .eq("business_id", businessId!)
         .or(
@@ -397,6 +398,7 @@ function AppointmentsPage() {
                     <th className="py-1.5 pr-2">Phone</th>
                     <th className="py-1.5 pr-2">Location</th>
                     <th className="py-1.5 pr-2">Serial</th>
+                    <th className="py-1.5 pr-2">Type</th>
                     <th className="py-1.5 pr-2">Fee</th>
                   </tr>
                 </thead>
@@ -416,8 +418,10 @@ function AppointmentsPage() {
                       </td>
                       <td className="py-1.5 pr-2">{h.serial_no ?? "—"}</td>
                       <td className="py-1.5 pr-2">
+                        {patientTypeLabel(h.patient_type, h.is_new_patient !== false)}
+                      </td>
+                      <td className="py-1.5 pr-2">
                         {h.fee_amount != null ? `৳ ${Number(h.fee_amount).toFixed(2)}` : "—"}
-                        {h.is_new_patient === false ? " (old)" : ""}
                       </td>
                     </tr>
                   ))}
