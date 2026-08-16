@@ -129,7 +129,13 @@ function RxDashboard() {
             Tomorrow
           </button>
         </div>
-        <AppointmentQueue allowEdit businessId={businessId} date={queueDate} chambers={chambers.data ?? []} />
+        <AppointmentQueue
+          allowEdit
+          businessId={businessId}
+          date={queueDate}
+          chambers={chambers.data ?? []}
+          clinicName={business?.clinic_mode ? business?.name ?? null : null}
+        />
       </div>
 
 

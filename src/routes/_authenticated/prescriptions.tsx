@@ -878,7 +878,8 @@ function PrescriptionsPage() {
     } catch { /* column may not exist */ }
 
     const biz = business as any;
-    const bizName = biz?.name ?? "";
+    // Clinic name only shows for a clinic business; an independent doctor's pad stays blank.
+    const clinicName = biz?.clinic_mode ? (biz?.name ?? "") : "";
     const bizAddr = biz?.address ?? "";
     const bizPhone = biz?.mobile ?? "";
 
@@ -893,7 +894,8 @@ function PrescriptionsPage() {
 
     const headerHtml = `
       <div class="header center">
-        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : esc(bizName)}</h2>
+        ${clinicName ? `<div style="font-size:0.95em;letter-spacing:.4px;">${esc(clinicName)}</div>` : ""}
+        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : "&nbsp;"}</h2>
         ${rx.doctor_qualification ? `<div class="desig">${esc(rx.doctor_qualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
@@ -905,7 +907,7 @@ function PrescriptionsPage() {
         <div><span class="label">Date:</span> ${fmtDate(rx.rx_date)}</div>
       </div>
       <div class="pbox">
-        <div class="row"><div><strong>${esc(rx.patient_name)}</strong></div>
+        <div class="row"><div><strong>${esc(rx.patient_name)}</strong>${(rx as any).patient_code ? ` <span class="label">(ID: ${esc((rx as any).patient_code)})</span>` : ""}</div>
           <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
         ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
       </div>`;
@@ -930,7 +932,7 @@ function PrescriptionsPage() {
     if (size === "A4") {
       const styles = `
         @page { size: A4; margin: 0; }
-        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
+        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:12px; }
         .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "12mm"} 10mm 12mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
         h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
         .desig { font-size:13px; margin-bottom:3px; }
@@ -996,7 +998,7 @@ function PrescriptionsPage() {
     const fs = size === "58mm" ? "10px" : "11px";
     const styles = `
       @page { size: ${size} auto; margin: 0; }
-      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:${fs}; }
+      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:${fs}; }
       .page { width:${widthCss}; padding:4mm; box-sizing:border-box; background:#fff; }
       h2 { margin:2px 0; font-size:17px; }
       .desig { font-size:0.9em; }

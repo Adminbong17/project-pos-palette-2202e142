@@ -262,7 +262,7 @@ function ClinicDashboard() {
         businessId={businessId}
         date={date}
         chambers={chambers.data ?? []}
-        clinicName={business?.name ?? null}
+        clinicName={business?.clinic_mode ? business?.name ?? null : null}
         allowEdit
         allowDelete
         allowStart={false}
