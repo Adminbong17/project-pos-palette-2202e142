@@ -91,6 +91,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
           managed_password: (u.user_metadata?.managed_password as string | undefined) ?? null,
           businesses: [...(bizByUser.get(u.id) ?? [])],
           roles: [...(rolesByUser.get(u.id) ?? [])],
+          disabled: !!(u.banned_until && new Date(u.banned_until as string).getTime() > Date.now()),
         };
       })
       .sort((a, b) => a.email.localeCompare(b.email));
