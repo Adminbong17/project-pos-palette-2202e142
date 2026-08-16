@@ -36,7 +36,16 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const navigate = useNavigate();
   useEffect(() => {
-    if (isRxMode()) navigate({ to: "/prescriptions", search: { rx: undefined }, replace: true });
+    if (!isRxMode()) return;
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) navigate({ to: "/prescriptions", search: { rx: undefined }, replace: true });
+      else navigate({ to: "/rx", replace: true });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   return (
