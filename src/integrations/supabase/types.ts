@@ -2482,6 +2482,7 @@ export type Database = {
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
+          patient_type: string
           prescription_id: string | null
           serial_no: number | null
           status: string
@@ -2504,6 +2505,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
+          patient_type?: string
           prescription_id?: string | null
           serial_no?: number | null
           status?: string
@@ -2526,6 +2528,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
+          patient_type?: string
           prescription_id?: string | null
           serial_no?: number | null
           status?: string
