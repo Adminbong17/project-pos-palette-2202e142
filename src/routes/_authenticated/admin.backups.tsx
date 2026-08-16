@@ -65,9 +65,6 @@ function BackupsPage() {
   const getSettings = useServerFn(backupGetSettings);
   const saveSettings = useServerFn(backupSaveSettings);
   const download = useServerFn(backupDownload);
-  if (superLoading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
-  if (!isSuperAdmin)
-    return <div className="p-8 text-sm text-muted-foreground">Only the super admin can access this page.</div>;
 
   const [selected, setSelected] = useState<string | null>(null);
   const [restoreUser, setRestoreUser] = useState<string>("");
@@ -183,6 +180,9 @@ function BackupsPage() {
     );
   }, [runs.data, search]);
 
+  if (superLoading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (!isSuperAdmin)
+    return <div className="p-8 text-sm text-muted-foreground">Only the super admin can access this page.</div>;
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
