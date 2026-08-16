@@ -25,6 +25,13 @@ export type TokenData = {
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 
+/** Always show doctors with a "Dr." prefix (without doubling it). */
+function withDrPrefix(name?: string | null) {
+  const n = String(name ?? "").trim();
+  if (!n) return "Doctor";
+  return /^(dr\.?|doctor|prof\.?)\s/i.test(n) ? n : `Dr. ${n}`;
+}
+
 export function patientTypeLabel(type?: string | null, isNew?: boolean) {
   const t = (type ?? (isNew === false ? "old" : "new")).toLowerCase();
   if (t === "medical") return "Medical person";
