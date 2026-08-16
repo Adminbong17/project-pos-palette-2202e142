@@ -11,7 +11,7 @@ import {
   type Appointment,
   type Chamber,
 } from "@/lib/appointments";
-import { printPatientToken, type TokenSize } from "@/lib/token-print";
+import { printPatientToken, patientTypeLabel, type TokenSize } from "@/lib/token-print";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ type EditState = {
   serial_no: string;
   status: string;
   notes: string;
+  patient_type: string;
 };
 
 export function AppointmentQueue({
@@ -72,7 +73,7 @@ export function AppointmentQueue({
       let q = supabase
         .from("rx_appointments")
         .select(
-          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id, patient_code, is_new_patient, fee_amount, doctor_id",
+          "id, chamber_id, patient_name, patient_age, patient_phone, patient_gender, appt_date, appt_time, serial_no, status, notes, prescription_id, patient_code, is_new_patient, patient_type, fee_amount, doctor_id",
         )
         .eq("business_id", businessId!)
         .eq("appt_date", date)
@@ -112,6 +113,8 @@ export function AppointmentQueue({
           serial_no: e.serial_no ? Number(e.serial_no) : null,
           status: e.status || "waiting",
           notes: e.notes.trim() || null,
+          patient_type: e.patient_type || "new",
+          fee_amount: null,
         })
         .eq("id", e.id);
       if (error) throw error;
@@ -155,9 +158,10 @@ export function AppointmentQueue({
   const printToken = (a: Appointment) => {
     const doc = a.doctor_id ? doctors.data?.[a.doctor_id] : undefined;
     const chamber = chambers.find((c) => c.id === a.chamber_id);
+    const type = (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")).toLowerCase();
     const fee =
       a.fee_amount ??
-      (a.is_new_patient === false ? chamber?.fee_old ?? null : chamber?.fee_new ?? null);
+      (type === "medical" ? 0 : type === "old" ? chamber?.fee_old ?? null : chamber?.fee_new ?? null);
     printPatientToken(
       {
         clinicName: clinicName ?? null,
@@ -166,7 +170,8 @@ export function AppointmentQueue({
         serialNo: a.serial_no,
         patientCode: a.patient_code ?? null,
         fee,
-        isNewPatient: a.is_new_patient !== false,
+        isNewPatient: type === "new",
+        patientType: type,
         patientName: a.patient_name,
         age: a.patient_age,
         gender: a.patient_gender,
@@ -241,7 +246,18 @@ export function AppointmentQueue({
                 {a.patient_age ? `${a.patient_age}y` : ""} {a.patient_gender ?? ""}
               </span>
               {a.patient_phone && <span className="text-xs text-muted-foreground">{a.patient_phone}</span>}
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
+                {patientTypeLabel(a.patient_type, a.is_new_patient !== false)}
+              </span>
+              {a.fee_amount != null && (
+                <span className="text-xs font-medium">৳ {Number(a.fee_amount).toFixed(0)}</span>
+              )}
               <span className="text-xs text-muted-foreground">{chamberName(a.chamber_id)}</span>
+              {a.doctor_id && doctors.data?.[a.doctor_id]?.name && (
+                <span className="text-xs text-muted-foreground">
+                  Dr. {doctors.data[a.doctor_id]!.name}
+                </span>
+              )}
               {a.appt_time && (
                 <span className="font-mono text-[11px] text-muted-foreground">{a.appt_time.slice(0, 5)}</span>
               )}
@@ -283,6 +299,8 @@ export function AppointmentQueue({
                         serial_no: a.serial_no != null ? String(a.serial_no) : "",
                         status: a.status ?? "waiting",
                         notes: (a as any).notes ?? "",
+                        patient_type:
+                          (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")) as string,
                       })
                     }
                   >
@@ -339,6 +357,18 @@ export function AppointmentQueue({
               <div>
                 <Label className="mb-1.5 block text-xs">Phone</Label>
                 <Input value={edit.patient_phone} onChange={(e) => setEdit({ ...edit, patient_phone: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block text-xs">Patient type</Label>
+                <select
+                  value={edit.patient_type}
+                  onChange={(e) => setEdit({ ...edit, patient_type: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+                >
+                  <option value="new">New patient</option>
+                  <option value="old">Old patient</option>
+                  <option value="medical">Medical person</option>
+                </select>
               </div>
               <div>
                 <Label className="mb-1.5 block text-xs">Serial no</Label>

@@ -57,6 +57,7 @@ function AppointmentsPage() {
     patient_gender: "",
     patient_phone: "",
     appt_time: "",
+    patient_type: "new",
   });
 
   useEffect(() => {
@@ -149,13 +150,21 @@ function AppointmentsPage() {
         patient_phone: form.patient_phone.trim() || null,
         appt_date: date,
         appt_time: form.appt_time || null,
+        patient_type: form.patient_type || "new",
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Patient added to the queue");
-      setForm({ patient_name: "", patient_age: "", patient_gender: "", patient_phone: "", appt_time: "" });
+      setForm({
+        patient_name: "",
+        patient_age: "",
+        patient_gender: "",
+        patient_phone: "",
+        appt_time: "",
+        patient_type: "new",
+      });
       qc.invalidateQueries({ queryKey: ["rx-appointments"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -327,6 +336,18 @@ function AppointmentsPage() {
               onChange={(e) => setForm((s) => ({ ...s, patient_phone: e.target.value }))}
               placeholder="Phone"
             />
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-xs">Patient type</Label>
+            <select
+              value={form.patient_type}
+              onChange={(e) => setForm((s) => ({ ...s, patient_type: e.target.value }))}
+              className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+            >
+              <option value="new">New patient</option>
+              <option value="old">Old patient</option>
+              <option value="medical">Medical person</option>
+            </select>
           </div>
           <div className="flex items-end">
             <Button className="w-full" onClick={() => addPatient.mutate()} disabled={addPatient.isPending}>
