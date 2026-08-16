@@ -16,6 +16,7 @@ import { RxPresetCombo } from "@/components/rx-preset-combo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -339,6 +340,22 @@ function PrescriptionsPage() {
   const navigate = Route.useNavigate();
 
   const [search, setSearch] = useState("");
+
+  // "Own pad" mode: doctor prints on a pre-printed letterhead, so A4 print/PDF
+  // keeps a 2 inch (50.8mm) blank top area and skips the printed header block.
+  const [ownPad, setOwnPad] = useState(false);
+  useEffect(() => {
+    try {
+      setOwnPad(window.localStorage.getItem("rx-own-pad") === "1");
+    } catch { /* storage blocked */ }
+  }, []);
+  const toggleOwnPad = (next: boolean) => {
+    setOwnPad(next);
+    try {
+      window.localStorage.setItem("rx-own-pad", next ? "1" : "0");
+    } catch { /* storage blocked */ }
+  };
+
   const [open, setOpen] = useState(false);
   const dialogScrollRef = useWheelScrollPassthrough<HTMLDivElement>();
   const [editing, setEditing] = useState<Rx | null>(null);
@@ -902,11 +919,13 @@ function PrescriptionsPage() {
         </div>`).join("")
       : `<div class="label">No medicines</div>`;
 
+    const creditHtml = `<div class="credit">QweekRx ${new Date().getFullYear()} - 01712472839(Phone/whatsapp)</div>`;
+
     if (size === "A4") {
       const styles = `
         @page { size: A4; margin: 0; }
         html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
-        .page { width:210mm; min-height:297mm; padding:12mm 10mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
+        .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "12mm"} 10mm 12mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
         h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
         .desig { font-size:13px; margin-bottom:3px; }
         .center { text-align:center; }
@@ -914,7 +933,7 @@ function PrescriptionsPage() {
         .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
         .label { color:#444; font-size:0.9em; }
         .pbox { border:1px solid #999; padding:6px; margin:6px 0 8px; border-radius:4px; }
-        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:180mm; }
+        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:${ownPad ? "140mm" : "180mm"}; }
         .left { width:40%; padding:6px 8px 6px 0; border-right:1.5px solid #000; box-sizing:border-box; }
         .right { width:60%; padding:6px 0 6px 10px; box-sizing:border-box; display:flex; flex-direction:column; }
         .sec-title { font-weight:bold; text-decoration:underline; margin:8px 0 4px; }
@@ -925,11 +944,12 @@ function PrescriptionsPage() {
         .med-name { font-weight:bold; }
         .med-sub { padding-left:14px; }
         .qty { font-weight:normal; }
-        .sign { margin-top:10px; text-align:right; }`;
+        .sign { margin-top:10px; text-align:right; }
+        .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:10px; color:#333; }`;
 
       const body = `
       <div class="page">
-        ${headerHtml}
+        ${ownPad ? "" : headerHtml}
         ${metaHtml}
         <div class="split">
           <div class="left">
@@ -954,10 +974,12 @@ function PrescriptionsPage() {
             </div>
           </div>
         </div>
+        ${creditHtml}
       </div>`;
 
       return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
     }
+
 
     const widthCss = size === "80mm" ? "80mm" : "58mm";
     const fs = size === "58mm" ? "10px" : "11px";
@@ -976,7 +998,8 @@ function PrescriptionsPage() {
       .med-name { font-weight:bold; }
       .med-sub { padding-left:10px; }
       .rx-mark { font-size:18px; font-weight:bold; }
-      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }`;
+      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }
+      .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:0.8em; }`;
 
     const body = `
     <div class="page">
@@ -991,7 +1014,9 @@ function PrescriptionsPage() {
       ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
       <div class="footer">Doctor's signature: ______________________</div>
+      ${creditHtml}
     </div>`;
+
 
     return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
   };
@@ -1088,7 +1113,16 @@ function PrescriptionsPage() {
           <h1 className="text-2xl font-semibold flex items-center gap-2"><FileText className="h-6 w-6" /> Prescriptions</h1>
           <p className="text-sm text-muted-foreground">Create, manage, and print patient prescriptions.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border px-3 py-1.5">
+            <Switch id="own-pad" checked={ownPad} onCheckedChange={toggleOwnPad} />
+            <Label htmlFor="own-pad" className="text-xs leading-tight">
+              Own pad
+              <span className="block text-[10px] text-muted-foreground">
+                {ownPad ? "2 inch top space, no header" : "Default header"}
+              </span>
+            </Label>
+          </div>
           <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
