@@ -24,6 +24,7 @@ export type SuperAdminUser = {
   managed_password: string | null;
   businesses: string[];
   roles: string[];
+  disabled: boolean;
 };
 
 export const listAllUsers = createServerFn({ method: "POST" })
