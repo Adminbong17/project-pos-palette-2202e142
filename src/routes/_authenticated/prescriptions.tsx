@@ -796,6 +796,8 @@ function PrescriptionsPage() {
         patient_gender: form.patient_gender || null,
         patient_phone: form.patient_phone.trim() || null,
         patient_code: form.patient_code.trim() || null,
+        patient_type: form.patient_type || "new",
+        fee_amount: form.fee_amount.trim() === "" ? null : Number(form.fee_amount),
         contact_id: form.contact_id || null,
         doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
