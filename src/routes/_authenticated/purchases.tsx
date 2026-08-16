@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { Plus, Truck, Eye, Pencil, Trash2, Trash, Undo2, XCircle } from "lucide-react";
+import { Plus, Truck, Eye, Pencil, Trash2, Trash, Undo2, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/purchases")({
   component: PurchasesPage,
@@ -38,6 +39,7 @@ function PurchasesPage() {
 function PurchasesList() {
   const { data: business } = useCurrentBusiness();
   const [showBin, setShowBin] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["purchases", business?.id, showBin ? "deleted" : "active"],
@@ -120,6 +122,28 @@ function PurchasesList() {
   const fmt = (n: number) =>
     new Intl.NumberFormat(undefined, { style: "currency", currency: "BDT", maximumFractionDigits: 2 }).format(n || 0);
 
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const due = Number(r.final_total || 0) - Number(r.total_paid || 0);
+      const haystack = [
+        formatDate(r.transaction_date),
+        r.ref_no,
+        r.contact?.name,
+        r.location?.name,
+        r.status,
+        showBin ? (r.deleted_at ? formatDateTime(r.deleted_at) : "") : r.payment_status,
+        r.final_total,
+        r.total_paid,
+        due,
+      ]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ");
+      return haystack.includes(q);
+    });
+  }, [rows, search, showBin]);
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -147,6 +171,16 @@ function PurchasesList() {
         </div>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Search purchases…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
@@ -168,8 +202,10 @@ function PurchasesList() {
               <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
             ) : rows.length === 0 ? (
               <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">{showBin ? "Recycle bin is empty." : "No purchases found."}</td></tr>
+            ) : filteredRows.length === 0 ? (
+              <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No match</td></tr>
             ) : (
-              rows.map((r) => {
+              filteredRows.map((r) => {
                 const due = Number(r.final_total || 0) - Number(r.total_paid || 0);
                 return (
                   <tr key={r.id} className="border-t hover:bg-muted/30">
