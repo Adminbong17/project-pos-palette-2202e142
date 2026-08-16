@@ -930,7 +930,7 @@ function PrescriptionsPage() {
     if (size === "A4") {
       const styles = `
         @page { size: A4; margin: 0; }
-        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
+        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:12px; }
         .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "12mm"} 10mm 12mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
         h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
         .desig { font-size:13px; margin-bottom:3px; }
@@ -996,7 +996,7 @@ function PrescriptionsPage() {
     const fs = size === "58mm" ? "10px" : "11px";
     const styles = `
       @page { size: ${size} auto; margin: 0; }
-      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:${fs}; }
+      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:${fs}; }
       .page { width:${widthCss}; padding:4mm; box-sizing:border-box; background:#fff; }
       h2 { margin:2px 0; font-size:17px; }
       .desig { font-size:0.9em; }

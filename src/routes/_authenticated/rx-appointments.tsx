@@ -343,7 +343,7 @@ function AppointmentsPage() {
         date={date}
         chamberId={chamberId || undefined}
         chambers={chamberList}
-        clinicName={business?.name ?? null}
+        clinicName={business?.clinic_mode ? business?.name ?? null : null}
         allowDelete
         allowEdit
         allowStart={!isAssistant}

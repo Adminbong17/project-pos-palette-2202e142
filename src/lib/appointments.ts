@@ -24,6 +24,7 @@ export type Appointment = {
   prescription_id: string | null;
   patient_code?: string | null;
   is_new_patient?: boolean | null;
+  patient_type?: string | null;
   fee_amount?: number | null;
   doctor_id?: string | null;
 };
