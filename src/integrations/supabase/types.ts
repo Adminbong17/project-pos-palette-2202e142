@@ -267,6 +267,74 @@ export type Database = {
           },
         ]
       }
+      backup_runs: {
+        Row: {
+          business_id: string | null
+          business_name: string | null
+          created_at: string
+          db_size_bytes: number | null
+          error: string | null
+          expires_at: string
+          file_name: string | null
+          id: string
+          payload: Json | null
+          scope: string
+          share_token: string | null
+          size_bytes: number
+          status: string
+          storage: string
+          table_counts: Json
+          user_counts: Json
+          vault_file_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          business_name?: string | null
+          created_at?: string
+          db_size_bytes?: number | null
+          error?: string | null
+          expires_at?: string
+          file_name?: string | null
+          id?: string
+          payload?: Json | null
+          scope?: string
+          share_token?: string | null
+          size_bytes?: number
+          status?: string
+          storage?: string
+          table_counts?: Json
+          user_counts?: Json
+          vault_file_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          business_name?: string | null
+          created_at?: string
+          db_size_bytes?: number | null
+          error?: string | null
+          expires_at?: string
+          file_name?: string | null
+          id?: string
+          payload?: Json | null
+          scope?: string
+          share_token?: string | null
+          size_bytes?: number
+          status?: string
+          storage?: string
+          table_counts?: Json
+          user_counts?: Json
+          vault_file_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_runs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           business_id: string
@@ -3863,6 +3931,16 @@ export type Database = {
         Args: { _id: string; _notes?: string }
         Returns: string
       }
+      backup_business_snapshot: {
+        Args: { _business_id: string }
+        Returns: Json
+      }
+      backup_purge_expired: { Args: never; Returns: Json }
+      backup_restore: {
+        Args: { _run_id: string; _tables?: string[]; _user_id?: string }
+        Returns: Json
+      }
+      backup_snapshot_stats: { Args: { _payload: Json }; Returns: Json }
       can_manage_member_profile: {
         Args: { _manager: string; _target: string }
         Returns: boolean
