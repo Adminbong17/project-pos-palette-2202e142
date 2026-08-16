@@ -78,6 +78,8 @@ import { Route as AuthenticatedAdminRxBillingRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_authenticated/admin.prescriptions'
 import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
 import { Route as AuthenticatedAdminBusinessRequestsRouteImport } from './routes/_authenticated/admin.business-requests'
+import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
+import { Route as ApiPublicCronBackupRouteImport } from './routes/api/public/cron.backup'
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
 import { Route as AuthenticatedPurchasesIdEditRouteImport } from './routes/_authenticated/purchases.$id.edit'
 
@@ -461,6 +463,17 @@ const AuthenticatedAdminBusinessRequestsRoute =
     path: '/admin/business-requests',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminBackupsRoute =
+  AuthenticatedAdminBackupsRouteImport.update({
+    id: '/admin/backups',
+    path: '/admin/backups',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiPublicCronBackupRoute = ApiPublicCronBackupRouteImport.update({
+  id: '/api/public/cron/backup',
+  path: '/api/public/cron/backup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSalesIdEditRoute =
   AuthenticatedSalesIdEditRouteImport.update({
     id: '/sales_/$id/edit',
@@ -505,6 +518,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
@@ -545,6 +559,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -570,6 +585,7 @@ export interface FileRoutesByTo {
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
@@ -610,6 +626,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -644,6 +661,7 @@ export interface FileRoutesById {
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/stock-transfers': typeof AuthenticatedStockTransfersRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
+  '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/_authenticated/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
@@ -684,6 +702,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/_authenticated/sales_/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -718,6 +737,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/stock-transfers'
     | '/scan/$sessionId'
+    | '/admin/backups'
     | '/admin/business-requests'
     | '/admin/doctors'
     | '/admin/prescriptions'
@@ -758,6 +778,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
+    | '/api/public/cron/backup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -783,6 +804,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/stock-transfers'
     | '/scan/$sessionId'
+    | '/admin/backups'
     | '/admin/business-requests'
     | '/admin/doctors'
     | '/admin/prescriptions'
@@ -823,6 +845,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
+    | '/api/public/cron/backup'
   id:
     | '__root__'
     | '/'
@@ -856,6 +879,7 @@ export interface FileRouteTypes {
     | '/_authenticated/setup'
     | '/_authenticated/stock-transfers'
     | '/scan/$sessionId'
+    | '/_authenticated/admin/backups'
     | '/_authenticated/admin/business-requests'
     | '/_authenticated/admin/doctors'
     | '/_authenticated/admin/prescriptions'
@@ -896,6 +920,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/purchases/$id/edit'
     | '/_authenticated/sales_/$id/edit'
+    | '/api/public/cron/backup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -903,6 +928,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
+  ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1390,6 +1416,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBusinessRequestsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/backups': {
+      id: '/_authenticated/admin/backups'
+      path: '/admin/backups'
+      fullPath: '/admin/backups'
+      preLoaderRoute: typeof AuthenticatedAdminBackupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cron/backup': {
+      id: '/api/public/cron/backup'
+      path: '/api/public/cron/backup'
+      fullPath: '/api/public/cron/backup'
+      preLoaderRoute: typeof ApiPublicCronBackupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/sales_/$id/edit': {
       id: '/_authenticated/sales_/$id/edit'
       path: '/sales/$id/edit'
@@ -1599,6 +1639,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedStockTransfersRoute: typeof AuthenticatedStockTransfersRoute
+  AuthenticatedAdminBackupsRoute: typeof AuthenticatedAdminBackupsRoute
   AuthenticatedAdminBusinessRequestsRoute: typeof AuthenticatedAdminBusinessRequestsRoute
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
@@ -1635,6 +1676,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedStockTransfersRoute: AuthenticatedStockTransfersRoute,
+  AuthenticatedAdminBackupsRoute: AuthenticatedAdminBackupsRoute,
   AuthenticatedAdminBusinessRequestsRoute:
     AuthenticatedAdminBusinessRequestsRoute,
   AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
@@ -1652,6 +1694,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
+  ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

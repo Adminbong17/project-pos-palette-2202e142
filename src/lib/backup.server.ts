@@ -15,13 +15,9 @@ export type BackupSettings = {
 };
 
 export async function getBackupSettings(): Promise<BackupSettings> {
-  const { data, error } = await supabaseAdmin
-    .schema("backups" as never)
-    .from("settings" as never)
-    .select("app_base_url, cron_secret, retention_days, vault_threshold_mb")
-    .maybeSingle();
+  const { data, error } = await (supabaseAdmin as any).rpc("backup_settings");
   if (error) throw error;
-  return (data as unknown as BackupSettings) ?? {
+  return (data as BackupSettings) ?? {
     app_base_url: "",
     cron_secret: "",
     retention_days: 30,
@@ -30,7 +26,7 @@ export async function getBackupSettings(): Promise<BackupSettings> {
 }
 
 async function dbSizeBytes(): Promise<number> {
-  const { data } = await supabaseAdmin.rpc("backup_db_size" as never);
+  const { data } = await (supabaseAdmin as any).rpc("backup_db_size");
   return Number(data ?? 0);
 }
 
@@ -60,7 +56,7 @@ async function uploadToVault(fileName: string, json: string) {
 }
 
 export async function purgeExpiredBackups() {
-  const { data, error } = await supabaseAdmin.rpc("backup_purge_expired");
+  const { data, error } = await (supabaseAdmin as any).rpc("backup_purge_expired");
   if (error) throw error;
   const removed = (data as any[]) ?? [];
   const token = process.env["VAULT_TOKEN"];
@@ -102,13 +98,13 @@ export async function runFullBackup(businessId?: string) {
 
   for (const biz of businesses ?? []) {
     try {
-      const { data: payload, error: snapErr } = await supabaseAdmin.rpc("backup_business_snapshot", {
+      const { data: payload, error: snapErr } = await (supabaseAdmin as any).rpc("backup_business_snapshot", {
         _business_id: biz.id,
       });
       if (snapErr) throw snapErr;
 
       const json = JSON.stringify(payload ?? {});
-      const { data: stats } = await supabaseAdmin.rpc("backup_snapshot_stats", {
+      const { data: stats } = await (supabaseAdmin as any).rpc("backup_snapshot_stats", {
         _payload: payload as any,
       });
       const statsObj = (stats as any) ?? {};
@@ -139,7 +135,7 @@ export async function runFullBackup(businessId?: string) {
         row.file_name = fileName;
       }
 
-      const { data: inserted, error: insErr } = await supabaseAdmin
+      const { data: inserted, error: insErr } = await (supabaseAdmin as any)
         .from("backup_runs")
         .insert(row)
         .select("id, business_name, storage, size_bytes")
@@ -147,7 +143,7 @@ export async function runFullBackup(businessId?: string) {
       if (insErr) throw insErr;
       results.push(inserted);
     } catch (e: any) {
-      await supabaseAdmin.from("backup_runs").insert({
+      await (supabaseAdmin as any).from("backup_runs").insert({
         business_id: biz.id,
         business_name: biz.name,
         status: "failed",
@@ -164,7 +160,7 @@ export async function runFullBackup(businessId?: string) {
 
 /** Pull a vault-stored snapshot back into the run row so it can be restored. */
 export async function rehydrateFromVault(runId: string) {
-  const { data: run, error } = await supabaseAdmin
+  const { data: run, error } = await (supabaseAdmin as any)
     .from("backup_runs")
     .select("id, share_token, payload")
     .eq("id", runId)
@@ -177,7 +173,7 @@ export async function rehydrateFromVault(runId: string) {
   const res = await fetch(`${VAULT_BASE}/share.php?t=${run.share_token}`);
   if (!res.ok) throw new Error(`Vault download failed [${res.status}]`);
   const payload = await res.json();
-  const { error: upErr } = await supabaseAdmin
+  const { error: upErr } = await (supabaseAdmin as any)
     .from("backup_runs")
     .update({ payload })
     .eq("id", runId);
