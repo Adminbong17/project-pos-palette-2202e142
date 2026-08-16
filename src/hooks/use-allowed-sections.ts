@@ -11,9 +11,17 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "products", label: "Products", path: "/products" },
   { key: "files", label: "Files", path: "/files" },
   { key: "contacts", label: "Contacts", path: "/contacts" },
+  { key: "stock-transfers", label: "Stock Transfers", path: "/stock-transfers" },
+  { key: "expenses", label: "Expenses", path: "/expenses" },
+  { key: "accounts", label: "Accounts", path: "/accounts" },
   { key: "reports", label: "Reports", path: "/reports" },
   { key: "settings", label: "Settings", path: "/settings" },
   { key: "quick-box", label: "Quick Box Add", path: "/quick-box" },
+  { key: "manufacturing", label: "Manufacturing", path: "/manufacturing" },
+  { key: "restaurant", label: "Restaurant", path: "/restaurant" },
+  { key: "repair", label: "Repair", path: "/repair" },
+  { key: "crm", label: "CRM", path: "/crm" },
+  { key: "hrm", label: "HRM", path: "/hrm" },
   { key: "prescriptions", label: "Doctor Dashboard", path: "/rx-dashboard" },
   { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
@@ -23,6 +31,7 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "prescriptions", label: "Rx Billing", path: "/rx-billing" },
 
 ];
+
 
 const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 
