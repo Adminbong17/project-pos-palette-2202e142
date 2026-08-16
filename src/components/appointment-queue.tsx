@@ -44,6 +44,8 @@ export function AppointmentQueue({
   chambers,
   allowDelete = false,
   allowEdit = false,
+  allowStart = true,
+  clinicName,
 }: {
   businessId?: string;
   date: string;
@@ -51,11 +53,16 @@ export function AppointmentQueue({
   chambers: Chamber[];
   allowDelete?: boolean;
   allowEdit?: boolean;
+  /** Assistants only print tokens — the doctor starts the prescription. */
+  allowStart?: boolean;
+  clinicName?: string | null;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
+  const [tokenSize, setTokenSize] = useState<TokenSize>("80mm");
+
 
   const list = useQuery({
     queryKey: ["rx-appointments", businessId, date, chamberId ?? "all"],
