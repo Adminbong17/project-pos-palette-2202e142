@@ -15,13 +15,9 @@ export type BackupSettings = {
 };
 
 export async function getBackupSettings(): Promise<BackupSettings> {
-  const { data, error } = await supabaseAdmin
-    .schema("backups" as never)
-    .from("settings" as never)
-    .select("app_base_url, cron_secret, retention_days, vault_threshold_mb")
-    .maybeSingle();
+  const { data, error } = await (supabaseAdmin as any).rpc("backup_settings");
   if (error) throw error;
-  return (data as unknown as BackupSettings) ?? {
+  return (data as BackupSettings) ?? {
     app_base_url: "",
     cron_secret: "",
     retention_days: 30,
