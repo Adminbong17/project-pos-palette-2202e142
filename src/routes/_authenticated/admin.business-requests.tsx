@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
+
+// Unique section keys the super admin can grant to a new business owner.
+const SECTION_OPTIONS = Array.from(
+  new Map(ALL_SECTIONS.map((s) => [s.key, s.key === "prescriptions" ? "Prescriptions" : s.label])).entries(),
+).map(([key, label]) => ({ key, label }));
 
 export const Route = createFileRoute("/_authenticated/admin/business-requests")({
   head: () => ({ meta: [{ title: "Business Requests — Admin" }] }),
@@ -15,6 +21,13 @@ function Page() {
   const qc = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+  // Per-request fixed section access. undefined = full access (all modules).
+  const [sections, setSections] = useState<Record<string, string[] | undefined>>({});
+  const toggleSection = (id: string, key: string) =>
+    setSections((s) => {
+      const cur = s[id] ?? [];
+      return { ...s, [id]: cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key] };
+    });
 
   const { data: me } = useQuery({
     queryKey: ["me-email"],
@@ -37,7 +50,12 @@ function Page() {
 
   const approve = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("approve_business_request", { _id: id, _notes: notes[id] ?? null });
+      const picked = sections[id];
+      const { error } = await supabase.rpc("approve_business_request", {
+        _id: id,
+        _notes: notes[id] ?? null,
+        _sections: picked && picked.length ? picked : null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Approved"); qc.invalidateQueries({ queryKey: ["business-requests-all"] }); },
@@ -95,6 +113,25 @@ function Page() {
                     Location: {r.location_name} · SKU: {r.sku_prefix ?? "—"} · Requested: {new Date(r.created_at).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">User: {r.user_id}</div>
+                </div>
+              </div>
+              <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                <div className="text-xs font-medium">Allowed sections / modules</div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Leave everything unchecked to give this owner full access.
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {SECTION_OPTIONS.map((o) => (
+                    <label key={o.key} className="flex items-center gap-1.5 text-xs">
+                      <input
+                        type="checkbox"
+                        className="size-3.5 accent-primary"
+                        checked={(sections[r.id] ?? []).includes(o.key)}
+                        onChange={() => toggleSection(r.id, o.key)}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
                 </div>
               </div>
               <textarea
