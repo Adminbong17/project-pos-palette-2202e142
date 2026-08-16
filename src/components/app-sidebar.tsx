@@ -68,6 +68,7 @@ const sections = [
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/rx-billing", label: "Rx Billing Admin", icon: Wallet, enabled: true, key: "__admin" },
+      { to: "/admin/users", label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/backups", label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
       { to: "/admin", label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
 

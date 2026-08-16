@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/admin/business-requests")({
   head: () => ({ meta: [{ title: "Business Requests — Admin" }] }),
@@ -12,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/admin/business-requests")(
 function Page() {
   const qc = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
 
   const { data: me } = useQuery({
     queryKey: ["me-email"],
@@ -52,8 +55,14 @@ function Page() {
   if (!me) return <div className="p-8">Loading…</div>;
   if (!isAdmin) return <div className="p-8 text-sm text-muted-foreground">Only the super admin can access this page.</div>;
 
-  const pending = rows.filter((r) => r.status === "pending");
-  const others = rows.filter((r) => r.status !== "pending");
+  const q = search.trim().toLowerCase();
+  const matches = (r: any) =>
+    !q ||
+    [r.name, r.location_name, r.sku_prefix, r.user_id, r.status, r.admin_notes]
+      .some((v) => String(v ?? "").toLowerCase().includes(q));
+
+  const pending = rows.filter((r) => r.status === "pending" && matches(r));
+  const others = rows.filter((r) => r.status !== "pending" && matches(r));
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -62,11 +71,21 @@ function Page() {
         <p className="text-sm text-muted-foreground">Approve or reject pending business creation requests.</p>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search requests…"
+          className="pl-9"
+        />
+      </div>
+
       <section>
         <h2 className="text-sm font-medium mb-2">Pending ({pending.length})</h2>
         <div className="space-y-3">
           {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
-          {!isLoading && pending.length === 0 && <div className="text-sm text-muted-foreground">No pending requests.</div>}
+          {!isLoading && pending.length === 0 && <div className="text-sm text-muted-foreground">{q ? "No match." : "No pending requests."}</div>}
           {pending.map((r) => (
             <div key={r.id} className="rounded-xl border border-border/60 bg-card p-4">
               <div className="flex items-start justify-between gap-4">
@@ -106,6 +125,7 @@ function Page() {
       <section>
         <h2 className="text-sm font-medium mb-2">History</h2>
         <div className="space-y-2">
+          {others.length === 0 && <div className="text-sm text-muted-foreground">{q ? "No match." : "No history yet."}</div>}
           {others.map((r) => (
             <div key={r.id} className="rounded-lg border border-border/60 bg-card p-3 text-sm flex items-center justify-between">
               <div>

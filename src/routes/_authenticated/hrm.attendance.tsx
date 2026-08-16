@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { Printer } from "lucide-react";
+import { Printer, Search } from "lucide-react";
 import { printHrmReport } from "@/lib/hrm-print";
 import { PrintSizeButton } from "@/components/print-size-select";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/hrm/attendance")({
   component: AttendancePage,
@@ -19,6 +20,7 @@ function AttendancePage() {
   const { data: business } = useCurrentBusiness();
   const qc = useQueryClient();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [search, setSearch] = useState("");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hrm_employees_active", business?.id],
@@ -45,6 +47,15 @@ function AttendancePage() {
   });
 
   const byEmp = new Map<string, any>(rows.map((r: any) => [r.employee_id, r]));
+
+  const q = search.trim().toLowerCase();
+  const filteredEmployees = q
+    ? employees.filter((e: any) => {
+        const r = byEmp.get(e.id);
+        return [e.name, e.designation, r?.status, r?.check_in, r?.check_out, r?.notes]
+          .some((v) => String(v ?? "").toLowerCase().includes(q));
+      })
+    : employees;
 
   const upsert = useMutation({
     mutationFn: async (payload: { employee_id: string; status: Status; check_in?: string; check_out?: string; notes?: string }) => {
@@ -86,6 +97,10 @@ function AttendancePage() {
         <label className="text-xs font-medium text-muted-foreground">Date</label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
           className="h-9 rounded-lg border border-border bg-input px-3 text-sm" />
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search employees…" className="pl-9" />
+        </div>
         <div className="ml-auto flex gap-1.5">
           <button onClick={() => markAll.mutate("present")} className="rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs">Mark all present</button>
           <button onClick={() => markAll.mutate("absent")} className="rounded-lg bg-rose-600 text-white px-3 py-1.5 text-xs">Mark all absent</button>
@@ -121,7 +136,9 @@ function AttendancePage() {
           <tbody className="divide-y divide-border/60">
             {employees.length === 0 ? (
               <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Add employees first.</td></tr>
-            ) : employees.map((e: any) => {
+            ) : filteredEmployees.length === 0 ? (
+              <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No match.</td></tr>
+            ) : filteredEmployees.map((e: any) => {
               const r = byEmp.get(e.id);
               return (
                 <tr key={e.id}>

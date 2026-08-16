@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { useOwnerDoctorId } from "@/hooks/use-owner-doctor";
 import { formatDate } from "@/lib/utils";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { dhakaToday } from "@/lib/appointments";
@@ -40,12 +41,13 @@ function RxDashboard() {
   const { isAdmin } = useCurrentRole();
   const businessId = business?.id;
   const chambers = useChambers(businessId);
+  const { doctorId } = useOwnerDoctorId(businessId);
   const [queueDate, setQueueDate] = useState(dhakaToday());
 
 
 
   const { data, isLoading } = useQuery({
-    queryKey: ["rx-dashboard", businessId, isAdmin],
+    queryKey: ["rx-dashboard", businessId, isAdmin, doctorId],
     enabled: !!businessId,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -57,7 +59,7 @@ function RxDashboard() {
         .limit(5000);
       // Older prescriptions were saved without created_by — keep them visible
       // to non-admin doctors instead of hiding everything.
-      if (!isAdmin && u.user) q = q.or(`created_by.eq.${u.user.id},created_by.is.null`);
+      if (!isAdmin && u.user) q = q.or(`doctor_id.eq.${doctorId ?? u.user.id},doctor_id.is.null`);
       const { data: rows, error } = await q;
       if (error) throw error;
       return rows ?? [];

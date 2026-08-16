@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, Factory, Play, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Factory, Play, CheckCircle2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -169,6 +169,7 @@ function ManufacturingPage() {
 function BomsTab({ businessId }: { businessId: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: boms = [], isLoading } = useQuery({
     queryKey: ["mfg-boms", businessId],
@@ -197,12 +198,23 @@ function BomsTab({ businessId }: { businessId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const q = search.trim().toLowerCase();
+  const filteredBoms = q
+    ? boms.filter((b) =>
+        [b.name, b.finished_variation?.product?.name, b.finished_variation?.name, b.output_qty, b.is_active ? "active" : "inactive", b.notes]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : boms;
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search BOMs…" className="pl-9" />
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" className="ml-auto">
               <Plus className="h-4 w-4 mr-1" /> New BOM
             </Button>
           </DialogTrigger>
@@ -235,8 +247,14 @@ function BomsTab({ businessId }: { businessId: string }) {
                   No BOMs yet.
                 </TableCell>
               </TableRow>
+            ) : filteredBoms.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                  No match.
+                </TableCell>
+              </TableRow>
             ) : (
-              boms.map((b) => (
+              filteredBoms.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.name}</TableCell>
                   <TableCell>
@@ -506,6 +524,7 @@ function OrdersTab({ businessId }: { businessId: string }) {
   const qc = useQueryClient();
   const [openNew, setOpenNew] = useState(false);
   const [completing, setCompleting] = useState<Order | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["mfg-orders", businessId],
@@ -538,12 +557,24 @@ function OrdersTab({ businessId }: { businessId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const q = search.trim().toLowerCase();
+  const filteredOrders = q
+    ? orders.filter((o) =>
+        [o.ref_no, o.finished_variation?.product?.name, o.finished_variation?.name, o.location?.name,
+          o.planned_qty, o.produced_qty, o.yield_percent, o.unit_cost, o.status]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : orders;
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search production orders…" className="pl-9" />
+        </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" className="ml-auto">
               <Plus className="h-4 w-4 mr-1" /> New Production Order
             </Button>
           </DialogTrigger>
@@ -580,8 +611,14 @@ function OrdersTab({ businessId }: { businessId: string }) {
                   No production orders yet.
                 </TableCell>
               </TableRow>
+            ) : filteredOrders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                  No match.
+                </TableCell>
+              </TableRow>
             ) : (
-              orders.map((o) => (
+              filteredOrders.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">{o.ref_no ?? "—"}</TableCell>
                   <TableCell>{new Date(o.order_date).toLocaleDateString()}</TableCell>

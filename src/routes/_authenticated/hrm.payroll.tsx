@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Printer } from "lucide-react";
+import { Plus, Trash2, Pencil, Printer, Search } from "lucide-react";
 import { printHrmReport } from "@/lib/hrm-print";
 import { PrintSizeButton } from "@/components/print-size-select";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/hrm/payroll")({
   component: PayrollPage,
@@ -18,6 +19,7 @@ function PayrollPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [search, setSearch] = useState("");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hrm_employees_all", business?.id],
@@ -102,12 +104,23 @@ function PayrollPage() {
     net: acc.net + Number(r.net || 0),
   }), { gross: 0, ded: 0, net: 0 });
 
+  const q = search.trim().toLowerCase();
+  const filteredRows = q
+    ? rows.filter((r: any) =>
+        [r.hrm_employees?.name, r.gross, r.deductions, r.net, r.paid_on, r.notes]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : rows;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <label className="text-xs font-medium text-muted-foreground">Month</label>
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
           className="h-9 rounded-lg border border-border bg-input px-3 text-sm" />
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search payslips…" className="pl-9" />
+        </div>
         <div className="ml-auto flex gap-1.5">
           <PrintSizeButton onPrint={(size) => printHrmReport({
             title: "Payroll Report",
@@ -210,7 +223,9 @@ function PayrollPage() {
           <tbody className="divide-y divide-border/60">
             {rows.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No payslips for {month}.</td></tr>
-            ) : rows.map((r: any) => (
+            ) : filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No match.</td></tr>
+            ) : filteredRows.map((r: any) => (
               <tr key={r.id}>
                 <td className="px-4 py-3">{r.hrm_employees?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-right">৳ {Number(r.gross).toLocaleString()}</td>
@@ -225,7 +240,7 @@ function PayrollPage() {
                 </td>
               </tr>
             ))}
-            {rows.length > 0 && (
+            {filteredRows.length > 0 && (
               <tr className="bg-muted/20 font-semibold">
                 <td className="px-4 py-3">Total</td>
                 <td className="px-4 py-3 text-right">৳ {totals.gross.toLocaleString()}</td>

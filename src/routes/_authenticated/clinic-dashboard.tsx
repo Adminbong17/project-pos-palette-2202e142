@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, Users, FileText, Wallet, Stethoscope } from "lucide-react";
+import { Building2, Users, FileText, Wallet, Stethoscope, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -11,6 +11,7 @@ import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { dhakaToday } from "@/lib/appointments";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/clinic-dashboard")({
   head: () => ({
@@ -40,6 +41,7 @@ function ClinicDashboard() {
   const qc = useQueryClient();
   const chambers = useChambers(businessId);
   const [date, setDate] = useState(dhakaToday());
+  const [search, setSearch] = useState("");
 
   const toggleClinic = useMutation({
     mutationFn: async (next: boolean) => {
@@ -127,6 +129,14 @@ function ClinicDashboard() {
     }, {}),
   ) as any[];
 
+  const q = search.trim().toLowerCase();
+  const filteredDoctorRows = q
+    ? doctorRows.filter((d) => [d.name, d.patients, d.newPatients, d.rx, d.fees.toFixed(2)].some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : doctorRows;
+  const filteredChamberRows = q
+    ? chamberRows.filter((c) => [c.name, c.patients, c.fees.toFixed(2)].some((v) => String(v ?? "").toLowerCase().includes(q)))
+    : chamberRows;
+
   const cards = [
     { label: "Patients today", value: appts.length, icon: Users, color: "bg-primary/15 text-primary" },
     { label: "Doctors on duty", value: doctorRows.length, icon: Stethoscope, color: "bg-chart-2/15 text-chart-2" },
@@ -163,6 +173,16 @@ function ClinicDashboard() {
             Doctor Mode
           </Link>
         </div>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search doctors or locations…"
+          className="pl-9"
+        />
       </div>
 
       {isAdmin && (
@@ -205,6 +225,8 @@ function ClinicDashboard() {
           <h2 className="mb-3 text-sm font-semibold">Doctor-wise</h2>
           {doctorRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No patients for this day.</p>
+          ) : filteredDoctorRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match.</p>
           ) : (
             <table className="w-full text-xs">
               <thead className="text-muted-foreground">
@@ -217,7 +239,7 @@ function ClinicDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {doctorRows.map((d) => (
+                {filteredDoctorRows.map((d) => (
                   <tr key={d.key} className="border-b border-border/40">
                     <td className="py-1.5 font-medium">{d.name}</td>
                     <td className="py-1.5">{d.patients}</td>
@@ -235,6 +257,8 @@ function ClinicDashboard() {
           <h2 className="mb-3 text-sm font-semibold">Location-wise</h2>
           {chamberRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No patients for this day.</p>
+          ) : filteredChamberRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match.</p>
           ) : (
             <table className="w-full text-xs">
               <thead className="text-muted-foreground">
@@ -245,7 +269,7 @@ function ClinicDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {chamberRows.map((c) => (
+                {filteredChamberRows.map((c) => (
                   <tr key={c.key} className="border-b border-border/40">
                     <td className="py-1.5 font-medium">{c.name}</td>
                     <td className="py-1.5">{c.patients}</td>

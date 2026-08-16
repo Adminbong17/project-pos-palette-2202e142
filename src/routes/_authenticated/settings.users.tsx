@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
-import { ShieldCheck, ShoppingCart, UserPlus } from "lucide-react";
+import { ShieldCheck, ShoppingCart, UserPlus, Search } from "lucide-react";
 import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
 import { createBusinessUser } from "@/lib/admin-users.functions";
 import {
@@ -39,6 +39,7 @@ function UsersAndRoles() {
     role: "Salesman" as "Admin" | "Salesman" | "Doctor",
   });
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["business-members", businessId],
@@ -89,6 +90,17 @@ function UsersAndRoles() {
       }));
     },
   });
+
+  const filteredMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      [m.name, m.email, m.roleName, m.doctorName, m.doctorQualification]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [members, search]);
 
   const salesmanRole = roles.find((r) => r.name === "Salesman");
   const salesmanSections: string[] =
@@ -261,6 +273,11 @@ function UsersAndRoles() {
         </div>
       </div>
 
+      <div className="relative max-w-sm mb-3">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input className="pl-9" placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs text-muted-foreground">
@@ -279,7 +296,10 @@ function UsersAndRoles() {
             {!isLoading && members.length === 0 && (
               <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No users yet.</td></tr>
             )}
-            {members.map((m) => {
+            {!isLoading && members.length > 0 && filteredMembers.length === 0 && (
+              <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No match</td></tr>
+            )}
+            {filteredMembers.map((m) => {
               const isSalesman = !!m.roleName && m.roleName !== "Admin";
               const roleDefaults =
                 m.roleName === "Doctor" ? ["prescriptions"] : salesmanSections;

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, X, Stethoscope, ClipboardCheck } from "lucide-react";
+import { Check, X, Stethoscope, ClipboardCheck, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -67,6 +67,8 @@ function AdminDoctorsPage() {
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const businessId = business?.id;
   const qc = useQueryClient();
+  const [pendingSearch, setPendingSearch] = useState("");
+  const [doctorSearch, setDoctorSearch] = useState("");
 
   const requests = useQuery({
     queryKey: ["access-requests"],
@@ -205,6 +207,28 @@ function AdminDoctorsPage() {
   const doctors = (members.data ?? []).filter((m) => m.roleName === "Doctor");
   const others = (members.data ?? []).filter((m) => m.roleName !== "Doctor");
 
+  const filteredPending = useMemo(() => {
+    const q = pendingSearch.trim().toLowerCase();
+    if (!q) return pending;
+    return pending.filter((r) =>
+      [r.full_name, r.email, r.phone, r.qualification, r.requested_role, r.status]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [pending, pendingSearch]);
+
+  const filteredDoctors = useMemo(() => {
+    const q = doctorSearch.trim().toLowerCase();
+    if (!q) return doctors;
+    return doctors.filter((m) =>
+      [m.name, m.email, m.doctorName, m.doctorQualification]
+        .map((v) => String(v ?? "").toLowerCase())
+        .join(" ")
+        .includes(q),
+    );
+  }, [doctors, doctorSearch]);
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
@@ -226,12 +250,18 @@ function AdminDoctorsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search requests…" value={pendingSearch} onChange={(e) => setPendingSearch(e.target.value)} />
+          </div>
           {requests.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : pending.length === 0 ? (
             <p className="text-sm text-muted-foreground">No pending requests.</p>
+          ) : filteredPending.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match</p>
           ) : (
-            pending.map((r) => (
+            filteredPending.map((r) => (
               <PendingCard
                 key={r.id}
                 req={r}
@@ -290,14 +320,20 @@ function AdminDoctorsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Search doctors…" value={doctorSearch} onChange={(e) => setDoctorSearch(e.target.value)} />
+          </div>
           {members.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : doctors.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No doctors yet. Approve a signup above or create one from Users &amp; Roles.
             </p>
+          ) : filteredDoctors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No match</p>
           ) : (
-            doctors.map((m) => (
+            filteredDoctors.map((m) => (
               <DoctorCard
                 key={m.id}
                 member={m}

@@ -1848,6 +1848,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           diagnosis: string | null
+          doctor_id: string | null
           doctor_name: string | null
           doctor_qualification: string | null
           id: string
@@ -1873,6 +1874,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diagnosis?: string | null
+          doctor_id?: string | null
           doctor_name?: string | null
           doctor_qualification?: string | null
           id?: string
@@ -1898,6 +1900,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diagnosis?: string | null
+          doctor_id?: string | null
           doctor_name?: string | null
           doctor_qualification?: string | null
           id?: string
@@ -2673,6 +2676,7 @@ export type Database = {
           business_id: string
           created_at: string
           created_by: string | null
+          doctor_id: string | null
           fee_new: number
           fee_old: number
           id: string
@@ -2685,6 +2689,7 @@ export type Database = {
           business_id: string
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           fee_new?: number
           fee_old?: number
           id?: string
@@ -2697,6 +2702,7 @@ export type Database = {
           business_id?: string
           created_at?: string
           created_by?: string | null
+          doctor_id?: string | null
           fee_new?: number
           fee_old?: number
           id?: string
@@ -4032,6 +4038,10 @@ export type Database = {
       rx_grant_credits: {
         Args: { _account_id: string; _delta: number; _reason?: string }
         Returns: number
+      }
+      rx_owner_doctor: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
       }
       rx_resolve_account: {
         Args: { _business_id: string; _user_id: string }

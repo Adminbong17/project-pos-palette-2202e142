@@ -74,6 +74,7 @@ import { Route as AuthenticatedHrmAttendanceRouteImport } from './routes/_authen
 import { Route as AuthenticatedCrmLeadsRouteImport } from './routes/_authenticated/crm.leads'
 import { Route as AuthenticatedCrmFollowupsRouteImport } from './routes/_authenticated/crm.followups'
 import { Route as AuthenticatedCrmCampaignsRouteImport } from './routes/_authenticated/crm.campaigns'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminRxBillingRouteImport } from './routes/_authenticated/admin.rx-billing'
 import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_authenticated/admin.prescriptions'
 import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
@@ -439,6 +440,11 @@ const AuthenticatedCrmCampaignsRoute =
     path: '/campaigns',
     getParentRoute: () => AuthenticatedCrmRoute,
   } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRxBillingRoute =
   AuthenticatedAdminRxBillingRouteImport.update({
     id: '/admin/rx-billing',
@@ -523,6 +529,7 @@ export interface FileRoutesByFullPath {
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/crm/followups': typeof AuthenticatedCrmFollowupsRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsRoute
@@ -590,6 +597,7 @@ export interface FileRoutesByTo {
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/crm/followups': typeof AuthenticatedCrmFollowupsRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsRoute
@@ -666,6 +674,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/_authenticated/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/_authenticated/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
   '/_authenticated/crm/followups': typeof AuthenticatedCrmFollowupsRoute
   '/_authenticated/crm/leads': typeof AuthenticatedCrmLeadsRoute
@@ -742,6 +751,7 @@ export interface FileRouteTypes {
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
+    | '/admin/users'
     | '/crm/campaigns'
     | '/crm/followups'
     | '/crm/leads'
@@ -809,6 +819,7 @@ export interface FileRouteTypes {
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
+    | '/admin/users'
     | '/crm/campaigns'
     | '/crm/followups'
     | '/crm/leads'
@@ -884,6 +895,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/doctors'
     | '/_authenticated/admin/prescriptions'
     | '/_authenticated/admin/rx-billing'
+    | '/_authenticated/admin/users'
     | '/_authenticated/crm/campaigns'
     | '/_authenticated/crm/followups'
     | '/_authenticated/crm/leads'
@@ -1388,6 +1400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmCampaignsRouteImport
       parentRoute: typeof AuthenticatedCrmRoute
     }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/rx-billing': {
       id: '/_authenticated/admin/rx-billing'
       path: '/admin/rx-billing'
@@ -1644,6 +1663,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
   AuthenticatedAdminRxBillingRoute: typeof AuthenticatedAdminRxBillingRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedSalesIdEditRoute: typeof AuthenticatedSalesIdEditRoute
 }
@@ -1682,6 +1702,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
   AuthenticatedAdminPrescriptionsRoute: AuthenticatedAdminPrescriptionsRoute,
   AuthenticatedAdminRxBillingRoute: AuthenticatedAdminRxBillingRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedSalesIdEditRoute: AuthenticatedSalesIdEditRoute,
 }
