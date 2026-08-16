@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { isRxMode } from "@/lib/rx-mode";
+import { supabase } from "@/integrations/supabase/client";
 
 import {
   ShoppingCart,
@@ -36,7 +37,16 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const navigate = useNavigate();
   useEffect(() => {
-    if (isRxMode()) navigate({ to: "/prescriptions", search: { rx: undefined }, replace: true });
+    if (!isRxMode()) return;
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) navigate({ to: "/prescriptions", search: { rx: undefined }, replace: true });
+      else navigate({ to: "/rx", replace: true });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   return (

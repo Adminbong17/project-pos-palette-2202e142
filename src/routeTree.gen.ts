@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RxRouteImport } from './routes/rx'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -84,6 +85,11 @@ import { Route as ApiPublicCronBackupRouteImport } from './routes/api/public/cro
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
 import { Route as AuthenticatedPurchasesIdEditRouteImport } from './routes/_authenticated/purchases.$id.edit'
 
+const RxRoute = RxRouteImport.update({
+  id: '/rx',
+  path: '/rx',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -496,6 +502,7 @@ const AuthenticatedPurchasesIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/rx': typeof RxRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/contacts': typeof AuthenticatedContactsRoute
@@ -571,6 +578,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/rx': typeof RxRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/contacts': typeof AuthenticatedContactsRoute
@@ -641,6 +649,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/rx': typeof RxRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
@@ -718,6 +727,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/rx'
     | '/accounts'
     | '/clinic-dashboard'
     | '/contacts'
@@ -793,6 +803,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/rx'
     | '/accounts'
     | '/clinic-dashboard'
     | '/contacts'
@@ -862,6 +873,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/rx'
     | '/_authenticated/accounts'
     | '/_authenticated/clinic-dashboard'
     | '/_authenticated/contacts'
@@ -939,12 +951,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  RxRoute: typeof RxRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
   ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/rx': {
+      id: '/rx'
+      path: '/rx'
+      fullPath: '/rx'
+      preLoaderRoute: typeof RxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -1714,6 +1734,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  RxRoute: RxRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
   ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }
