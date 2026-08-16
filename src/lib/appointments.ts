@@ -95,6 +95,8 @@ export async function startPrescriptionFromAppointment(
       patient_phone: appointment.patient_phone,
       patient_gender: appointment.patient_gender,
       patient_code: appointment.patient_code ?? null,
+      patient_type: appointment.patient_type ?? "new",
+      fee_amount: appointment.fee_amount ?? null,
       doctor_name: doctorName || null,
       doctor_qualification: doctorQualification || null,
       created_by: ownerId,
