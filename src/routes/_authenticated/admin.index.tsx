@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ClipboardList, UserCog, ListChecks, Building2, KeyRound } from "lucide-react";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { isRxMode } from "@/lib/rx-mode";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({
@@ -52,6 +53,7 @@ const CARDS = [
     desc: "Every account with email, username, role and password control.",
     icon: KeyRound,
     rx: true,
+    superOnly: true,
   },
   {
     to: "/admin/business-requests",
@@ -59,14 +61,16 @@ const CARDS = [
     desc: "Review new business signup requests.",
     icon: Building2,
     rx: false,
+    superOnly: true,
   },
 ];
 
 function AdminHub() {
   const { isAdmin, isLoading } = useCurrentRole();
+  const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const rxMode = isRxMode();
 
-  if (isLoading) {
+  if (isLoading || superLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   }
 
@@ -81,7 +85,11 @@ function AdminHub() {
     );
   }
 
-  const cards = rxMode ? CARDS.filter((c) => c.rx) : CARDS;
+  // Platform-wide tools (all users, business requests) stay with the super
+  // admin; a business owner only sees tools scoped to their own business.
+  const cards = (rxMode ? CARDS.filter((c) => c.rx) : CARDS).filter(
+    (c: any) => (c.superOnly ? isSuperAdmin : true),
+  );
 
   return (
     <div className="p-4 sm:p-6">
