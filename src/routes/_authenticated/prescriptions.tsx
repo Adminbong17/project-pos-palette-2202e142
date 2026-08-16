@@ -902,11 +902,13 @@ function PrescriptionsPage() {
         </div>`).join("")
       : `<div class="label">No medicines</div>`;
 
+    const creditHtml = `<div class="credit">QweekRx ${new Date().getFullYear()} - 01712472839(Phone/whatsapp)</div>`;
+
     if (size === "A4") {
       const styles = `
         @page { size: A4; margin: 0; }
         html, body { margin:0; padding:0; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:12px; }
-        .page { width:210mm; min-height:297mm; padding:12mm 10mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
+        .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "12mm"} 10mm 12mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
         h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
         .desig { font-size:13px; margin-bottom:3px; }
         .center { text-align:center; }
@@ -914,7 +916,7 @@ function PrescriptionsPage() {
         .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
         .label { color:#444; font-size:0.9em; }
         .pbox { border:1px solid #999; padding:6px; margin:6px 0 8px; border-radius:4px; }
-        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:180mm; }
+        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:${ownPad ? "140mm" : "180mm"}; }
         .left { width:40%; padding:6px 8px 6px 0; border-right:1.5px solid #000; box-sizing:border-box; }
         .right { width:60%; padding:6px 0 6px 10px; box-sizing:border-box; display:flex; flex-direction:column; }
         .sec-title { font-weight:bold; text-decoration:underline; margin:8px 0 4px; }
@@ -925,11 +927,12 @@ function PrescriptionsPage() {
         .med-name { font-weight:bold; }
         .med-sub { padding-left:14px; }
         .qty { font-weight:normal; }
-        .sign { margin-top:10px; text-align:right; }`;
+        .sign { margin-top:10px; text-align:right; }
+        .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:10px; color:#333; }`;
 
       const body = `
       <div class="page">
-        ${headerHtml}
+        ${ownPad ? "" : headerHtml}
         ${metaHtml}
         <div class="split">
           <div class="left">
@@ -954,10 +957,12 @@ function PrescriptionsPage() {
             </div>
           </div>
         </div>
+        ${creditHtml}
       </div>`;
 
       return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
     }
+
 
     const widthCss = size === "80mm" ? "80mm" : "58mm";
     const fs = size === "58mm" ? "10px" : "11px";
