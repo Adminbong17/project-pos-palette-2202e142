@@ -2472,6 +2472,115 @@ export type Database = {
           },
         ]
       }
+      rx_billing_accounts: {
+        Row: {
+          business_id: string
+          created_at: string
+          credits: number
+          helpline: string | null
+          id: string
+          mode: Database["public"]["Enums"]["rx_billing_mode"]
+          notes: string | null
+          payment_link: string | null
+          phone: string | null
+          phone_verified_at: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          credits?: number
+          helpline?: string | null
+          id?: string
+          mode?: Database["public"]["Enums"]["rx_billing_mode"]
+          notes?: string | null
+          payment_link?: string | null
+          phone?: string | null
+          phone_verified_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          credits?: number
+          helpline?: string | null
+          id?: string
+          mode?: Database["public"]["Enums"]["rx_billing_mode"]
+          notes?: string | null
+          payment_link?: string | null
+          phone?: string | null
+          phone_verified_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_billing_accounts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rx_bills: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          due_date: string
+          id: string
+          paid_at: string | null
+          payment_link: string | null
+          period_start: string
+          prescriptions_count: number
+          sms_sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          business_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          paid_at?: string | null
+          payment_link?: string | null
+          period_start: string
+          prescriptions_count?: number
+          sms_sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          paid_at?: string | null
+          payment_link?: string | null
+          period_start?: string
+          prescriptions_count?: number
+          sms_sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_bills_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rx_chambers: {
         Row: {
           address: string | null
@@ -2509,6 +2618,41 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rx_credit_ledger: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          delta: number
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_credit_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "rx_billing_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -2595,6 +2739,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rx_phone_otps: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
       }
       rx_presets: {
         Row: {
@@ -3741,6 +3915,36 @@ export type Database = {
         Returns: undefined
       }
       restore_purchase: { Args: { _id: string }; Returns: undefined }
+      rx_billing_state: { Args: { _user_id?: string }; Returns: Json }
+      rx_close_month: { Args: { _month?: string }; Returns: number }
+      rx_grant_credits: {
+        Args: { _account_id: string; _delta: number; _reason?: string }
+        Returns: number
+      }
+      rx_resolve_account: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: {
+          business_id: string
+          created_at: string
+          credits: number
+          helpline: string | null
+          id: string
+          mode: Database["public"]["Enums"]["rx_billing_mode"]
+          notes: string | null
+          payment_link: string | null
+          phone: string | null
+          phone_verified_at: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rx_billing_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rx_tier_amount: { Args: { _count: number }; Returns: number }
       transfer_between_accounts: {
         Args: { _amount: number; _from: string; _note: string; _to: string }
         Returns: undefined
@@ -3759,6 +3963,7 @@ export type Database = {
       mfg_order_status: "draft" | "in_progress" | "completed" | "cancelled"
       payment_status: "paid" | "due" | "partial" | "overdue"
       product_type: "single" | "variable" | "combo"
+      rx_billing_mode: "credit" | "subscription" | "free"
       stock_adjustment_type: "normal" | "abnormal"
       transaction_status: "draft" | "final" | "received" | "pending" | "ordered"
       transaction_type:
@@ -3906,6 +4111,7 @@ export const Constants = {
       mfg_order_status: ["draft", "in_progress", "completed", "cancelled"],
       payment_status: ["paid", "due", "partial", "overdue"],
       product_type: ["single", "variable", "combo"],
+      rx_billing_mode: ["credit", "subscription", "free"],
       stock_adjustment_type: ["normal", "abnormal"],
       transaction_status: ["draft", "final", "received", "pending", "ordered"],
       transaction_type: [

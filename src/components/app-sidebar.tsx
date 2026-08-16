@@ -61,9 +61,11 @@ const sections = [
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
+      { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "prescriptions" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
+      { to: "/admin/rx-billing", label: "Rx Billing Admin", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin", label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
 
     ],

@@ -8,6 +8,8 @@ import { Plus, Trash2, Pencil, Search, FileText, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useRxBillingState } from "@/hooks/use-rx-billing";
+import { RxBillingBanner } from "@/components/rx-billing-banner";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import { useRxPresets } from "@/hooks/use-rx-presets";
 import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
@@ -332,6 +334,7 @@ function vitalsLines(s: string | null | undefined): string[] {
 
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
+  const rxBilling = useRxBillingState();
   const businessId = business?.id;
   const qc = useQueryClient();
 
@@ -1134,9 +1137,11 @@ function PrescriptionsPage() {
               <Input placeholder="Search patient / Rx no / phone…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
             </div>
           </FloatingSearch>
-          <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
+          <Button onClick={openNew} disabled={rxBilling.blocked}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
         </div>
       </div>
+
+      <RxBillingBanner />
 
       <div className="rounded-lg border">
         <Table>
