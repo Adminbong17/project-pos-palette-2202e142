@@ -3945,6 +3945,15 @@ export type Database = {
         }
         Returns: string
       }
+      approve_access_request_new_business: {
+        Args: {
+          _business_name?: string
+          _id: string
+          _notes?: string
+          _sections?: string[]
+        }
+        Returns: string
+      }
       approve_business_request:
         | { Args: { _id: string; _notes?: string }; Returns: string }
         | {
