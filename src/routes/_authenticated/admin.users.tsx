@@ -46,9 +46,13 @@ function Page() {
   const qc = useQueryClient();
   const fetchUsers = useServerFn(listAllUsers);
   const savePassword = useServerFn(setUserPassword);
+  const toggleDisabled = useServerFn(setUserDisabled);
+  const removeUser = useServerFn(deleteUserAccount);
   const [search, setSearch] = useState("");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmDisable, setConfirmDisable] = useState<{ id: string; disabled: boolean } | null>(null);
 
   const me = useQuery({
     queryKey: ["me-email"],
@@ -67,6 +71,26 @@ function Page() {
     onSuccess: (_r, v) => {
       toast.success("Password updated");
       setReveal((s) => ({ ...s, [v.user_id]: true }));
+      qc.invalidateQueries({ queryKey: ["super-admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const disableUser = useMutation({
+    mutationFn: (v: { user_id: string; disabled: boolean }) => toggleDisabled({ data: v }),
+    onSuccess: (_r, v) => {
+      toast.success(v.disabled ? "User disabled" : "User enabled");
+      setConfirmDisable(null);
+      qc.invalidateQueries({ queryKey: ["super-admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (v: { user_id: string }) => removeUser({ data: v }),
+    onSuccess: () => {
+      toast.success("User deleted");
+      setConfirmDelete(null);
       qc.invalidateQueries({ queryKey: ["super-admin-users"] });
     },
     onError: (e: any) => toast.error(e.message),
