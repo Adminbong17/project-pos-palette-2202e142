@@ -369,19 +369,61 @@ function AdminDoctorsPage() {
   );
 }
 
+type ApproveArgs = {
+  role: string;
+  sections: string[] | null;
+  ownBusiness?: boolean;
+  businessName?: string;
+};
+
+// Default modules a brand-new shop (POS) owner gets — no prescription access
+// unless the super admin ticks it.
+const POS_DEFAULT_SECTIONS = [
+  "dashboard",
+  "pos",
+  "sales",
+  "purchases",
+  "products",
+  "quick-box",
+  "files",
+  "contacts",
+  "stock-transfers",
+  "expenses",
+  "accounts",
+  "reports",
+  "settings",
+];
+
 function PendingCard({
   req,
   busy,
+  canCreateBusiness,
   onApprove,
   onReject,
 }: {
   req: RequestRow;
   busy: boolean;
-  onApprove: (role: string) => void;
+  canCreateBusiness: boolean;
+  onApprove: (args: ApproveArgs) => void;
   onReject: (notes: string | null) => void;
 }) {
+  const wantsPos = (req.requested_role || "Doctor") !== "Doctor";
   const [role, setRole] = useState(req.requested_role || "Doctor");
   const [notes, setNotes] = useState("");
+  const [ownBusiness, setOwnBusiness] = useState(canCreateBusiness && wantsPos);
+  const [businessName, setBusinessName] = useState(req.full_name || "");
+  const [sections, setSections] = useState<string[]>(
+    wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+  );
+
+  const sectionOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return ALL_SECTIONS.filter((s) => !seen.has(s.key) && seen.add(s.key));
+  }, []);
+
+  function toggle(key: string, on: boolean) {
+    setSections((prev) => (on ? Array.from(new Set([...prev, key])) : prev.filter((k) => k !== key)));
+  }
 
   return (
     <div className="rounded-lg border border-border/60 p-3">
@@ -397,16 +439,36 @@ function PendingCard({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="h-9 rounded-lg border border-border bg-input px-2 text-sm"
+          {!ownBusiness && (
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="h-9 rounded-lg border border-border bg-input px-2 text-sm"
+            >
+              <option value="Doctor">Doctor (Prescriptions only)</option>
+              <option value="Salesman">Salesman</option>
+              <option value="Admin">Admin</option>
+            </select>
+          )}
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              onApprove(
+                ownBusiness
+                  ? {
+                      role: "Admin",
+                      sections: sections.length ? sections : POS_DEFAULT_SECTIONS,
+                      ownBusiness: true,
+                      businessName: businessName.trim(),
+                    }
+                  : {
+                      role,
+                      sections: role === "Doctor" ? ["prescriptions"] : sections.length ? sections : null,
+                    },
+              )
+            }
           >
-            <option value="Doctor">Doctor (Prescriptions only)</option>
-            <option value="Salesman">Salesman</option>
-            <option value="Admin">Admin</option>
-          </select>
-          <Button size="sm" disabled={busy} onClick={() => onApprove(role)}>
             <Check className="h-4 w-4" /> Approve
           </Button>
           <Button
@@ -419,6 +481,49 @@ function PendingCard({
           </Button>
         </div>
       </div>
+
+      {canCreateBusiness && (
+        <label className="mt-3 flex items-center gap-2 text-xs font-medium">
+          <input
+            type="checkbox"
+            className="size-3.5"
+            checked={ownBusiness}
+            onChange={(e) => setOwnBusiness(e.target.checked)}
+          />
+          Own separate POS (create a new business — no link to this business&apos;s data)
+        </label>
+      )}
+
+      {ownBusiness && (
+        <Input
+          className="mt-2 h-8 text-xs"
+          placeholder="Shop / business name"
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+        />
+      )}
+
+      {(ownBusiness || role !== "Doctor") && (
+        <div className="mt-2 rounded-md border border-border/60 p-2">
+          <p className="mb-1 text-[11px] font-medium uppercase text-muted-foreground">
+            Sections &amp; modules
+          </p>
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-4">
+            {sectionOptions.map((s) => (
+              <label key={s.key} className="flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  className="size-3.5"
+                  checked={sections.includes(s.key)}
+                  onChange={(e) => toggle(s.key, e.target.checked)}
+                />
+                {s.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Input
         className="mt-2 h-8 text-xs"
         placeholder="Optional note (shown on rejection)"
@@ -428,6 +533,7 @@ function PendingCard({
     </div>
   );
 }
+
 
 function DoctorCard({
   member,
