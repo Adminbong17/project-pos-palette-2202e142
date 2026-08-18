@@ -3,10 +3,22 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { listAllUsers, setUserPassword } from "@/lib/super-admin-users.functions";
+import { listAllUsers, setUserPassword, setUserDisabled, deleteUserAccount } from "@/lib/super-admin-users.functions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, KeyRound, Copy, Eye, EyeOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, KeyRound, Copy, Eye, EyeOff, Ban, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
@@ -34,9 +46,13 @@ function Page() {
   const qc = useQueryClient();
   const fetchUsers = useServerFn(listAllUsers);
   const savePassword = useServerFn(setUserPassword);
+  const toggleDisabled = useServerFn(setUserDisabled);
+  const removeUser = useServerFn(deleteUserAccount);
   const [search, setSearch] = useState("");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmDisable, setConfirmDisable] = useState<{ id: string; disabled: boolean } | null>(null);
 
   const me = useQuery({
     queryKey: ["me-email"],
@@ -55,6 +71,26 @@ function Page() {
     onSuccess: (_r, v) => {
       toast.success("Password updated");
       setReveal((s) => ({ ...s, [v.user_id]: true }));
+      qc.invalidateQueries({ queryKey: ["super-admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const disableUser = useMutation({
+    mutationFn: (v: { user_id: string; disabled: boolean }) => toggleDisabled({ data: v }),
+    onSuccess: (_r, v) => {
+      toast.success(v.disabled ? "User disabled" : "User enabled");
+      setConfirmDisable(null);
+      qc.invalidateQueries({ queryKey: ["super-admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (v: { user_id: string }) => removeUser({ data: v }),
+    onSuccess: () => {
+      toast.success("User deleted");
+      setConfirmDelete(null);
       qc.invalidateQueries({ queryKey: ["super-admin-users"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -101,7 +137,7 @@ function Page() {
         <div className="text-sm text-destructive">{(users.error as any).message}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="p-2 text-left">Email / Username</th>
@@ -110,15 +146,24 @@ function Page() {
                 <th className="p-2 text-left">Role</th>
                 <th className="p-2 text-left">Last sign in</th>
                 <th className="p-2 text-left">Password</th>
+                <th className="p-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((u) => {
                 const shown = reveal[u.id];
+                const isMe = me.data?.id === u.id;
                 return (
                   <tr key={u.id} className="border-t border-border align-top">
                     <td className="p-2">
-                      <div className="font-medium">{u.email}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{u.email}</span>
+                        {u.disabled && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Disabled
+                          </Badge>
+                        )}
+                      </div>
                       {u.username && <div className="text-xs text-muted-foreground">@{u.username}</div>}
                     </td>
                     <td className="p-2">
@@ -179,18 +224,96 @@ function Page() {
                         </Button>
                       </div>
                     </td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={u.disabled ? "outline" : "secondary"}
+                          className={u.disabled ? "text-green-700" : "text-amber-700"}
+                          disabled={isMe || disableUser.isPending}
+                          onClick={() => setConfirmDisable({ id: u.id, disabled: !u.disabled })}
+                        >
+                          <Ban className="mr-1 size-3.5" />
+                          {u.disabled ? "Enable" : "Disable"}
+                        </Button>
+                        <AlertDialog open={confirmDelete === u.id} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={isMe || deleteUser.isPending}
+                              onClick={() => setConfirmDelete(u.id)}
+                            >
+                              <Trash2 className="mr-1 size-3.5" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="size-5 text-destructive" />
+                                Delete account?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove <strong>{u.email}</strong> and all their roles,
+                                business links and memberships. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteUser.mutate({ user_id: u.id })}
+                                disabled={deleteUser.isPending}
+                              >
+                                {deleteUser.isPending ? "Deleting…" : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
                     No user matches “{search}”.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          <AlertDialog
+            open={!!confirmDisable}
+            onOpenChange={(open) => !open && setConfirmDisable(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {confirmDisable?.disabled ? "Disable account?" : "Enable account?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {confirmDisable?.disabled
+                    ? "The user will be banned from signing in and their business memberships will be marked inactive."
+                    : "The user will be allowed to sign in again and their business memberships will be reactivated."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setConfirmDisable(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() =>
+                    confirmDisable &&
+                    disableUser.mutate({ user_id: confirmDisable.id, disabled: confirmDisable.disabled })
+                  }
+                  disabled={disableUser.isPending}
+                >
+                  {disableUser.isPending ? "Saving…" : confirmDisable?.disabled ? "Disable" : "Enable"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>
