@@ -137,7 +137,7 @@ function Page() {
         <div className="text-sm text-destructive">{(users.error as any).message}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1000px] text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="p-2 text-left">Email / Username</th>
@@ -146,6 +146,7 @@ function Page() {
                 <th className="p-2 text-left">Role</th>
                 <th className="p-2 text-left">Last sign in</th>
                 <th className="p-2 text-left">Password</th>
+                <th className="p-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
