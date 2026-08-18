@@ -285,15 +285,11 @@ function AdminDoctorsPage() {
                 key={r.id}
                 req={r}
                 busy={approve.isPending || reject.isPending}
-                onApprove={(role) =>
-                  approve.mutate({
-                    id: r.id,
-                    role,
-                    sections: role === "Doctor" ? ["prescriptions"] : null,
-                  })
-                }
+                canCreateBusiness={isSuperAdmin}
+                onApprove={(args) => approve.mutate({ id: r.id, ...args })}
                 onReject={(notes) => reject.mutate({ id: r.id, notes })}
               />
+
             ))
           )}
           {reviewed.length > 0 && (
