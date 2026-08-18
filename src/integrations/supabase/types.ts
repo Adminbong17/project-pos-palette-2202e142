@@ -542,6 +542,7 @@ export type Database = {
       businesses: {
         Row: {
           accounting_method: string
+          biz_kind: string
           clinic_mode: boolean
           created_at: string
           currency_id: number
@@ -570,6 +571,7 @@ export type Database = {
         }
         Insert: {
           accounting_method?: string
+          biz_kind?: string
           clinic_mode?: boolean
           created_at?: string
           currency_id: number
@@ -598,6 +600,7 @@ export type Database = {
         }
         Update: {
           accounting_method?: string
+          biz_kind?: string
           clinic_mode?: boolean
           created_at?: string
           currency_id?: number
@@ -3945,6 +3948,15 @@ export type Database = {
         }
         Returns: string
       }
+      approve_access_request_clinic: {
+        Args: {
+          _clinic_name?: string
+          _id: string
+          _notes?: string
+          _sections?: string[]
+        }
+        Returns: string
+      }
       approve_access_request_new_business: {
         Args: {
           _business_name?: string
@@ -4000,6 +4012,10 @@ export type Database = {
       delete_sale: { Args: { _id: string }; Returns: undefined }
       delete_stock_adjustment: { Args: { _id: string }; Returns: undefined }
       delete_stock_transfer: { Args: { _id: string }; Returns: undefined }
+      ensure_assistant_role: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: undefined
+      }
       has_permission: {
         Args: { _business_id: string; _permission: string; _user_id: string }
         Returns: boolean
@@ -4018,6 +4034,21 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      move_doctor_to_own_business: {
+        Args: { _business_name?: string; _user_id: string }
+        Returns: string
+      }
+      provision_clinic_doctor: {
+        Args: {
+          _business_id: string
+          _email: string
+          _name: string
+          _phone: string
+          _qualification: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       provision_rx_staff:
         | {
             Args: {
@@ -4034,6 +4065,19 @@ export type Database = {
             Args: {
               _business_id: string
               _chamber_id?: string
+              _email: string
+              _name: string
+              _phone: string
+              _user_id: string
+              _username: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _business_id: string
+              _chamber_id: string
+              _doctor_id: string
               _email: string
               _name: string
               _phone: string
