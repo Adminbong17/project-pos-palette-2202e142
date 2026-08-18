@@ -67,6 +67,8 @@ type Member = {
 function AdminDoctorsPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { isSuperAdmin } = useIsSuperAdmin();
+
   const businessId = business?.id;
   const qc = useQueryClient();
   const [pendingSearch, setPendingSearch] = useState("");
