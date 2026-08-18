@@ -152,10 +152,18 @@ function Page() {
             <tbody>
               {rows.map((u) => {
                 const shown = reveal[u.id];
+                const isMe = me.data?.id === u.id;
                 return (
                   <tr key={u.id} className="border-t border-border align-top">
                     <td className="p-2">
-                      <div className="font-medium">{u.email}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{u.email}</span>
+                        {u.disabled && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Disabled
+                          </Badge>
+                        )}
+                      </div>
                       {u.username && <div className="text-xs text-muted-foreground">@{u.username}</div>}
                     </td>
                     <td className="p-2">
@@ -216,12 +224,61 @@ function Page() {
                         </Button>
                       </div>
                     </td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={u.disabled ? "outline" : "secondary"}
+                          className={u.disabled ? "text-green-700" : "text-amber-700"}
+                          disabled={isMe || disableUser.isPending}
+                          onClick={() => setConfirmDisable({ id: u.id, disabled: !u.disabled })}
+                        >
+                          <Ban className="mr-1 size-3.5" />
+                          {u.disabled ? "Enable" : "Disable"}
+                        </Button>
+                        <AlertDialog open={confirmDelete === u.id} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={isMe || deleteUser.isPending}
+                              onClick={() => setConfirmDelete(u.id)}
+                            >
+                              <Trash2 className="mr-1 size-3.5" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="size-5 text-destructive" />
+                                Delete account?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove <strong>{u.email}</strong> and all their roles,
+                                business links and memberships. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteUser.mutate({ user_id: u.id })}
+                                disabled={deleteUser.isPending}
+                              >
+                                {deleteUser.isPending ? "Deleting…" : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
                     No user matches “{search}”.
                   </td>
                 </tr>
