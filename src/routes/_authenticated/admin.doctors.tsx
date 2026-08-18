@@ -127,7 +127,25 @@ function AdminDoctorsPage() {
   });
 
   const approve = useMutation({
-    mutationFn: async (args: { id: string; role: string; sections: string[] | null }) => {
+    mutationFn: async (args: {
+      id: string;
+      role: string;
+      sections: string[] | null;
+      ownBusiness?: boolean;
+      businessName?: string;
+    }) => {
+      if (args.ownBusiness) {
+        // Separate POS: the person becomes owner/Admin of a brand-new business,
+        // with no link to this business's data.
+        const { error } = await supabase.rpc("approve_access_request_new_business", {
+          _id: args.id,
+          _business_name: args.businessName || undefined,
+          _sections: args.sections ?? undefined,
+          _notes: undefined,
+        });
+        if (error) throw error;
+        return;
+      }
       if (!businessId) throw new Error("No business selected");
       const { error } = await supabase.rpc("approve_access_request", {
         _id: args.id,
@@ -138,6 +156,7 @@ function AdminDoctorsPage() {
       });
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast.success("Approved");
       qc.invalidateQueries({ queryKey: ["access-requests"] });
