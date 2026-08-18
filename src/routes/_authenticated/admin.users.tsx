@@ -285,6 +285,35 @@ function Page() {
               )}
             </tbody>
           </table>
+          <AlertDialog
+            open={!!confirmDisable}
+            onOpenChange={(open) => !open && setConfirmDisable(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {confirmDisable?.disabled ? "Disable account?" : "Enable account?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {confirmDisable?.disabled
+                    ? "The user will be banned from signing in and their business memberships will be marked inactive."
+                    : "The user will be allowed to sign in again and their business memberships will be reactivated."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setConfirmDisable(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() =>
+                    confirmDisable &&
+                    disableUser.mutate({ user_id: confirmDisable.id, disabled: confirmDisable.disabled })
+                  }
+                  disabled={disableUser.isPending}
+                >
+                  {disableUser.isPending ? "Saving…" : confirmDisable?.disabled ? "Disable" : "Enable"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>
