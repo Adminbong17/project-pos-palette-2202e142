@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+
 import {
   RX_OPTION_KINDS,
   useRxUserOptionSettings,
