@@ -116,7 +116,9 @@ export function AppSidebar() {
     // Platform-wide admin tools belong to the super admin only; a business
     // owner is an admin of their own business, not of the whole platform.
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
-      .filter((it) => (it.to === "/clinic-dashboard" ? clinicMode : true)),
+      .filter((it) =>
+        it.to === "/clinic-dashboard" || it.to === "/clinic-doctors" ? clinicMode : true,
+      ),
   }));
   const visibleSections = modeScoped
     .map((sec) => {

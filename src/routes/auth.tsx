@@ -30,7 +30,8 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [qualification, setQualification] = useState("");
-  const [requestedRole, setRequestedRole] = useState<"Doctor" | "Salesman">("Doctor");
+  const [requestedRole, setRequestedRole] = useState<"Doctor" | "Clinic" | "Salesman">("Doctor");
+  const [clinicName, setClinicName] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -61,7 +62,10 @@ function AuthPage() {
             email: email.trim(),
             full_name: name.trim() || null,
             phone: phone.trim() || null,
-            qualification: qualification.trim() || null,
+            qualification:
+              requestedRole === "Clinic"
+                ? clinicName.trim() || null
+                : qualification.trim() || null,
             requested_role: requestedRole,
           });
           if (reqErr && !`${reqErr.message}`.toLowerCase().includes("duplicate")) throw reqErr;
@@ -125,12 +129,24 @@ function AuthPage() {
               />
               <select
                 value={requestedRole}
-                onChange={(e) => setRequestedRole(e.target.value as "Doctor" | "Salesman")}
+                onChange={(e) =>
+                  setRequestedRole(e.target.value as "Doctor" | "Clinic" | "Salesman")
+                }
                 className={inputCls}
               >
                 <option value="Doctor">I am a Doctor (Prescriptions)</option>
+                <option value="Clinic">We are a Clinic (doctors + serial)</option>
                 <option value="Salesman">I am shop staff (POS)</option>
               </select>
+              {requestedRole === "Clinic" && (
+                <input
+                  required
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                  placeholder="Clinic name & address"
+                  className={inputCls}
+                />
+              )}
               {requestedRole === "Doctor" && (
                 <input
                   value={qualification}
