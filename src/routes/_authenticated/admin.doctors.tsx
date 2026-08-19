@@ -462,9 +462,12 @@ function AdminDoctorsPage() {
 type ApproveArgs = {
   role: string;
   sections: string[] | null;
-  ownBusiness?: boolean;
+  mode?: ApproveMode;
   businessName?: string;
 };
+
+// Modules a brand-new clinic gets: it manages doctors + the serial queue only.
+const CLINIC_DEFAULT_SECTIONS = ["clinic", "rx-queue"];
 
 // Default modules a brand-new shop (POS) owner gets — no prescription access
 // unless the super admin ticks it.
@@ -497,14 +500,22 @@ function PendingCard({
   onApprove: (args: ApproveArgs) => void;
   onReject: (notes: string | null) => void;
 }) {
-  const wantsPos = (req.requested_role || "Doctor") !== "Doctor";
-  const [role, setRole] = useState(req.requested_role || "Doctor");
+  const requested = req.requested_role || "Doctor";
+  const wantsClinic = requested === "Clinic";
+  const wantsPos = requested !== "Doctor" && !wantsClinic;
+  const [role, setRole] = useState(wantsClinic ? "Doctor" : requested);
   const [notes, setNotes] = useState("");
-  const [ownBusiness, setOwnBusiness] = useState(canCreateBusiness && wantsPos);
-  const [businessName, setBusinessName] = useState(req.full_name || "");
-  const [sections, setSections] = useState<string[]>(
-    wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+  const [mode, setMode] = useState<ApproveMode>(
+    !canCreateBusiness ? "existing" : wantsClinic ? "clinic" : wantsPos ? "own" : "existing",
   );
+  const [businessName, setBusinessName] = useState(
+    wantsClinic ? req.qualification || req.full_name || "" : req.full_name || "",
+  );
+  const [sections, setSections] = useState<string[]>(
+    wantsClinic ? CLINIC_DEFAULT_SECTIONS : wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+  );
+  const ownBusiness = mode === "own";
+  const clinic = mode === "clinic";
 
   const sectionOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -529,7 +540,7 @@ function PendingCard({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!ownBusiness && (
+          {mode === "existing" && (
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -545,17 +556,26 @@ function PendingCard({
             disabled={busy}
             onClick={() =>
               onApprove(
-                ownBusiness
+                clinic
                   ? {
-                      role: "Admin",
-                      sections: sections.length ? sections : POS_DEFAULT_SECTIONS,
-                      ownBusiness: true,
+                      role: "Clinic Admin",
+                      sections: sections.length ? sections : CLINIC_DEFAULT_SECTIONS,
+                      mode: "clinic",
                       businessName: businessName.trim(),
                     }
-                  : {
-                      role,
-                      sections: role === "Doctor" ? ["prescriptions"] : sections.length ? sections : null,
-                    },
+                  : ownBusiness
+                    ? {
+                        role: "Admin",
+                        sections: sections.length ? sections : POS_DEFAULT_SECTIONS,
+                        mode: "own",
+                        businessName: businessName.trim(),
+                      }
+                    : {
+                        role,
+                        sections:
+                          role === "Doctor" ? ["prescriptions"] : sections.length ? sections : null,
+                        mode: "existing",
+                      },
               )
             }
           >
@@ -573,27 +593,41 @@ function PendingCard({
       </div>
 
       {canCreateBusiness && (
-        <label className="mt-3 flex items-center gap-2 text-xs font-medium">
-          <input
-            type="checkbox"
-            className="size-3.5"
-            checked={ownBusiness}
-            onChange={(e) => setOwnBusiness(e.target.checked)}
-          />
-          Own separate POS (create a new business — no link to this business&apos;s data)
-        </label>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium">
+          {(
+            [
+              ["existing", "Join this business"],
+              ["own", "Own separate POS / business"],
+              ["clinic", "New Clinic (doctors + serial)"],
+            ] as [ApproveMode, string][]
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                className="size-3.5"
+                checked={mode === value}
+                onChange={() => {
+                  setMode(value);
+                  if (value === "clinic") setSections(CLINIC_DEFAULT_SECTIONS);
+                  else if (value === "own") setSections(POS_DEFAULT_SECTIONS);
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       )}
 
-      {ownBusiness && (
+      {(ownBusiness || clinic) && (
         <Input
           className="mt-2 h-8 text-xs"
-          placeholder="Shop / business name"
+          placeholder={clinic ? "Clinic name" : "Shop / business name"}
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
         />
       )}
 
-      {(ownBusiness || role !== "Doctor") && (
+      {(ownBusiness || clinic || role !== "Doctor") && (
         <div className="mt-2 rounded-md border border-border/60 p-2">
           <p className="mb-1 text-[11px] font-medium uppercase text-muted-foreground">
             Sections &amp; modules
@@ -628,11 +662,19 @@ function PendingCard({
 function DoctorCard({
   member,
   businessId,
+  assistants,
+  canMove,
+  moving,
+  onMoveOut,
   onSaveSections,
   onSaveIdentity,
 }: {
   member: Member;
   businessId: string | undefined;
+  assistants: AssistantRow[];
+  canMove: boolean;
+  moving: boolean;
+  onMoveOut: (businessName?: string) => void;
   onSaveSections: (next: string[] | null) => void;
   onSaveIdentity: (name: string, qualification: string) => void;
 }) {
@@ -664,6 +706,51 @@ function DoctorCard({
           </div>
           <div className="text-xs text-muted-foreground">{member.email}</div>
         </div>
+        {canMove && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={moving}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  `Move ${member.doctorName || member.name} (and their assistants) into their own separate business?`,
+                )
+              )
+                return;
+              onMoveOut(member.doctorName || member.name || undefined);
+            }}
+          >
+            <ArrowRightLeft className="h-4 w-4" /> Move to own business
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-3 rounded-md border border-border/60 p-2">
+        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase text-muted-foreground">
+          <Users className="h-3.5 w-3.5" /> Assistants under this doctor ({assistants.length})
+        </p>
+        {assistants.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No assistant yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {assistants.map((a) => (
+              <span
+                key={a.id}
+                className="flex items-center gap-1.5 rounded bg-muted/40 px-2 py-1"
+              >
+                <span className="font-medium">{a.name}</span>
+                <span className="text-muted-foreground">{a.username}</span>
+                {a.phone && <span className="text-muted-foreground">📞 {a.phone}</span>}
+                {a.chamber && (
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-3 w-3" /> {a.chamber}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
