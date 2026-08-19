@@ -149,6 +149,8 @@ function AppointmentsPage() {
     mutationFn: async () => {
       if (!businessId) throw new Error("No business");
       if (!form.patient_name.trim()) throw new Error("Patient name is required");
+      if (needsDoctorPick && !isAssistant && !doctorId)
+        throw new Error("Select which doctor this patient is for");
       const { data: auth } = await supabase.auth.getUser();
       const { error } = await supabase.from("rx_appointments").insert({
         business_id: businessId,
@@ -160,6 +162,7 @@ function AppointmentsPage() {
         appt_date: date,
         appt_time: form.appt_time || null,
         patient_type: form.patient_type || "new",
+        ...(doctorId && !isAssistant ? { doctor_id: doctorId } : {}),
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
