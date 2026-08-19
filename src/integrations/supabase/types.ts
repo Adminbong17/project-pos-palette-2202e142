@@ -2145,6 +2145,7 @@ export type Database = {
           id: string
           language: string
           last_name: string | null
+          phone: string | null
           updated_at: string
           username: string | null
         }
@@ -2158,6 +2159,7 @@ export type Database = {
           id: string
           language?: string
           last_name?: string | null
+          phone?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -2171,6 +2173,7 @@ export type Database = {
           id?: string
           language?: string
           last_name?: string | null
+          phone?: string | null
           updated_at?: string
           username?: string | null
         }
