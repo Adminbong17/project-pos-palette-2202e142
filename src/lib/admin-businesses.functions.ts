@@ -1,0 +1,139 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const SUPER_ADMIN_EMAIL = "admin@bongbangla.top";
+
+async function assertSuperAdmin(context: any) {
+  let email = String((context?.claims as any)?.email ?? "").toLowerCase();
+  if (!email) {
+    const { data } = await context.supabase.auth.getUser();
+    email = String(data?.user?.email ?? "").toLowerCase();
+  }
+  if (email !== SUPER_ADMIN_EMAIL) throw new Error("Only the super admin can do this");
+}
+
+export type BizMember = {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string | null;
+  sections: string[] | null;
+  is_active: boolean;
+};
+
+export type BizRow = {
+  id: string;
+  name: string;
+  kind: string;
+  clinic_mode: boolean;
+  owner_id: string | null;
+  owner_email: string | null;
+  members: BizMember[];
+};
+
+/** Every business on the platform with its members and module grants. */
+export const listBusinessesWithMembers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BizRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: businesses }, { data: members }, { data: profiles }, { data: roles }, { data: userRoles }] =
+      await Promise.all([
+        supabaseAdmin.from("businesses").select("id, name, biz_kind, clinic_mode, owner_id").order("name"),
+        supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
+        supabaseAdmin.from("profiles").select("id, email, first_name, last_name, doctor_name"),
+        supabaseAdmin.from("roles").select("id, name, business_id"),
+        supabaseAdmin.from("user_roles").select("user_id, role_id, business_id, allowed_sections"),
+      ]);
+
+    const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+    const roleById = new Map((roles ?? []).map((r: any) => [r.id, String(r.name ?? "").split("#")[0]]));
+
+    return (businesses ?? []).map((b: any) => {
+      const rows = (members ?? []).filter((m: any) => m.business_id === b.id);
+      const memberList: BizMember[] = rows.map((m: any) => {
+        const p: any = profileById.get(m.user_id) ?? {};
+        const ur: any = (userRoles ?? []).find(
+          (r: any) => r.user_id === m.user_id && r.business_id === b.id,
+        );
+        return {
+          user_id: m.user_id,
+          name:
+            p.doctor_name ||
+            [p.first_name, p.last_name].filter(Boolean).join(" ") ||
+            p.email ||
+            "—",
+          email: p.email ?? "—",
+          role: ur?.role_id ? (roleById.get(ur.role_id) ?? null) : null,
+          sections: (ur?.allowed_sections as string[] | null) ?? null,
+          is_active: !!m.is_active,
+        };
+      });
+      const owner: any = b.owner_id ? profileById.get(b.owner_id) : null;
+      return {
+        id: b.id,
+        name: b.name,
+        kind: b.biz_kind ?? "pos",
+        clinic_mode: !!b.clinic_mode,
+        owner_id: b.owner_id ?? null,
+        owner_email: owner?.email ?? null,
+        members: memberList.sort((a, z) => a.name.localeCompare(z.name)),
+      };
+    });
+  });
+
+/** Replace the module list of one member (null = full access). */
+export const setMemberSections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { business_id: string; user_id: string; sections: string[] | null }) => {
+    if (!data?.business_id || !data?.user_id) throw new Error("business_id and user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .update({ allowed_sections: data.sections })
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Give the same module list to every member of a business. */
+export const setBusinessSections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { business_id: string; sections: string[] | null }) => {
+    if (!data?.business_id) throw new Error("business_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .update({ allowed_sections: data.sections })
+      .eq("business_id", data.business_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Move a doctor (and the assistants under them) into their own business. */
+export const moveDoctorToOwnBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; business_name?: string }) => {
+    if (!data?.user_id) throw new Error("user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    // The SQL function checks auth.uid() itself, so it must run as the caller.
+    const { data: biz, error } = await context.supabase.rpc("move_doctor_to_own_business", {
+      _user_id: data.user_id,
+      _business_name: data.business_name?.trim() || undefined,
+    } as any);
+    if (error) throw new Error(error.message);
+    return { business_id: biz as unknown as string };
+  });
