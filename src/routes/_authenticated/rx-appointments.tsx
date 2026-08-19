@@ -322,6 +322,23 @@ function AppointmentsPage() {
               </select>
             )}
           </div>
+          {needsDoctorPick && !isAssistant && (
+            <div>
+              <Label className="mb-1.5 block text-xs">Doctor *</Label>
+              <select
+                value={doctorId}
+                onChange={(e) => setDoctorId(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+              >
+                <option value="">— Select doctor —</option>
+                {doctorList.map((d) => (
+                  <option key={d.user_id} value={d.user_id}>
+                    Dr. {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <Label className="mb-1.5 block text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
