@@ -6,7 +6,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
+  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -57,6 +57,8 @@ const sections = [
       { to: "/repair", label: "Repair", icon: Wrench, enabled: true, key: "repair" },
       { to: "/crm", label: "CRM", icon: HeartHandshake, enabled: true, key: "crm" },
       { to: "/hrm", label: "HRM", icon: Users, enabled: true, key: "hrm" },
+      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "clinic" },
+      { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic" },
       { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "prescriptions" },
       { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
@@ -69,6 +71,7 @@ const sections = [
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/rx-billing", label: "Rx Billing Admin", icon: Wallet, enabled: true, key: "__admin" },
+      { to: "/admin/businesses", superOnly: true, label: "Businesses & Modules", icon: Building2, enabled: true, key: "__admin" },
       { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
       { to: "/admin", superOnly: true, label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },

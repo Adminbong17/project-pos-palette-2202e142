@@ -29,5 +29,6 @@ export function useCurrentRole() {
     isAdmin: q.data === "Admin",
     isDoctor: q.data === "Doctor",
     isAssistant: q.data === "Assistant",
+    isClinicAdmin: q.data === "Clinic Admin",
   };
 }

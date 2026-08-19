@@ -39,6 +39,7 @@ import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedClinicDoctorsRouteImport } from './routes/_authenticated/clinic-doctors'
 import { Route as AuthenticatedClinicDashboardRouteImport } from './routes/_authenticated/clinic-dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
@@ -240,6 +241,12 @@ const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedClinicDoctorsRoute =
+  AuthenticatedClinicDoctorsRouteImport.update({
+    id: '/clinic-doctors',
+    path: '/clinic-doctors',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClinicDashboardRoute =
   AuthenticatedClinicDashboardRouteImport.update({
     id: '/clinic-dashboard',
@@ -512,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/rx': typeof RxRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
+  '/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/crm': typeof AuthenticatedCrmRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -589,6 +597,7 @@ export interface FileRoutesByTo {
   '/rx': typeof RxRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
+  '/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
@@ -661,6 +670,7 @@ export interface FileRoutesById {
   '/rx': typeof RxRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
+  '/_authenticated/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/crm': typeof AuthenticatedCrmRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -740,6 +750,7 @@ export interface FileRouteTypes {
     | '/rx'
     | '/accounts'
     | '/clinic-dashboard'
+    | '/clinic-doctors'
     | '/contacts'
     | '/crm'
     | '/dashboard'
@@ -817,6 +828,7 @@ export interface FileRouteTypes {
     | '/rx'
     | '/accounts'
     | '/clinic-dashboard'
+    | '/clinic-doctors'
     | '/contacts'
     | '/dashboard'
     | '/expenses'
@@ -888,6 +900,7 @@ export interface FileRouteTypes {
     | '/rx'
     | '/_authenticated/accounts'
     | '/_authenticated/clinic-dashboard'
+    | '/_authenticated/clinic-doctors'
     | '/_authenticated/contacts'
     | '/_authenticated/crm'
     | '/_authenticated/dashboard'
@@ -1179,6 +1192,13 @@ declare module '@tanstack/react-router' {
       path: '/contacts'
       fullPath: '/contacts'
       preLoaderRoute: typeof AuthenticatedContactsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clinic-doctors': {
+      id: '/_authenticated/clinic-doctors'
+      path: '/clinic-doctors'
+      fullPath: '/clinic-doctors'
+      preLoaderRoute: typeof AuthenticatedClinicDoctorsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clinic-dashboard': {
@@ -1673,6 +1693,7 @@ const AuthenticatedSettingsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedClinicDashboardRoute: typeof AuthenticatedClinicDashboardRoute
+  AuthenticatedClinicDoctorsRoute: typeof AuthenticatedClinicDoctorsRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -1712,6 +1733,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedClinicDashboardRoute: AuthenticatedClinicDashboardRoute,
+  AuthenticatedClinicDoctorsRoute: AuthenticatedClinicDoctorsRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedCrmRoute: AuthenticatedCrmRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
