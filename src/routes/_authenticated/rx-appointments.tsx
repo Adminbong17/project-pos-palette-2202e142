@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useMyStaffChamber } from "@/hooks/use-my-staff-chamber";
+import { useBusinessDoctors } from "@/hooks/use-business-doctors";
 import { dhakaToday } from "@/lib/appointments";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { patientTypeLabel } from "@/lib/token-print";
@@ -48,8 +49,14 @@ function AppointmentsPage() {
   // Staff accounts work at the location their doctor assigned — they cannot pick one.
   const lockedChamberId = isAssistant ? myStaff.data?.chamber_id ?? null : null;
 
+  const doctorsQ = useBusinessDoctors(businessId);
+  const doctorList = doctorsQ.data ?? [];
+  // A clinic (or any business with several doctors) must pick whose queue the patient joins.
+  const needsDoctorPick = doctorList.length > 1;
+
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
+  const [doctorId, setDoctorId] = useState<string>("");
   const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
   const [history, setHistory] = useState("");
   const [form, setForm] = useState({
@@ -142,6 +149,8 @@ function AppointmentsPage() {
     mutationFn: async () => {
       if (!businessId) throw new Error("No business");
       if (!form.patient_name.trim()) throw new Error("Patient name is required");
+      if (needsDoctorPick && !isAssistant && !doctorId)
+        throw new Error("Select which doctor this patient is for");
       const { data: auth } = await supabase.auth.getUser();
       const { error } = await supabase.from("rx_appointments").insert({
         business_id: businessId,
@@ -153,6 +162,7 @@ function AppointmentsPage() {
         appt_date: date,
         appt_time: form.appt_time || null,
         patient_type: form.patient_type || "new",
+        ...(doctorId && !isAssistant ? { doctor_id: doctorId } : {}),
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
@@ -312,6 +322,23 @@ function AppointmentsPage() {
               </select>
             )}
           </div>
+          {needsDoctorPick && !isAssistant && (
+            <div>
+              <Label className="mb-1.5 block text-xs">Doctor *</Label>
+              <select
+                value={doctorId}
+                onChange={(e) => setDoctorId(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-input px-3 text-sm"
+              >
+                <option value="">— Select doctor —</option>
+                {doctorList.map((d) => (
+                  <option key={d.user_id} value={d.user_id}>
+                    Dr. {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <Label className="mb-1.5 block text-xs">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
