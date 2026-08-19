@@ -49,8 +49,14 @@ function AppointmentsPage() {
   // Staff accounts work at the location their doctor assigned — they cannot pick one.
   const lockedChamberId = isAssistant ? myStaff.data?.chamber_id ?? null : null;
 
+  const doctorsQ = useBusinessDoctors(businessId);
+  const doctorList = doctorsQ.data ?? [];
+  // A clinic (or any business with several doctors) must pick whose queue the patient joins.
+  const needsDoctorPick = doctorList.length > 1;
+
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
+  const [doctorId, setDoctorId] = useState<string>("");
   const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
   const [history, setHistory] = useState("");
   const [form, setForm] = useState({
