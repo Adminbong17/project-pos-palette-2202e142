@@ -138,8 +138,13 @@ function AdminBusinessesPage() {
 
       {q.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : q.isError ? (
+        <p className="text-sm text-destructive">
+          {(q.error as any)?.message ?? "Could not load businesses"}
+        </p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No businesses match.</p>
+
       ) : (
         rows.map((b) => (
           <BusinessCard
