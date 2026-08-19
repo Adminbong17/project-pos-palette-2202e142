@@ -23,6 +23,8 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "crm", label: "CRM", path: "/crm" },
   { key: "hrm", label: "HRM", path: "/hrm" },
   { key: "prescriptions", label: "Doctor Dashboard", path: "/rx-dashboard" },
+  { key: "clinic", label: "Clinic Dashboard", path: "/clinic-dashboard" },
+  { key: "clinic", label: "Clinic Doctors", path: "/clinic-doctors" },
   { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
@@ -39,7 +41,10 @@ const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 const ALWAYS_ALLOWED = ["quick-box"];
 
 // Clinical-only keys: users limited to these never get POS/inventory extras.
-const CLINICAL_KEYS = ["prescriptions", "rx-queue"];
+const CLINICAL_KEYS = ["prescriptions", "rx-queue", "clinic"];
+
+// A clinic admin only manages doctors, assistants and the serial queue.
+const DEFAULT_CLINIC = ["clinic", "rx-queue"];
 
 // A "doctor" only needs the prescription module — no POS/inventory extras.
 export function isPrescriptionOnly(list: string[] | null) {
@@ -54,8 +59,8 @@ function withAlways(list: string[]) {
 
 export function useAllowedSections() {
   const { data: business } = useCurrentBusiness();
-  const { isAdmin, isDoctor, isAssistant, isLoading: roleLoading } = useCurrentRole();
-  const clinicalOnlyRole = isDoctor || isAssistant;
+  const { isAdmin, isDoctor, isAssistant, isClinicAdmin, isLoading: roleLoading } = useCurrentRole();
+  const clinicalOnlyRole = isDoctor || isAssistant || isClinicAdmin;
 
   const q = useQuery({
     queryKey: ["allowed-sections", business?.id],
@@ -95,7 +100,7 @@ export function useAllowedSections() {
   const hasExplicitGrant = Array.isArray(q.data) && q.data.length > 0;
   const sections =
     raw && clinicalOnlyRole && !hasExplicitGrant
-      ? ["prescriptions"]
+      ? (isClinicAdmin ? DEFAULT_CLINIC : ["prescriptions"])
       : raw;
 
 
@@ -117,6 +122,7 @@ export function isPathAllowed(pathname: string, sections: string[] | null) {
 // First landing path for a set of allowed sections (Assistant → Patient Queue).
 export function sectionHomePath(sections: string[] | null) {
   if (!sections || sections.length === 0) return "/dashboard";
+  if (sections.includes("clinic")) return "/clinic-dashboard";
   if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
     return "/rx-appointments";
   if (sections.includes("prescriptions")) return "/rx-dashboard";
