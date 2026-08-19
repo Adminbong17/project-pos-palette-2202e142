@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, X, Stethoscope, ClipboardCheck, Search } from "lucide-react";
+import { Check, X, Stethoscope, ClipboardCheck, Search, Users, MapPin, ArrowRightLeft } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { moveDoctorToOwnBusiness } from "@/lib/admin-businesses.functions";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -63,6 +65,17 @@ type Member = {
   doctorName: string;
   doctorQualification: string;
 };
+
+type AssistantRow = {
+  id: string;
+  doctor_id: string;
+  name: string;
+  username: string;
+  phone: string | null;
+  chamber: string | null;
+};
+
+type ApproveMode = "existing" | "own" | "clinic";
 
 function AdminDoctorsPage() {
   const { data: business } = useCurrentBusiness();
@@ -130,15 +143,52 @@ function AdminDoctorsPage() {
     },
   });
 
+  const assistants = useQuery({
+    queryKey: ["business-assistants", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const [{ data: staff }, { data: chambers }] = await Promise.all([
+        supabase
+          .from("rx_staff")
+          .select("id, doctor_id, name, username, phone, chamber_id, is_active")
+          .eq("business_id", businessId!)
+          .eq("is_active", true)
+          .order("name"),
+        supabase.from("rx_chambers").select("id, name").eq("business_id", businessId!),
+      ]);
+      const chamberById = new Map((chambers ?? []).map((c: any) => [c.id, c.name] as const));
+      return (staff ?? []).map((a: any) => ({
+        id: a.id,
+        doctor_id: a.doctor_id as string,
+        name: a.name as string,
+        username: a.username as string,
+        phone: (a.phone as string | null) ?? null,
+        chamber: a.chamber_id ? (chamberById.get(a.chamber_id) ?? null) : null,
+      })) as AssistantRow[];
+    },
+  });
+
   const approve = useMutation({
     mutationFn: async (args: {
       id: string;
       role: string;
       sections: string[] | null;
-      ownBusiness?: boolean;
+      mode?: ApproveMode;
       businessName?: string;
     }) => {
-      if (args.ownBusiness) {
+      if (args.mode === "clinic") {
+        // Clinic: a new clinic business with a Clinic Admin owner. The clinic
+        // adds its own doctors and their assistants, and takes serials.
+        const { error } = await supabase.rpc("approve_access_request_clinic", {
+          _id: args.id,
+          _clinic_name: args.businessName || undefined,
+          _sections: args.sections ?? undefined,
+          _notes: undefined,
+        });
+        if (error) throw error;
+        return;
+      }
+      if (args.mode === "own") {
         // Separate POS: the person becomes owner/Admin of a brand-new business,
         // with no link to this business's data.
         const { error } = await supabase.rpc("approve_access_request_new_business", {
@@ -197,6 +247,19 @@ function AdminDoctorsPage() {
       qc.invalidateQueries({ queryKey: ["allowed-sections", businessId] });
     }
   }
+
+  const moveDoctor = useServerFn(moveDoctorToOwnBusiness);
+
+  const moveOut = useMutation({
+    mutationFn: async (args: { user_id: string; business_name?: string }) =>
+      await moveDoctor({ data: args }),
+    onSuccess: () => {
+      toast.success("Doctor moved to their own business");
+      qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-assistants", businessId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not move this doctor"),
+  });
 
   async function saveDoctorIdentity(userId: string, name: string, qualification: string) {
     const { error } = await supabase
@@ -357,11 +420,34 @@ function AdminDoctorsPage() {
                 key={m.id}
                 member={m}
                 businessId={businessId}
+                assistants={(assistants.data ?? []).filter((a) => a.doctor_id === m.id)}
+                canMove={isSuperAdmin}
+                moving={moveOut.isPending}
+                onMoveOut={(name) => moveOut.mutate({ user_id: m.id, business_name: name })}
                 onSaveSections={(next) => saveSections(m.id, next)}
                 onSaveIdentity={(n, q) => saveDoctorIdentity(m.id, n, q)}
               />
             ))
           )}
+          {(() => {
+            const doctorIds = new Set(doctors.map((d) => d.id));
+            const orphans = (assistants.data ?? []).filter((a) => !doctorIds.has(a.doctor_id));
+            if (!orphans.length) return null;
+            return (
+              <div className="rounded-lg border border-dashed border-border/60 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" /> Unassigned assistants ({orphans.length})
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {orphans.map((a) => (
+                    <span key={a.id} className="rounded bg-muted/40 px-2 py-1">
+                      {a.name} · {a.username}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {others.length > 0 && (
             <p className="text-xs text-muted-foreground">
               {others.length} other member(s) (Admin / Salesman) are managed in Users &amp; Roles.
