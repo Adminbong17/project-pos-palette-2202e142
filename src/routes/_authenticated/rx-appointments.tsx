@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useMyStaffChamber } from "@/hooks/use-my-staff-chamber";
+import { useBusinessDoctors } from "@/hooks/use-business-doctors";
 import { dhakaToday } from "@/lib/appointments";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { patientTypeLabel } from "@/lib/token-print";
