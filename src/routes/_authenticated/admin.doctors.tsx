@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, X, Stethoscope, ClipboardCheck, Search } from "lucide-react";
+import { Check, X, Stethoscope, ClipboardCheck, Search, Users, MapPin, ArrowRightLeft } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { moveDoctorToOwnBusiness } from "@/lib/admin-businesses.functions";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -63,6 +65,17 @@ type Member = {
   doctorName: string;
   doctorQualification: string;
 };
+
+type AssistantRow = {
+  id: string;
+  doctor_id: string;
+  name: string;
+  username: string;
+  phone: string | null;
+  chamber: string | null;
+};
+
+type ApproveMode = "existing" | "own" | "clinic";
 
 function AdminDoctorsPage() {
   const { data: business } = useCurrentBusiness();
@@ -130,15 +143,52 @@ function AdminDoctorsPage() {
     },
   });
 
+  const assistants = useQuery({
+    queryKey: ["business-assistants", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const [{ data: staff }, { data: chambers }] = await Promise.all([
+        supabase
+          .from("rx_staff")
+          .select("id, doctor_id, name, username, phone, chamber_id, is_active")
+          .eq("business_id", businessId!)
+          .eq("is_active", true)
+          .order("name"),
+        supabase.from("rx_chambers").select("id, name").eq("business_id", businessId!),
+      ]);
+      const chamberById = new Map((chambers ?? []).map((c: any) => [c.id, c.name] as const));
+      return (staff ?? []).map((a: any) => ({
+        id: a.id,
+        doctor_id: a.doctor_id as string,
+        name: a.name as string,
+        username: a.username as string,
+        phone: (a.phone as string | null) ?? null,
+        chamber: a.chamber_id ? (chamberById.get(a.chamber_id) ?? null) : null,
+      })) as AssistantRow[];
+    },
+  });
+
   const approve = useMutation({
     mutationFn: async (args: {
       id: string;
       role: string;
       sections: string[] | null;
-      ownBusiness?: boolean;
+      mode?: ApproveMode;
       businessName?: string;
     }) => {
-      if (args.ownBusiness) {
+      if (args.mode === "clinic") {
+        // Clinic: a new clinic business with a Clinic Admin owner. The clinic
+        // adds its own doctors and their assistants, and takes serials.
+        const { error } = await supabase.rpc("approve_access_request_clinic", {
+          _id: args.id,
+          _clinic_name: args.businessName || undefined,
+          _sections: args.sections ?? undefined,
+          _notes: undefined,
+        });
+        if (error) throw error;
+        return;
+      }
+      if (args.mode === "own") {
         // Separate POS: the person becomes owner/Admin of a brand-new business,
         // with no link to this business's data.
         const { error } = await supabase.rpc("approve_access_request_new_business", {
@@ -197,6 +247,19 @@ function AdminDoctorsPage() {
       qc.invalidateQueries({ queryKey: ["allowed-sections", businessId] });
     }
   }
+
+  const moveDoctor = useServerFn(moveDoctorToOwnBusiness);
+
+  const moveOut = useMutation({
+    mutationFn: async (args: { user_id: string; business_name?: string }) =>
+      await moveDoctor({ data: args }),
+    onSuccess: () => {
+      toast.success("Doctor moved to their own business");
+      qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-assistants", businessId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not move this doctor"),
+  });
 
   async function saveDoctorIdentity(userId: string, name: string, qualification: string) {
     const { error } = await supabase
@@ -357,11 +420,34 @@ function AdminDoctorsPage() {
                 key={m.id}
                 member={m}
                 businessId={businessId}
+                assistants={(assistants.data ?? []).filter((a) => a.doctor_id === m.id)}
+                canMove={isSuperAdmin}
+                moving={moveOut.isPending}
+                onMoveOut={(name) => moveOut.mutate({ user_id: m.id, business_name: name })}
                 onSaveSections={(next) => saveSections(m.id, next)}
                 onSaveIdentity={(n, q) => saveDoctorIdentity(m.id, n, q)}
               />
             ))
           )}
+          {(() => {
+            const doctorIds = new Set(doctors.map((d) => d.id));
+            const orphans = (assistants.data ?? []).filter((a) => !doctorIds.has(a.doctor_id));
+            if (!orphans.length) return null;
+            return (
+              <div className="rounded-lg border border-dashed border-border/60 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" /> Unassigned assistants ({orphans.length})
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {orphans.map((a) => (
+                    <span key={a.id} className="rounded bg-muted/40 px-2 py-1">
+                      {a.name} · {a.username}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {others.length > 0 && (
             <p className="text-xs text-muted-foreground">
               {others.length} other member(s) (Admin / Salesman) are managed in Users &amp; Roles.
@@ -376,9 +462,12 @@ function AdminDoctorsPage() {
 type ApproveArgs = {
   role: string;
   sections: string[] | null;
-  ownBusiness?: boolean;
+  mode?: ApproveMode;
   businessName?: string;
 };
+
+// Modules a brand-new clinic gets: it manages doctors + the serial queue only.
+const CLINIC_DEFAULT_SECTIONS = ["clinic", "rx-queue"];
 
 // Default modules a brand-new shop (POS) owner gets — no prescription access
 // unless the super admin ticks it.
@@ -411,14 +500,22 @@ function PendingCard({
   onApprove: (args: ApproveArgs) => void;
   onReject: (notes: string | null) => void;
 }) {
-  const wantsPos = (req.requested_role || "Doctor") !== "Doctor";
-  const [role, setRole] = useState(req.requested_role || "Doctor");
+  const requested = req.requested_role || "Doctor";
+  const wantsClinic = requested === "Clinic";
+  const wantsPos = requested !== "Doctor" && !wantsClinic;
+  const [role, setRole] = useState(wantsClinic ? "Doctor" : requested);
   const [notes, setNotes] = useState("");
-  const [ownBusiness, setOwnBusiness] = useState(canCreateBusiness && wantsPos);
-  const [businessName, setBusinessName] = useState(req.full_name || "");
-  const [sections, setSections] = useState<string[]>(
-    wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+  const [mode, setMode] = useState<ApproveMode>(
+    !canCreateBusiness ? "existing" : wantsClinic ? "clinic" : wantsPos ? "own" : "existing",
   );
+  const [businessName, setBusinessName] = useState(
+    wantsClinic ? req.qualification || req.full_name || "" : req.full_name || "",
+  );
+  const [sections, setSections] = useState<string[]>(
+    wantsClinic ? CLINIC_DEFAULT_SECTIONS : wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+  );
+  const ownBusiness = mode === "own";
+  const clinic = mode === "clinic";
 
   const sectionOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -443,7 +540,7 @@ function PendingCard({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!ownBusiness && (
+          {mode === "existing" && (
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -459,17 +556,26 @@ function PendingCard({
             disabled={busy}
             onClick={() =>
               onApprove(
-                ownBusiness
+                clinic
                   ? {
-                      role: "Admin",
-                      sections: sections.length ? sections : POS_DEFAULT_SECTIONS,
-                      ownBusiness: true,
+                      role: "Clinic Admin",
+                      sections: sections.length ? sections : CLINIC_DEFAULT_SECTIONS,
+                      mode: "clinic",
                       businessName: businessName.trim(),
                     }
-                  : {
-                      role,
-                      sections: role === "Doctor" ? ["prescriptions"] : sections.length ? sections : null,
-                    },
+                  : ownBusiness
+                    ? {
+                        role: "Admin",
+                        sections: sections.length ? sections : POS_DEFAULT_SECTIONS,
+                        mode: "own",
+                        businessName: businessName.trim(),
+                      }
+                    : {
+                        role,
+                        sections:
+                          role === "Doctor" ? ["prescriptions"] : sections.length ? sections : null,
+                        mode: "existing",
+                      },
               )
             }
           >
@@ -487,27 +593,41 @@ function PendingCard({
       </div>
 
       {canCreateBusiness && (
-        <label className="mt-3 flex items-center gap-2 text-xs font-medium">
-          <input
-            type="checkbox"
-            className="size-3.5"
-            checked={ownBusiness}
-            onChange={(e) => setOwnBusiness(e.target.checked)}
-          />
-          Own separate POS (create a new business — no link to this business&apos;s data)
-        </label>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium">
+          {(
+            [
+              ["existing", "Join this business"],
+              ["own", "Own separate POS / business"],
+              ["clinic", "New Clinic (doctors + serial)"],
+            ] as [ApproveMode, string][]
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                className="size-3.5"
+                checked={mode === value}
+                onChange={() => {
+                  setMode(value);
+                  if (value === "clinic") setSections(CLINIC_DEFAULT_SECTIONS);
+                  else if (value === "own") setSections(POS_DEFAULT_SECTIONS);
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       )}
 
-      {ownBusiness && (
+      {(ownBusiness || clinic) && (
         <Input
           className="mt-2 h-8 text-xs"
-          placeholder="Shop / business name"
+          placeholder={clinic ? "Clinic name" : "Shop / business name"}
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
         />
       )}
 
-      {(ownBusiness || role !== "Doctor") && (
+      {(ownBusiness || clinic || role !== "Doctor") && (
         <div className="mt-2 rounded-md border border-border/60 p-2">
           <p className="mb-1 text-[11px] font-medium uppercase text-muted-foreground">
             Sections &amp; modules
@@ -542,11 +662,19 @@ function PendingCard({
 function DoctorCard({
   member,
   businessId,
+  assistants,
+  canMove,
+  moving,
+  onMoveOut,
   onSaveSections,
   onSaveIdentity,
 }: {
   member: Member;
   businessId: string | undefined;
+  assistants: AssistantRow[];
+  canMove: boolean;
+  moving: boolean;
+  onMoveOut: (businessName?: string) => void;
   onSaveSections: (next: string[] | null) => void;
   onSaveIdentity: (name: string, qualification: string) => void;
 }) {
@@ -578,6 +706,51 @@ function DoctorCard({
           </div>
           <div className="text-xs text-muted-foreground">{member.email}</div>
         </div>
+        {canMove && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={moving}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  `Move ${member.doctorName || member.name} (and their assistants) into their own separate business?`,
+                )
+              )
+                return;
+              onMoveOut(member.doctorName || member.name || undefined);
+            }}
+          >
+            <ArrowRightLeft className="h-4 w-4" /> Move to own business
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-3 rounded-md border border-border/60 p-2">
+        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase text-muted-foreground">
+          <Users className="h-3.5 w-3.5" /> Assistants under this doctor ({assistants.length})
+        </p>
+        {assistants.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No assistant yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {assistants.map((a) => (
+              <span
+                key={a.id}
+                className="flex items-center gap-1.5 rounded bg-muted/40 px-2 py-1"
+              >
+                <span className="font-medium">{a.name}</span>
+                <span className="text-muted-foreground">{a.username}</span>
+                {a.phone && <span className="text-muted-foreground">📞 {a.phone}</span>}
+                {a.chamber && (
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-3 w-3" /> {a.chamber}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
