@@ -377,8 +377,17 @@ function DoctorBlock({
   const addStaff = useServerFn(createRxStaff);
   const setStaffPw = useServerFn(setRxStaffPassword);
   const dropStaff = useServerFn(removeRxStaff);
+  const editDoctor = useServerFn(updateClinicDoctor);
+  const dropDoctor = useServerFn(removeClinicDoctor);
+  const qcDoc = useQueryClient();
 
   const [pw, setPw] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [docForm, setDocForm] = useState({
+    name: doctor.name,
+    qualification: doctor.qualification,
+  });
+  const [docBusy, setDocBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [staffForm, setStaffForm] = useState({
     name: "",
