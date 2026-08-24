@@ -95,6 +95,28 @@ function RxBillingPage() {
     }
   }
 
+  if (clinicFunded) {
+    return (
+      <div className="space-y-4 p-4 sm:p-6">
+        <h1 className="font-display text-2xl font-semibold">Rx Credits</h1>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Wallet className="h-4 w-4 text-primary" /> Credits from your clinic
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <p className="text-2xl font-semibold">{isLoading ? "…" : state.credits}</p>
+            <p className="text-xs text-muted-foreground">
+              You are under a clinic, so your clinic provides your prescription credits — there is no
+              platform bill for you. Ask your clinic admin to add more when they run out.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
