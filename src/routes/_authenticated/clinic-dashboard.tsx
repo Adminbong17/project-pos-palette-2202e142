@@ -12,6 +12,7 @@ import { dhakaToday } from "@/lib/appointments";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { RxBillingSummaryCard } from "@/components/rx-billing-summary-card";
 
 export const Route = createFileRoute("/_authenticated/clinic-dashboard")({
   head: () => ({
