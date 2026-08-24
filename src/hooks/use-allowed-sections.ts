@@ -37,6 +37,10 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "prescriptions", label: "My Staff", path: "/rx-staff" },
   { key: "rx-queue", label: "Patient Queue", path: "/rx-appointments" },
   { key: "prescriptions", label: "Rx Billing", path: "/rx-billing" },
+  // Clinic / doctor accounts manage their own name, address and SMS number.
+  { key: "clinic", label: "Settings", path: "/settings/business" },
+  { key: "prescriptions", label: "Settings", path: "/settings/business" },
+
 
 ];
 
