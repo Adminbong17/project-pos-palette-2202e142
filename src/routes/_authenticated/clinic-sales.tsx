@@ -213,6 +213,12 @@ function ClinicSalesPage() {
     );
   }, [history.data, historySearch]);
 
+  const printHeader = {
+    businessName: (business as any)?.name ?? null,
+    address: (business as any)?.address ?? null,
+    phone: (business as any)?.notify_phone ?? null,
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-full overflow-x-hidden">
       <div className="flex items-start justify-between gap-2">
@@ -220,10 +226,46 @@ function ClinicSalesPage() {
           <h1 className="font-display text-2xl font-semibold">Clinic Sales</h1>
           <p className="text-sm text-muted-foreground">Sell clinic services & products with discount.</p>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> {save.isPending ? "Saving…" : "Save sale"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <PrintSizeButton
+            label="Print bill"
+            defaultSize="80mm"
+            onPrint={(size) =>
+              printClinicSale(
+                {
+                  invoice_no: nextInvoiceNo,
+                  sale_date: new Date(date).toISOString(),
+                  patient_name: patientName || null,
+                  patient_phone: patientPhone || null,
+                  ref_doctor_name: refDoctor || null,
+                  notes: notes || null,
+                  subtotal,
+                  discount_amount: Number(billDiscount || 0),
+                  total,
+                  paid: Number(paid || 0),
+                  lines: lines
+                    .filter((l) => l.name.trim())
+                    .map((l) => ({
+                      name: l.name,
+                      quantity: Number(l.quantity || 0),
+                      unit_price: Number(l.unit_price || 0),
+                      line_total: Math.max(
+                        Number(l.quantity || 0) * Number(l.unit_price || 0) - Number(l.discount || 0),
+                        0,
+                      ),
+                    })),
+                },
+                printHeader,
+                size,
+              )
+            }
+          />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> {save.isPending ? "Saving…" : "Save sale"}
+          </Button>
+        </div>
       </div>
+
 
       <div className="rounded-2xl border border-border/60 bg-card p-4 grid gap-3 sm:grid-cols-3">
         <label className="block">
