@@ -542,6 +542,7 @@ export type Database = {
       businesses: {
         Row: {
           accounting_method: string
+          address: string | null
           biz_kind: string
           clinic_mode: boolean
           clinic_type: string
@@ -573,6 +574,7 @@ export type Database = {
         }
         Insert: {
           accounting_method?: string
+          address?: string | null
           biz_kind?: string
           clinic_mode?: boolean
           clinic_type?: string
@@ -604,6 +606,7 @@ export type Database = {
         }
         Update: {
           accounting_method?: string
+          address?: string | null
           biz_kind?: string
           clinic_mode?: boolean
           clinic_type?: string
