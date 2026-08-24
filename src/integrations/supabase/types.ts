@@ -559,6 +559,7 @@ export type Database = {
           enable_sub_category: boolean
           fy_start_month: number
           id: string
+          is_rx_master: boolean
           logo: string | null
           name: string
           notify_phone: string | null
@@ -592,6 +593,7 @@ export type Database = {
           enable_sub_category?: boolean
           fy_start_month?: number
           id?: string
+          is_rx_master?: boolean
           logo?: string | null
           name: string
           notify_phone?: string | null
@@ -625,6 +627,7 @@ export type Database = {
           enable_sub_category?: boolean
           fy_start_month?: number
           id?: string
+          is_rx_master?: boolean
           logo?: string | null
           name?: string
           notify_phone?: string | null
@@ -4600,6 +4603,13 @@ export type Database = {
       rx_grant_credits: {
         Args: { _account_id: string; _delta: number; _reason?: string }
         Returns: number
+      }
+      rx_master_options: {
+        Args: { _kind: string; _limit?: number }
+        Returns: {
+          id: string
+          name: string
+        }[]
       }
       rx_owner_doctor: {
         Args: { _business_id: string; _user_id: string }
