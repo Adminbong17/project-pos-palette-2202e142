@@ -475,8 +475,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("chief_complaints").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("cc", 2000),
+        supabase.from("chief_complaints").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("cc", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -521,8 +521,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("investigations").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("investigation", 2000),
+        supabase.from("investigations").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("investigation", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -549,8 +549,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_frequencies").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("frequency", 2000),
+        supabase.from("rx_frequencies").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("frequency", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -577,8 +577,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_instructions").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("instruction", 2000),
+        supabase.from("rx_instructions").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("instruction", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -605,8 +605,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_advices").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("advice", 2000),
+        supabase.from("rx_advices").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("advice", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -659,7 +659,7 @@ function PrescriptionsPage() {
       }
       // Shared medicine library curated by the super admin — available to every
       // doctor even when their own business has no products yet.
-      const master = await fetchMasterOptions("medicine", 5000);
+      const master = await fetchMasterOptions("medicine", 20000);
       for (const m of master) {
         const k = m.name.trim().toLowerCase();
         if (!k || seen.has(k)) continue;
