@@ -68,6 +68,11 @@ const CLINIC_STAFF_ROLES: { value: string; label: string; sections: string[] }[]
     sections: ["rx-queue", "clinic-sales"],
   },
   {
+    value: "Plans & Billing",
+    label: "Plans & Billing — treatment plans + sales",
+    sections: ["clinic-plans", "clinic-sales"],
+  },
+  {
     value: "Store",
     label: "Store — products & services list",
     sections: ["clinic-services"],
