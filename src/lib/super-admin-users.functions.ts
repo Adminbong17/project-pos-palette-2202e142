@@ -163,6 +163,8 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
       .eq("owner_id", data.user_id);
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
-    if (error) throw new Error(error.message);
+    // Already gone (e.g. a previous partial delete) — clean up leftovers and succeed.
+    if (error && !/not found/i.test(error.message)) throw new Error(error.message);
+    await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
     return { ok: true };
   });
