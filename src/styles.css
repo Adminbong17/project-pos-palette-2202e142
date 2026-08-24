@@ -148,3 +148,78 @@
     font-weight: 700;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Colourful panel system
+   Every card / panel surface gets a distinct, rotating colour tone
+   (tinted gradient, matching border + top accent bar + hover lift)
+   so dense screens stay readable and feel lively instead of flat.
+   ────────────────────────────────────────────────────────────── */
+
+@layer components {
+  [class*="bg-card"][class*="rounded-2xl"],
+  [class*="bg-card"][class*="rounded-xl"] {
+    --panel-hue: 250;
+    --panel-chroma: 0.03;
+    background-image: linear-gradient(
+      160deg,
+      oklch(0.975 var(--panel-chroma) var(--panel-hue)),
+      oklch(1 0 0) 70%
+    );
+    border-color: oklch(0.88 calc(var(--panel-chroma) * 1.6) var(--panel-hue)) !important;
+    box-shadow:
+      inset 0 3px 0 0 oklch(0.66 0.15 var(--panel-hue)),
+      0 10px 26px -18px oklch(0.5 0.12 var(--panel-hue) / 0.65);
+    transition: transform 160ms ease, box-shadow 200ms ease;
+  }
+
+  [class*="bg-card"][class*="rounded-2xl"]:hover,
+  [class*="bg-card"][class*="rounded-xl"]:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 3px 0 0 oklch(0.66 0.15 var(--panel-hue)),
+      0 18px 34px -20px oklch(0.5 0.14 var(--panel-hue) / 0.8);
+  }
+
+  /* Rotating tones across sibling panels */
+  [class*="bg-card"]:nth-child(6n + 1) { --panel-hue: 150; }
+  [class*="bg-card"]:nth-child(6n + 2) { --panel-hue: 232; }
+  [class*="bg-card"]:nth-child(6n + 3) { --panel-hue: 300; }
+  [class*="bg-card"]:nth-child(6n + 4) { --panel-hue: 55; }
+  [class*="bg-card"]:nth-child(6n + 5) { --panel-hue: 25; }
+  [class*="bg-card"]:nth-child(6n + 6) { --panel-hue: 195; }
+
+  /* Slightly airier spacing so the colours have room to breathe */
+  [class*="bg-card"][class*="rounded-2xl"] > * + * {
+    margin-top: 0.125rem;
+  }
+
+  /* Nested panels stay calm (no double accent bar) */
+  [class*="bg-card"] [class*="bg-card"][class*="rounded-xl"],
+  [class*="bg-card"] [class*="bg-card"][class*="rounded-2xl"] {
+    box-shadow: none;
+    background-image: linear-gradient(
+      160deg,
+      oklch(0.985 0.02 var(--panel-hue)),
+      oklch(1 0 0) 80%
+    );
+  }
+  [class*="bg-card"] [class*="bg-card"]:hover { transform: none; }
+
+  /* Keep dialogs, dropdowns, sheets and print sheets untouched */
+  [role="dialog"] [class*="bg-card"],
+  [role="menu"] [class*="bg-card"],
+  [data-radix-popper-content-wrapper] [class*="bg-card"] {
+    background-image: none;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+@media print {
+  [class*="bg-card"] {
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
