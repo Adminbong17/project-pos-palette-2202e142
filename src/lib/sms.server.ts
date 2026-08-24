@@ -40,11 +40,26 @@ function sendUrl(cfg: SmsConfig, phone: string, message: string) {
   const q = new URLSearchParams({
     apikey: cfg.api_key,
     secretkey: cfg.secret_key,
-    callerID: cfg.caller_id,
     toUser: phone,
     messageContent: message,
   });
+  // An empty callerID makes the gateway answer "114 Inappropriate request
+  // parameter", so the parameter is only sent when a sender ID is configured.
+  if (cfg.caller_id) q.set("callerID", cfg.caller_id);
   return `${root}?${q.toString()}`;
+}
+
+/** Turns the gateway's numeric status into something a human can act on. */
+function explain(status: string | undefined, text: string | undefined) {
+  const map: Record<string, string> = {
+    "101": "Wrong API key or secret key",
+    "102": "Account is inactive or expired",
+    "103": "Not enough SMS balance",
+    "104": "Sender / caller ID is not approved for this account",
+    "114": "Gateway rejected a parameter — check the Sender / caller ID and API base URL",
+  };
+  const s = String(status ?? "");
+  return map[s] ?? text ?? (s ? `Gateway error ${s}` : "Sending failed");
 }
 
 /** Bangladeshi numbers are normalised to 880XXXXXXXXXX. */
