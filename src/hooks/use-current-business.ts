@@ -12,6 +12,7 @@ export type Business = {
   clinic_mode?: boolean | null;
   clinic_type?: "general" | "dental" | null;
   notify_phone?: string | null;
+  address?: string | null;
 };
 
 export function useCurrentBusiness() {
