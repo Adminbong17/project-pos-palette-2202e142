@@ -175,6 +175,7 @@ function AdminDoctorsPage() {
       sections: string[] | null;
       mode?: ApproveMode;
       businessName?: string;
+      clinicType?: "general" | "dental";
     }) => {
       if (args.mode === "clinic") {
         // Clinic: a new clinic business with a Clinic Admin owner. The clinic
@@ -184,7 +185,8 @@ function AdminDoctorsPage() {
           _clinic_name: args.businessName || undefined,
           _sections: args.sections ?? undefined,
           _notes: undefined,
-        });
+          _clinic_type: args.clinicType ?? "general",
+        } as any);
         if (error) throw error;
         return;
       }
@@ -464,6 +466,7 @@ type ApproveArgs = {
   sections: string[] | null;
   mode?: ApproveMode;
   businessName?: string;
+  clinicType?: "general" | "dental";
 };
 
 // Modules a brand-new clinic gets: it manages doctors + the serial queue only.
@@ -511,6 +514,7 @@ function PendingCard({
   const [businessName, setBusinessName] = useState(
     wantsClinic ? req.qualification || req.full_name || "" : req.full_name || "",
   );
+  const [clinicType, setClinicType] = useState<"general" | "dental">("general");
   const [sections, setSections] = useState<string[]>(
     wantsClinic ? CLINIC_DEFAULT_SECTIONS : wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
   );
@@ -562,6 +566,7 @@ function PendingCard({
                       sections: sections.length ? sections : CLINIC_DEFAULT_SECTIONS,
                       mode: "clinic",
                       businessName: businessName.trim(),
+                      clinicType,
                     }
                   : ownBusiness
                     ? {
@@ -611,6 +616,28 @@ function PendingCard({
                   if (value === "clinic") setSections(CLINIC_DEFAULT_SECTIONS);
                   else if (value === "own") setSections(POS_DEFAULT_SECTIONS);
                 }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
+
+      {clinic && (
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-medium">
+          <span className="text-muted-foreground">Clinic mode:</span>
+          {(
+            [
+              ["general", "General mode"],
+              ["dental", "Dental mode"],
+            ] as ["general" | "dental", string][]
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                className="size-3.5"
+                checked={clinicType === value}
+                onChange={() => setClinicType(value)}
               />
               {label}
             </label>
