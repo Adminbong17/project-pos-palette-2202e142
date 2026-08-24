@@ -18,7 +18,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useBusinessDoctors } from "@/hooks/use-business-doctors";
-import { sendPlanPaymentSms } from "@/lib/clinic-plans.functions";
+import { sendPlanCreatedSms, sendPlanPaymentSms } from "@/lib/clinic-plans.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +99,7 @@ function ClinicPlansPage() {
   const qc = useQueryClient();
   const doctors = useBusinessDoctors(businessId);
   const sendSms = useServerFn(sendPlanPaymentSms);
+  const sendCreatedSms = useServerFn(sendPlanCreatedSms);
 
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -269,6 +270,13 @@ function ClinicPlansPage() {
     },
     onSuccess: (planId) => {
       toast.success("Treatment plan created");
+      // Notify the clinic admin number with the plan summary.
+      sendCreatedSms({ data: { plan_id: planId } })
+        .then((r: any) => {
+          if (r?.status === "sent") toast.success("Plan summary SMS sent to clinic admin");
+          else if (r?.status === "no_phone") toast.message("No clinic SMS number set in Settings");
+        })
+        .catch(() => toast.error("Plan summary SMS could not be sent"));
       setCart([]);
       setForm({
         patient_name: "",
