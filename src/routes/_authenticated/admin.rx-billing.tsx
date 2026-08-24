@@ -58,6 +58,7 @@ type Account = {
 function AdminRxBillingPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const businessId = business?.id;
   const qc = useQueryClient();
   const [month, setMonth] = useState("");
