@@ -27,7 +27,7 @@ function SettingsLayout() {
         <p className="text-sm text-muted-foreground">Manage your business configuration and master data.</p>
       </div>
       <nav className="flex flex-wrap gap-1 border-b border-border/60">
-        {tabs.map((t) => {
+        {visibleTabs.map((t) => {
           const active = pathname === t.to;
           return (
             <Link key={t.to} to={t.to}
