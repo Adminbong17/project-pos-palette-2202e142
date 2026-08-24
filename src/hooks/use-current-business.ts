@@ -10,6 +10,7 @@ export type Business = {
   logo: string | null;
   time_zone: string;
   clinic_mode?: boolean | null;
+  clinic_type?: "general" | "dental" | null;
 };
 
 export function useCurrentBusiness() {
@@ -39,7 +40,7 @@ export function useCurrentBusiness() {
 
       const { data: biz } = await supabase
         .from("businesses")
-        .select("id, name, owner_id, currency_id, sku_prefix, logo, time_zone, clinic_mode")
+        .select("id, name, owner_id, currency_id, sku_prefix, logo, time_zone, clinic_mode, clinic_type")
         .eq("id", bizId)
         .maybeSingle();
       return (biz as Business) ?? null;
