@@ -3,7 +3,16 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Stethoscope, UserPlus, KeyRound, Users, Search, MapPin } from "lucide-react";
+import {
+  Stethoscope,
+  UserPlus,
+  KeyRound,
+  Users,
+  Search,
+  MapPin,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
