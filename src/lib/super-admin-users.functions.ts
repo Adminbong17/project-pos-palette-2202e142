@@ -155,6 +155,13 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
     await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
     await supabaseAdmin.from("business_users").delete().eq("user_id", data.user_id);
 
+    // businesses.owner_id is NOT NULL with ON DELETE RESTRICT — hand ownership
+    // to the super admin doing the deletion so the auth user can be removed.
+    await supabaseAdmin
+      .from("businesses")
+      .update({ owner_id: context.userId } as never)
+      .eq("owner_id", data.user_id);
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
