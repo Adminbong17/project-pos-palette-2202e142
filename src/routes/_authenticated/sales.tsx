@@ -133,7 +133,7 @@ function SalesPage() {
       const [txRes, linesRes, bizRes] = await Promise.all([
         supabase.from("transactions").select("id, invoice_no, ref_no, transaction_date, final_total, discount_amount, total_paid, location_id, contact:contacts(name), location:business_locations(name, landmark, city, state, country, zip_code, mobile, alternate_number)").eq("id", saleId).single(),
         supabase.from("transaction_sell_lines").select("quantity, unit_price, product:products(name), variation:variations(name, sub_sku)").eq("transaction_id", saleId),
-        supabase.from("businesses").select("name").eq("id", business.id).single(),
+        supabase.from("businesses").select("name, address, notify_phone").eq("id", business.id).single(),
       ]);
       if (txRes.error) throw txRes.error;
       if (linesRes.error) throw linesRes.error;
