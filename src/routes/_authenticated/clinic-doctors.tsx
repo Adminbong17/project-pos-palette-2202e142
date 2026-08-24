@@ -756,6 +756,41 @@ function ClinicStaffCard({
                       Remove
                     </Button>
                   </div>
+                  {editing?.id === s.id && (
+                    <div className="w-full space-y-2 rounded-md border border-border bg-background/60 p-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Roles (one or more)
+                      </p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        {CLINIC_STAFF_ROLES.map((r) => (
+                          <label key={r.value} className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 accent-primary"
+                              checked={editing.roles.includes(r.value)}
+                              onChange={() =>
+                                setEditing({ ...editing, roles: toggle(editing.roles, r.value) })
+                              }
+                            />
+                            {r.label}
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-[11px]" disabled={busy} onClick={saveRoles}>
+                          Save roles
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[11px]"
+                          onClick={() => setEditing(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
