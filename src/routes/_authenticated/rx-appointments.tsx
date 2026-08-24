@@ -42,7 +42,9 @@ function AppointmentsPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
 
-  const { isAssistant } = useCurrentRole();
+  const { isAssistant, role } = useCurrentRole();
+  // Clinic staff (reception/billing) only take serials — they don't manage locations or fees.
+  const isClinicStaff = !!role?.startsWith("Clinic Staff");
   const chambers = useChambers(businessId);
   const chamberList = chambers.data ?? [];
   const myStaff = useMyStaffChamber(businessId);
