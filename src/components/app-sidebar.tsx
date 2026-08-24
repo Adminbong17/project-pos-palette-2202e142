@@ -98,15 +98,26 @@ const sections = [
   },
 ];
 
+// A doctor account (under a clinic or standalone) only ever needs these pages.
+const DOCTOR_PATHS = [
+  "/rx-dashboard",
+  "/prescriptions",
+  "/rx-appointments",
+  "/rx-staff",
+  "/rx-lists",
+];
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
   const rxMode = isRxMode();
   const { data: business } = useCurrentBusiness();
+  const { isDoctor } = useCurrentRole();
   // Doctor mode and clinic mode are separate: the clinic dashboard only
   // appears for businesses marked as a clinic (multi-doctor + reception).
   const clinicMode = !!business?.clinic_mode;
   const { isSuperAdmin } = useIsSuperAdmin();
+
   const base = isLoading
     ? []
     : isAdmin
