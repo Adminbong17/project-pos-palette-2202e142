@@ -22,26 +22,9 @@ export const sendRxBillingOtp = createServerFn({ method: "POST" })
     } as never);
     if (error) throw new Error(error.message);
 
-    const url = process.env["SMS_API_URL"];
-    const key = process.env["SMS_API_KEY"];
-    const sender = process.env["SMS_SENDER_ID"];
-    if (url && key) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            api_key: key,
-            senderid: sender ?? undefined,
-            number: data.phone,
-            message: `QweekRx verification code: ${code}`,
-          }),
-        });
-        if (res.ok) return { delivered: true as const };
-      } catch {
-        /* fall through to manual delivery */
-      }
-    }
+    const { sendSms } = await import("./sms.server");
+    const res = await sendSms(data.phone, `QweekRx verification code: ${code}`);
+    if (res.ok) return { delivered: true as const };
     return { delivered: false as const, code };
   });
 

@@ -6,25 +6,8 @@ function digits(v: unknown) {
 }
 
 async function sendSms(phone: string, message: string) {
-  const url = process.env["SMS_API_URL"];
-  const key = process.env["SMS_API_KEY"];
-  const sender = process.env["SMS_SENDER_ID"];
-  if (!url || !key) return false;
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: key,
-        senderid: sender ?? undefined,
-        number: phone,
-        message,
-      }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  const { sendSms: send } = await import("./sms.server");
+  return (await send(phone, message)).ok;
 }
 
 /**
