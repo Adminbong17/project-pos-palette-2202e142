@@ -83,6 +83,7 @@ const sections = [
       { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
       { to: "/admin/sms", superOnly: true, label: "SMS Gateway", icon: MessageSquare, enabled: true, key: "__admin" },
+      { to: "/admin/rx-credit-links", superOnly: true, label: "Credit Links", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin", superOnly: true, label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
 
     ],
