@@ -73,6 +73,46 @@ export function normalizePhone(raw: unknown) {
 
 export type SmsResult = { ok: boolean; status?: string; text?: string; error?: string };
 
+/** Per-business Sender / Caller ID (any user type can set it in Settings → Business). */
+export async function senderIdForBusiness(businessId?: string | null): Promise<string | null> {
+  if (!businessId) return null;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("businesses")
+      .select("sms_sender_id")
+      .eq("id", businessId)
+      .maybeSingle();
+    const id = String((data as any)?.sms_sender_id ?? "").trim();
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sender ID of the business this user owns / belongs to, when there is one. */
+export async function senderIdForUser(userId?: string | null): Promise<string | null> {
+  if (!userId) return null;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: owned } = await supabaseAdmin
+      .from("businesses")
+      .select("sms_sender_id")
+      .eq("owner_id", userId)
+      .limit(1);
+    const ownedId = String((owned as any)?.[0]?.sms_sender_id ?? "").trim();
+    if (ownedId) return ownedId;
+    const { data: member } = await supabaseAdmin
+      .from("business_users")
+      .select("business_id")
+      .eq("user_id", userId)
+      .limit(1);
+    return await senderIdForBusiness((member as any)?.[0]?.business_id ?? null);
+  } catch {
+    return null;
+  }
+}
+
 /** Sends one SMS. Never throws — callers treat a false result as "not sent". */
 export async function sendSms(
   phone: string,
