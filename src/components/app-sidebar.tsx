@@ -118,6 +118,8 @@ const DOCTOR_PATHS = [
   "/rx-staff",
   "/rx-lists",
   "/rx-credit-history",
+  "/clinic-services",
+  "/clinic-plans",
 ];
 
 export function AppSidebar() {
@@ -156,8 +158,9 @@ export function AppSidebar() {
       // A doctor sees only their own clinical pages — no clinic admin pages,
       // no business settings, even inside a clinic business.
       .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
-      .filter((it) =>
-        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
+      .filter((it: any) =>
+        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to) &&
+        !it.anyMode
           ? clinicMode
           : true,
       ),
