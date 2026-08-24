@@ -12,6 +12,7 @@ import { dhakaToday } from "@/lib/appointments";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { RxBillingSummaryCard } from "@/components/rx-billing-summary-card";
 
 export const Route = createFileRoute("/_authenticated/clinic-dashboard")({
   head: () => ({
@@ -174,6 +175,9 @@ function ClinicDashboard() {
           </Link>
         </div>
       </div>
+
+      <RxBillingSummaryCard />
+
 
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -6,7 +6,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare,
+  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -75,6 +75,8 @@ const sections = [
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
       { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "prescriptions" },
+      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "prescriptions" },
+      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "clinic" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
@@ -108,6 +110,7 @@ const DOCTOR_PATHS = [
   "/rx-appointments",
   "/rx-staff",
   "/rx-lists",
+  "/rx-credit-history",
 ];
 
 export function AppSidebar() {

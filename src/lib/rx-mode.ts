@@ -21,7 +21,7 @@ const FULL_APP_HOSTS = [
 ];
 
 /** Paths reachable while in prescription-only (Rx domain) mode. */
-export const RX_PATHS = ["/rx", "/admin", "/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans", "/rx-dashboard", "/rx-appointments", "/prescriptions", "/rx-lists", "/rx-staff", "/rx-options", "/rx-billing", "/settings/business", "/admin/prescriptions", "/admin/doctors", "/admin/rx-billing", "/admin/users", "/admin/backups"];
+export const RX_PATHS = ["/rx", "/admin", "/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans", "/rx-dashboard", "/rx-appointments", "/prescriptions", "/rx-lists", "/rx-staff", "/rx-options", "/rx-billing", "/rx-credit-history", "/settings/business", "/admin/prescriptions", "/admin/doctors", "/admin/rx-billing", "/admin/users", "/admin/backups"];
 
 export function isRxHost(hostname?: string | null) {
   if (!hostname) return false;
@@ -45,6 +45,7 @@ export const RX_ONLY_PATHS = [
   "/rx-staff",
   "/rx-options",
   "/rx-billing",
+  "/rx-credit-history",
 ];
 
 /** True when the current host serves the full POS app (client-only). */
