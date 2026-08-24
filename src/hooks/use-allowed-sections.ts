@@ -45,7 +45,13 @@ const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 const ALWAYS_ALLOWED = ["quick-box"];
 
 // Clinical-only keys: users limited to these never get POS/inventory extras.
-const CLINICAL_KEYS = ["prescriptions", "rx-queue", "clinic"];
+const CLINICAL_KEYS = [
+  "prescriptions",
+  "rx-queue",
+  "clinic",
+  "clinic-services",
+  "clinic-sales",
+];
 
 // A clinic admin only manages doctors, assistants and the serial queue.
 const DEFAULT_CLINIC = ["clinic", "rx-queue"];
