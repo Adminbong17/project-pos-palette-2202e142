@@ -187,14 +187,14 @@ function AdminRxBillingPage() {
       if (existing) {
         const { error } = await (supabase as any)
           .from("rx_billing_accounts")
-          .update(row)
+          .update(patch)
           .eq("id", existing.id);
         if (error) throw error;
         return;
       }
       const { error } = await (supabase as any)
         .from("rx_billing_accounts")
-        .insert({ business_id: businessId, mode: "credit", credits: 0, ...row });
+        .insert({ business_id: target, user_id, mode: "credit", credits: 0, ...patch });
       if (error) throw error;
     },
     onSuccess: () => {
