@@ -74,6 +74,12 @@ const sections = [
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
+      // Independent doctors (and their staff) manage their own service list and
+      // treatment plans, so these are not gated behind clinic mode.
+      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "prescriptions", anyMode: true },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "prescriptions", anyMode: true },
+      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "rx-queue", anyMode: true },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "rx-queue", anyMode: true },
       { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "prescriptions" },
       { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "prescriptions" },
       { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "clinic" },
@@ -112,6 +118,8 @@ const DOCTOR_PATHS = [
   "/rx-staff",
   "/rx-lists",
   "/rx-credit-history",
+  "/clinic-services",
+  "/clinic-plans",
 ];
 
 export function AppSidebar() {
@@ -150,8 +158,9 @@ export function AppSidebar() {
       // A doctor sees only their own clinical pages — no clinic admin pages,
       // no business settings, even inside a clinic business.
       .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
-      .filter((it) =>
-        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
+      .filter((it: any) =>
+        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to) &&
+        !it.anyMode
           ? clinicMode
           : true,
       ),

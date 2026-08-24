@@ -35,7 +35,12 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
   { key: "prescriptions", label: "My Staff", path: "/rx-staff" },
+  // Independent doctors and their staff run their own services + treatment plans.
+  { key: "prescriptions", label: "Services & Fees", path: "/clinic-services" },
+  { key: "prescriptions", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
   { key: "rx-queue", label: "Patient Queue", path: "/rx-appointments" },
+  { key: "rx-queue", label: "Services & Fees", path: "/clinic-services" },
+  { key: "rx-queue", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
   { key: "prescriptions", label: "Rx Billing", path: "/rx-billing" },
   { key: "prescriptions", label: "Credit & Payment History", path: "/rx-credit-history" },
   { key: "clinic", label: "Rx Billing", path: "/rx-billing" },
