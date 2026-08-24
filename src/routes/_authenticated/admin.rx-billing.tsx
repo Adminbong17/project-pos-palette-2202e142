@@ -409,7 +409,7 @@ function AdminRxBillingPage() {
           ) : (
             filteredDoctors.map((d) => (
               <AccountEditor
-                key={`${d.id}:${d.business_id}`}
+                key={`${d.id}:${d.business_id}:${accOf(d)?.id ?? "new"}`}
                 label={d.business_name ? `${d.label} — ${d.business_name}` : d.label}
                 account={accOf(d)}
                 monthCount={countMap[d.id] ?? 0}
