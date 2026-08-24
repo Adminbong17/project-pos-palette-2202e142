@@ -17,7 +17,7 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
 
     const [{ data: businesses }, { data: roles }, { data: userRoles }, { data: members }] =
       await Promise.all([
-        supabaseAdmin.from("businesses").select("id, name"),
+        supabaseAdmin.from("businesses").select("id, name, clinic_mode").order("name"),
         supabaseAdmin.from("roles").select("id, name, business_id"),
         supabaseAdmin.from("user_roles").select("user_id, role_id, business_id"),
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
