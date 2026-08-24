@@ -264,6 +264,27 @@ function AdminRxBillingPage() {
   );
   const accOf = (d: DoctorRow) => byUser.get(`${d.id}:${d.business_id}`) ?? null;
 
+  // Every clinic / business pool (super admin) so credits can be given to any of them.
+  const businessRows: { id: string; name: string; clinic_mode: boolean }[] = isSuperAdmin
+    ? ((all.data?.businesses ?? []) as any[])
+    : businessId
+      ? [{ id: businessId, name: business?.name ?? "This business", clinic_mode: !!business?.clinic_mode }]
+      : [];
+  const poolByBusiness = new Map(
+    accountList.filter((a) => !a.user_id).map((a) => [a.business_id, a]),
+  );
+  const countForBusiness = (bid: string) =>
+    doctorList
+      .filter((d) => d.business_id === bid)
+      .reduce((sum, d) => sum + (countMap[d.id] ?? 0), 0);
+
+  const filteredBusinesses = useMemo(() => {
+    const q = poolSearch.trim().toLowerCase();
+    if (!q) return businessRows;
+    return businessRows.filter((b) => b.name.toLowerCase().includes(q));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessRows, poolSearch]);
+
   const filteredDoctors = useMemo(() => {
     const q = doctorSearch.trim().toLowerCase();
     if (!q) return doctorList;
