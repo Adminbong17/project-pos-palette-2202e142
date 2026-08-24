@@ -13,6 +13,12 @@ type CreateStaffInput = {
   chamber_id?: string | null;
   /** Create the assistant under this doctor (clinic use); defaults to the caller. */
   doctor_id?: string | null;
+  /** "doctor_assistant" works under a doctor; "clinic_staff" works for the clinic. */
+  staff_kind?: "doctor_assistant" | "clinic_staff";
+  /** Job title for clinic staff, e.g. "Reception" or "Billing". */
+  role_label?: string | null;
+  /** Screens a clinic staff member may open (ignored for doctor assistants). */
+  sections?: string[] | null;
 };
 
 function hasServiceRole() {
