@@ -321,7 +321,7 @@ function AdminRxBillingPage() {
           <AccountEditor
             label="Whole clinic"
             account={pool}
-            monthCount={Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0)}
+            monthCount={Object.values(countMap).reduce((a, b) => a + b, 0)}
             onSave={(patch) => upsertAccount.mutate({ user_id: null, ...patch })}
             onGrant={(delta) =>
               pool ? grant.mutate({ accountId: pool.id, delta }) : toast.error("Create the pool first")
@@ -342,20 +342,24 @@ function AdminRxBillingPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Search doctors…" value={doctorSearch} onChange={(e) => setDoctorSearch(e.target.value)} />
           </div>
-          {doctors.isLoading ? (
+          {listLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (doctors.data ?? []).length > 0 && filteredDoctors.length === 0 ? (
+          ) : !doctorList.length ? (
+            <p className="text-sm text-muted-foreground">No doctors found.</p>
+          ) : filteredDoctors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No match</p>
           ) : (
             filteredDoctors.map((d) => (
               <AccountEditor
-                key={d.id}
-                label={d.label}
-                account={byUser.get(d.id) ?? null}
-                monthCount={counts.data?.[d.id] ?? 0}
-                onSave={(patch) => upsertAccount.mutate({ user_id: d.id, ...patch })}
+                key={`${d.id}:${d.business_id}`}
+                label={d.business_name ? `${d.label} — ${d.business_name}` : d.label}
+                account={accOf(d)}
+                monthCount={countMap[d.id] ?? 0}
+                onSave={(patch) =>
+                  upsertAccount.mutate({ user_id: d.id, business_id: d.business_id, ...patch })
+                }
                 onGrant={(delta) => {
-                  const acc = byUser.get(d.id);
+                  const acc = accOf(d);
                   if (!acc) toast.error("Save the account first");
                   else grant.mutate({ accountId: acc.id, delta });
                 }}
@@ -392,9 +396,9 @@ function AdminRxBillingPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Search bills…" value={billSearch} onChange={(e) => setBillSearch(e.target.value)} />
           </div>
-          {bills.isLoading ? (
+          {billsLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : !bills.data?.length ? (
+          ) : !billList.length ? (
             <p className="text-sm text-muted-foreground">No bills generated yet.</p>
           ) : filteredBills.length === 0 ? (
             <p className="text-sm text-muted-foreground">No match</p>
@@ -405,7 +409,7 @@ function AdminRxBillingPage() {
                 bill={b}
                 label={
                   b.user_id
-                    ? (doctors.data ?? []).find((d) => d.id === b.user_id)?.label ?? "Doctor"
+                    ? doctorList.find((d) => d.id === b.user_id)?.label ?? "Doctor"
                     : "Whole clinic"
                 }
                 busy={setBill.isPending}
