@@ -193,7 +193,7 @@ function AppointmentsPage() {
         </p>
       </div>
 
-      {!isAssistant && (
+      {!isAssistant && !isClinicStaff && (
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <div className="mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
