@@ -3485,6 +3485,42 @@ export type Database = {
           },
         ]
       }
+      sms_settings: {
+        Row: {
+          api_key: string | null
+          base_url: string
+          caller_id: string | null
+          enabled: boolean
+          id: boolean
+          provider: string
+          secret_key: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          base_url?: string
+          caller_id?: string | null
+          enabled?: boolean
+          id?: boolean
+          provider?: string
+          secret_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          base_url?: string
+          caller_id?: string | null
+          enabled?: boolean
+          id?: boolean
+          provider?: string
+          secret_key?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       stock_adjustment_lines: {
         Row: {
           created_at: string
