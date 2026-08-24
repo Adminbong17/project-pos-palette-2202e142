@@ -167,3 +167,40 @@ export const removeRxStaff = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+/** Give a clinic staff member one or more roles (role labels + merged sections). */
+export const setRxStaffRoles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { staff_id: string; roles: string[]; sections: string[] }) => {
+    if (!data?.staff_id) throw new Error("staff_id required");
+    if (!Array.isArray(data.roles) || data.roles.length === 0)
+      throw new Error("Pick at least one role");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: staff, error } = await supabase
+      .from("rx_staff")
+      .select("id, user_id, business_id, name, phone, username, chamber_id, doctor_id, staff_kind")
+      .eq("id", data.staff_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!staff?.user_id) throw new Error("Staff not found or not accessible");
+
+    const sections = Array.from(new Set(data.sections.length ? data.sections : ["rx-queue"]));
+    const { error: pErr } = await (supabase.rpc as any)("provision_rx_staff", {
+      _business_id: staff.business_id,
+      _user_id: staff.user_id,
+      _email: staffUsernameToEmail(staff.username),
+      _name: staff.name,
+      _phone: staff.phone ?? "",
+      _username: staff.username,
+      _chamber_id: staff.chamber_id ?? null,
+      _doctor_id: staff.staff_kind === "clinic_staff" ? null : staff.doctor_id,
+      _staff_kind: staff.staff_kind,
+      _role_label: data.roles.join(" + "),
+      _sections: sections,
+    });
+    if (pErr) throw new Error(pErr.message);
+    return { ok: true, roles: data.roles, sections };
+  });

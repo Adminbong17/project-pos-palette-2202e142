@@ -8,7 +8,12 @@ import { Stethoscope, UserPlus, KeyRound, Users, Search, MapPin } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { createClinicDoctor, setClinicDoctorPassword } from "@/lib/clinic.functions";
-import { createRxStaff, setRxStaffPassword, removeRxStaff } from "@/lib/rx-staff.functions";
+import {
+  createRxStaff,
+  setRxStaffPassword,
+  removeRxStaff,
+  setRxStaffRoles,
+} from "@/lib/rx-staff.functions";
 import { staffUsernameToEmail } from "@/lib/rx-staff";
 import { useChambers } from "@/components/appointment-queue";
 import { ClinicCreditsCard } from "@/components/clinic-credits-card";
@@ -570,21 +575,39 @@ function ClinicStaffCard({
   const addStaff = useServerFn(createRxStaff);
   const setStaffPw = useServerFn(setRxStaffPassword);
   const dropStaff = useServerFn(removeRxStaff);
+  const setRoles = useServerFn(setRxStaffRoles);
 
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     username: "",
     phone: "",
     password: "",
     chamber_id: "",
-    role: CLINIC_STAFF_ROLES[0]!.value,
-  });
+    roles: [CLINIC_STAFF_ROLES[0]!.value] as string[],
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState<{ id: string; roles: string[] } | null>(null);
+
+  function sectionsFor(values: string[]) {
+    return Array.from(
+      new Set(
+        values.flatMap((v) => CLINIC_STAFF_ROLES.find((r) => r.value === v)?.sections ?? []),
+      ),
+    );
+  }
+
+  function toggle(values: string[], value: string) {
+    return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!businessId || busy) return;
-    const role = CLINIC_STAFF_ROLES.find((r) => r.value === form.role) ?? CLINIC_STAFF_ROLES[0]!;
+    if (!form.roles.length) {
+      toast.error("Pick at least one role");
+      return;
+    }
     setBusy(true);
     try {
       await addStaff({
@@ -596,22 +619,40 @@ function ClinicStaffCard({
           phone: form.phone,
           chamber_id: form.chamber_id || null,
           staff_kind: "clinic_staff",
-          role_label: role.value,
-          sections: role.sections,
+          role_label: form.roles.join(" + "),
+          sections: sectionsFor(form.roles),
         },
       });
       toast.success("Clinic staff created");
-      setForm({
-        name: "",
-        username: "",
-        phone: "",
-        password: "",
-        chamber_id: "",
-        role: CLINIC_STAFF_ROLES[0]!.value,
-      });
+      setForm(emptyForm);
       onChanged();
     } catch (err: any) {
       toast.error(err?.message ?? "Could not create the staff account");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRoles() {
+    if (!editing || busy) return;
+    if (!editing.roles.length) {
+      toast.error("Pick at least one role");
+      return;
+    }
+    setBusy(true);
+    try {
+      await setRoles({
+        data: {
+          staff_id: editing.id,
+          roles: editing.roles,
+          sections: sectionsFor(editing.roles),
+        },
+      });
+      toast.success("Roles updated");
+      setEditing(null);
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not update roles");
     } finally {
       setBusy(false);
     }
@@ -642,7 +683,15 @@ function ClinicStaffCard({
                 >
                   <span className="font-medium">{s.name}</span>
                   <Badge variant="secondary">{s.username}</Badge>
-                  <Badge variant="outline">{s.role_label ?? "Staff"}</Badge>
+                  {(s.role_label ?? "Staff")
+                    .split("+")
+                    .map((r) => r.trim())
+                    .filter(Boolean)
+                    .map((r) => (
+                      <Badge key={r} variant="outline">
+                        {r}
+                      </Badge>
+                    ))}
                   {s.phone && <span className="text-muted-foreground">📞 {s.phone}</span>}
                   {chamber && (
                     <span className="flex items-center gap-1 text-muted-foreground">
@@ -650,6 +699,28 @@ function ClinicStaffCard({
                     </span>
                   )}
                   <div className="ml-auto flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() =>
+                        setEditing(
+                          editing?.id === s.id
+                            ? null
+                            : {
+                                id: s.id,
+                                roles: (s.role_label ?? "")
+                                  .split("+")
+                                  .map((r) => r.trim())
+                                  .filter((r) =>
+                                    CLINIC_STAFF_ROLES.some((cr) => cr.value === r),
+                                  ),
+                              },
+                        )
+                      }
+                    >
+                      Roles
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -685,6 +756,41 @@ function ClinicStaffCard({
                       Remove
                     </Button>
                   </div>
+                  {editing?.id === s.id && (
+                    <div className="w-full space-y-2 rounded-md border border-border bg-background/60 p-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Roles (one or more)
+                      </p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        {CLINIC_STAFF_ROLES.map((r) => (
+                          <label key={r.value} className="flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 accent-primary"
+                              checked={editing.roles.includes(r.value)}
+                              onChange={() =>
+                                setEditing({ ...editing, roles: toggle(editing.roles, r.value) })
+                              }
+                            />
+                            {r.label}
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-[11px]" disabled={busy} onClick={saveRoles}>
+                          Save roles
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[11px]"
+                          onClick={() => setEditing(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -723,17 +829,24 @@ function ClinicStaffCard({
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            className="h-9 min-w-0 rounded-md border border-border bg-input px-2 text-xs"
-          >
-            {CLINIC_STAFF_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <div className="rounded-md border border-border bg-input/40 p-2 sm:col-span-3 lg:col-span-5">
+            <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+              Roles (one or more)
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {CLINIC_STAFF_ROLES.map((r) => (
+                <label key={r.value} className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-primary"
+                    checked={form.roles.includes(r.value)}
+                    onChange={() => setForm({ ...form, roles: toggle(form.roles, r.value) })}
+                  />
+                  {r.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <select
               value={form.chamber_id}
