@@ -721,6 +721,173 @@ export type Database = {
         }
         Relationships: []
       }
+      clinic_sale_lines: {
+        Row: {
+          business_id: string
+          created_at: string
+          discount: number
+          id: string
+          line_total: number
+          name: string
+          quantity: number
+          sale_id: string
+          service_id: string | null
+          unit_price: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          discount?: number
+          id?: string
+          line_total?: number
+          name: string
+          quantity?: number
+          sale_id: string
+          service_id?: string | null
+          unit_price?: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          discount?: number
+          id?: string
+          line_total?: number
+          name?: string
+          quantity?: number
+          sale_id?: string
+          service_id?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_sale_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_sale_lines_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_sale_lines_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_sales: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount: number
+          doctor_id: string | null
+          id: string
+          invoice_no: string | null
+          notes: string | null
+          paid: number
+          patient_name: string | null
+          patient_phone: string | null
+          sale_date: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          doctor_id?: string | null
+          id?: string
+          invoice_no?: string | null
+          notes?: string | null
+          paid?: number
+          patient_name?: string | null
+          patient_phone?: string | null
+          sale_date?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          doctor_id?: string | null
+          id?: string
+          invoice_no?: string | null
+          notes?: string | null
+          paid?: number
+          patient_name?: string | null
+          patient_phone?: string | null
+          sale_date?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_services: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_services_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       combo_products: {
         Row: {
           component_variation_id: string

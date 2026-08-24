@@ -39,6 +39,8 @@ import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedClinicServicesRouteImport } from './routes/_authenticated/clinic-services'
+import { Route as AuthenticatedClinicSalesRouteImport } from './routes/_authenticated/clinic-sales'
 import { Route as AuthenticatedClinicDoctorsRouteImport } from './routes/_authenticated/clinic-doctors'
 import { Route as AuthenticatedClinicDashboardRouteImport } from './routes/_authenticated/clinic-dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
@@ -241,6 +243,18 @@ const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedClinicServicesRoute =
+  AuthenticatedClinicServicesRouteImport.update({
+    id: '/clinic-services',
+    path: '/clinic-services',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedClinicSalesRoute =
+  AuthenticatedClinicSalesRouteImport.update({
+    id: '/clinic-sales',
+    path: '/clinic-sales',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClinicDoctorsRoute =
   AuthenticatedClinicDoctorsRouteImport.update({
     id: '/clinic-doctors',
@@ -520,6 +534,8 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
+  '/clinic-sales': typeof AuthenticatedClinicSalesRoute
+  '/clinic-services': typeof AuthenticatedClinicServicesRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/crm': typeof AuthenticatedCrmRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -598,6 +614,8 @@ export interface FileRoutesByTo {
   '/accounts': typeof AuthenticatedAccountsRoute
   '/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
+  '/clinic-sales': typeof AuthenticatedClinicSalesRoute
+  '/clinic-services': typeof AuthenticatedClinicServicesRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
@@ -671,6 +689,8 @@ export interface FileRoutesById {
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/clinic-dashboard': typeof AuthenticatedClinicDashboardRoute
   '/_authenticated/clinic-doctors': typeof AuthenticatedClinicDoctorsRoute
+  '/_authenticated/clinic-sales': typeof AuthenticatedClinicSalesRoute
+  '/_authenticated/clinic-services': typeof AuthenticatedClinicServicesRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/crm': typeof AuthenticatedCrmRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -751,6 +771,8 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/clinic-dashboard'
     | '/clinic-doctors'
+    | '/clinic-sales'
+    | '/clinic-services'
     | '/contacts'
     | '/crm'
     | '/dashboard'
@@ -829,6 +851,8 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/clinic-dashboard'
     | '/clinic-doctors'
+    | '/clinic-sales'
+    | '/clinic-services'
     | '/contacts'
     | '/dashboard'
     | '/expenses'
@@ -901,6 +925,8 @@ export interface FileRouteTypes {
     | '/_authenticated/accounts'
     | '/_authenticated/clinic-dashboard'
     | '/_authenticated/clinic-doctors'
+    | '/_authenticated/clinic-sales'
+    | '/_authenticated/clinic-services'
     | '/_authenticated/contacts'
     | '/_authenticated/crm'
     | '/_authenticated/dashboard'
@@ -1192,6 +1218,20 @@ declare module '@tanstack/react-router' {
       path: '/contacts'
       fullPath: '/contacts'
       preLoaderRoute: typeof AuthenticatedContactsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clinic-services': {
+      id: '/_authenticated/clinic-services'
+      path: '/clinic-services'
+      fullPath: '/clinic-services'
+      preLoaderRoute: typeof AuthenticatedClinicServicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clinic-sales': {
+      id: '/_authenticated/clinic-sales'
+      path: '/clinic-sales'
+      fullPath: '/clinic-sales'
+      preLoaderRoute: typeof AuthenticatedClinicSalesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clinic-doctors': {
@@ -1694,6 +1734,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedClinicDashboardRoute: typeof AuthenticatedClinicDashboardRoute
   AuthenticatedClinicDoctorsRoute: typeof AuthenticatedClinicDoctorsRoute
+  AuthenticatedClinicSalesRoute: typeof AuthenticatedClinicSalesRoute
+  AuthenticatedClinicServicesRoute: typeof AuthenticatedClinicServicesRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -1734,6 +1776,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedClinicDashboardRoute: AuthenticatedClinicDashboardRoute,
   AuthenticatedClinicDoctorsRoute: AuthenticatedClinicDoctorsRoute,
+  AuthenticatedClinicSalesRoute: AuthenticatedClinicSalesRoute,
+  AuthenticatedClinicServicesRoute: AuthenticatedClinicServicesRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedCrmRoute: AuthenticatedCrmRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
