@@ -764,17 +764,24 @@ function ClinicStaffCard({
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            className="h-9 min-w-0 rounded-md border border-border bg-input px-2 text-xs"
-          >
-            {CLINIC_STAFF_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <div className="rounded-md border border-border bg-input/40 p-2 sm:col-span-3 lg:col-span-5">
+            <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+              Roles (one or more)
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {CLINIC_STAFF_ROLES.map((r) => (
+                <label key={r.value} className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-primary"
+                    checked={form.roles.includes(r.value)}
+                    onChange={() => setForm({ ...form, roles: toggle(form.roles, r.value) })}
+                  />
+                  {r.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <select
               value={form.chamber_id}
