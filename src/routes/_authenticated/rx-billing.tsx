@@ -205,6 +205,21 @@ function RxBillingPage() {
 
       <RxCreditBuyCard businessId={business?.id} />
 
+      {clinicAdmin && (
+        <ClinicCreditsCard
+          businessId={business?.id}
+          doctors={(clinicDoctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
+        />
+      )}
+
+      <div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/rx-credit-history">
+            <History className="h-4 w-4" /> Payment &amp; credit history
+          </Link>
+        </Button>
+      </div>
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Monthly bills</CardTitle>
