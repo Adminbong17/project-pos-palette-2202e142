@@ -135,6 +135,8 @@ export function sectionHomePath(sections: string[] | null) {
   if (sections.includes("clinic")) return "/clinic-dashboard";
   if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
     return "/rx-appointments";
+  if (sections.includes("clinic-sales")) return "/clinic-sales";
+  if (sections.includes("clinic-services")) return "/clinic-services";
   if (sections.includes("prescriptions")) return "/rx-dashboard";
   if (sections.includes("dashboard")) return "/dashboard";
   const match = ALL_SECTIONS.find((s) => sections.includes(s.key));
