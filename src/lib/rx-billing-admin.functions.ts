@@ -17,7 +17,7 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
 
     const [{ data: businesses }, { data: roles }, { data: userRoles }, { data: members }] =
       await Promise.all([
-        supabaseAdmin.from("businesses").select("id, name"),
+        supabaseAdmin.from("businesses").select("id, name, clinic_mode").order("name"),
         supabaseAdmin.from("roles").select("id, name, business_id"),
         supabaseAdmin.from("user_roles").select("user_id, role_id, business_id"),
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
@@ -86,7 +86,13 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
       counts[k] = (counts[k] ?? 0) + 1;
     }
 
-    return { doctors, accounts: accounts ?? [], bills: bills ?? [], counts };
+    const businessList = ((businesses ?? []) as any[]).map((b) => ({
+      id: b.id as string,
+      name: (b.name as string) ?? "—",
+      clinic_mode: !!b.clinic_mode,
+    }));
+
+    return { doctors, businesses: businessList, accounts: accounts ?? [], bills: bills ?? [], counts };
   });
 
 /** Create/update a doctor's (or a business pool's) billing account from the super-admin page. */

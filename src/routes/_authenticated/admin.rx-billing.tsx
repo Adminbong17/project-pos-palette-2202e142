@@ -64,6 +64,7 @@ function AdminRxBillingPage() {
   const [month, setMonth] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
   const [billSearch, setBillSearch] = useState("");
+  const [poolSearch, setPoolSearch] = useState("");
 
   const accounts = useQuery({
     queryKey: ["rx-billing-accounts", businessId],
@@ -255,13 +256,31 @@ function AdminRxBillingPage() {
   });
 
 
-  const pool =
-    accountList.find((a) => a.user_id === null && (!businessId || a.business_id === businessId)) ??
-    null;
   const byUser = new Map(
     accountList.filter((a) => a.user_id).map((a) => [`${a.user_id}:${a.business_id}`, a]),
   );
   const accOf = (d: DoctorRow) => byUser.get(`${d.id}:${d.business_id}`) ?? null;
+
+  // Every clinic / business pool (super admin) so credits can be given to any of them.
+  const businessRows: { id: string; name: string; clinic_mode: boolean }[] = isSuperAdmin
+    ? ((all.data?.businesses ?? []) as any[])
+    : businessId
+      ? [{ id: businessId, name: business?.name ?? "This business", clinic_mode: !!business?.clinic_mode }]
+      : [];
+  const poolByBusiness = new Map(
+    accountList.filter((a) => !a.user_id).map((a) => [a.business_id, a]),
+  );
+  const countForBusiness = (bid: string) =>
+    doctorList
+      .filter((d) => d.business_id === bid)
+      .reduce((sum, d) => sum + (countMap[d.id] ?? 0), 0);
+
+  const filteredBusinesses = useMemo(() => {
+    const q = poolSearch.trim().toLowerCase();
+    if (!q) return businessRows;
+    return businessRows.filter((b) => b.name.toLowerCase().includes(q));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessRows, poolSearch]);
 
   const filteredDoctors = useMemo(() => {
     const q = doctorSearch.trim().toLowerCase();
@@ -317,20 +336,56 @@ function AdminRxBillingPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-4 w-4 text-primary" /> Clinic-wide pool (fallback for every doctor)
+            <Wallet className="h-4 w-4 text-primary" />
+            {isSuperAdmin
+              ? "Clinic / business credit pools"
+              : "Clinic-wide pool (fallback for every doctor)"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <AccountEditor
-            label="Whole clinic"
-            account={pool}
-            monthCount={Object.values(countMap).reduce((a, b) => a + b, 0)}
-            onSave={(patch) => upsertAccount.mutate({ user_id: null, ...patch })}
-            onGrant={(delta) =>
-              pool ? grant.mutate({ accountId: pool.id, delta }) : toast.error("Create the pool first")
-            }
-            busy={upsertAccount.isPending || grant.isPending}
-          />
+        <CardContent className="space-y-4">
+          {isSuperAdmin && (
+            <div className="relative max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Search clinics / businesses…"
+                value={poolSearch}
+                onChange={(e) => setPoolSearch(e.target.value)}
+              />
+            </div>
+          )}
+          {isSuperAdmin && all.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : filteredBusinesses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {poolSearch ? "No match" : "No clinics or businesses found."}
+            </p>
+          ) : (
+            filteredBusinesses.map((b) => {
+              const bPool = poolByBusiness.get(b.id) ?? null;
+              return (
+                <AccountEditor
+                  key={`${b.id}:${bPool?.id ?? "new"}`}
+                  label={
+                    isSuperAdmin
+                      ? `${b.name}${b.clinic_mode ? " (clinic)" : ""} — whole-business pool`
+                      : "Whole clinic"
+                  }
+                  account={bPool}
+                  monthCount={countForBusiness(b.id)}
+                  onSave={(patch) =>
+                    upsertAccount.mutate({ user_id: null, business_id: b.id, ...patch })
+                  }
+                  onGrant={(delta) =>
+                    bPool
+                      ? grant.mutate({ accountId: bPool.id, delta })
+                      : toast.error("Create the pool first")
+                  }
+                  busy={upsertAccount.isPending || grant.isPending}
+                />
+              );
+            })
+          )}
         </CardContent>
       </Card>
 
@@ -354,7 +409,7 @@ function AdminRxBillingPage() {
           ) : (
             filteredDoctors.map((d) => (
               <AccountEditor
-                key={`${d.id}:${d.business_id}`}
+                key={`${d.id}:${d.business_id}:${accOf(d)?.id ?? "new"}`}
                 label={d.business_name ? `${d.label} — ${d.business_name}` : d.label}
                 account={accOf(d)}
                 monthCount={countMap[d.id] ?? 0}
