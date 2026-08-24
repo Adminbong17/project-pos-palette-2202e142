@@ -1,5 +1,7 @@
 import { AlertTriangle, PhoneCall, CreditCard } from "lucide-react";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
+import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -9,6 +11,10 @@ import { Button } from "@/components/ui/button";
  */
 export function RxBillingBanner({ compact = false }: { compact?: boolean }) {
   const { isLoading, state, locked, outOfCredits } = useRxBillingState();
+  const { data: business } = useCurrentBusiness();
+  const { isDoctor, isAdmin } = useCurrentRole();
+  // Doctors inside a clinic are funded by the clinic: no payment links / helpline.
+  const clinicFunded = !!business?.clinic_mode && isDoctor && !isAdmin;
   if (isLoading || state.mode === "free") return null;
 
   const helpline = state.helpline || "01712472839";
@@ -27,21 +33,25 @@ export function RxBillingBanner({ compact = false }: { compact?: boolean }) {
                 ? `Your bill for ${state.overdue_bill?.period_start?.slice(0, 7) ?? "last month"} (৳${
                     state.overdue_bill?.amount ?? 0
                   }) was due on ${state.overdue_bill?.due_date ?? "the 5th"}. Please pay to continue.`
-                : "Ask the admin to add credits to your account to continue."}
+                : clinicFunded
+                  ? "Ask your clinic admin to add prescription credits to your account."
+                  : "Ask the admin to add credits to your account to continue."}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {state.payment_link && (
+              {!clinicFunded && state.payment_link && (
                 <Button size="sm" asChild>
                   <a href={state.payment_link} target="_blank" rel="noreferrer">
                     <CreditCard className="mr-1 h-4 w-4" /> Pay bill
                   </a>
                 </Button>
               )}
+              {!clinicFunded && (
               <Button size="sm" variant="outline" asChild>
                 <a href={`tel:${helpline}`}>
                   <PhoneCall className="mr-1 h-4 w-4" /> Helpline {helpline}
                 </a>
               </Button>
+              )}
             </div>
           </div>
         </div>

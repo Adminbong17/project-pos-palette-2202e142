@@ -119,6 +119,9 @@ export function AppSidebar() {
   // appears for businesses marked as a clinic (multi-doctor + reception).
   const clinicMode = !!business?.clinic_mode;
   const { isSuperAdmin } = useIsSuperAdmin();
+  // A doctor inside a clinic is funded by the clinic, so no platform billing page.
+  // An independent doctor buys credits from the platform and keeps Rx Billing.
+  const doctorPaths = clinicMode ? DOCTOR_PATHS : [...DOCTOR_PATHS, "/rx-billing"];
 
   const base = isLoading
     ? []
@@ -141,7 +144,7 @@ export function AppSidebar() {
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
       // A doctor sees only their own clinical pages — no clinic admin pages,
       // no business settings, even inside a clinic business.
-      .filter((it) => (isDoctor && !isAdmin ? DOCTOR_PATHS.includes(it.to) : true))
+      .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
       .filter((it) =>
         ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
           ? clinicMode
