@@ -263,34 +263,41 @@ function AdminRxBillingPage() {
     );
   }
 
-  const pool = (accounts.data ?? []).find((a) => a.user_id === null) ?? null;
-  const byUser = new Map((accounts.data ?? []).filter((a) => a.user_id).map((a) => [a.user_id!, a]));
+  const pool =
+    accountList.find((a) => a.user_id === null && (!businessId || a.business_id === businessId)) ??
+    null;
+  const byUser = new Map(
+    accountList.filter((a) => a.user_id).map((a) => [`${a.user_id}:${a.business_id}`, a]),
+  );
+  const accOf = (d: DoctorRow) => byUser.get(`${d.id}:${d.business_id}`) ?? null;
 
   const filteredDoctors = useMemo(() => {
     const q = doctorSearch.trim().toLowerCase();
-    const list = doctors.data ?? [];
-    if (!q) return list;
-    return list.filter((d) => {
-      const acc = byUser.get(d.id);
-      return [d.label, acc?.mode, acc?.phone, acc?.payment_link, acc?.helpline]
+    if (!q) return doctorList;
+    return doctorList.filter((d) => {
+      const acc = byUser.get(`${d.id}:${d.business_id}`);
+      return [d.label, d.business_name, acc?.mode, acc?.phone, acc?.payment_link, acc?.helpline]
         .map((v) => String(v ?? "").toLowerCase())
         .join(" ")
         .includes(q);
     });
-  }, [doctors.data, doctorSearch, byUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorList, doctorSearch, accountList]);
 
   const filteredBills = useMemo(() => {
     const q = billSearch.trim().toLowerCase();
-    const list = bills.data ?? [];
-    if (!q) return list;
-    return list.filter((b) => {
-      const label = b.user_id ? (doctors.data ?? []).find((d) => d.id === b.user_id)?.label ?? "Doctor" : "Whole clinic";
+    if (!q) return billList;
+    return billList.filter((b) => {
+      const label = b.user_id
+        ? doctorList.find((d) => d.id === b.user_id)?.label ?? "Doctor"
+        : "Whole clinic";
       return [label, String(b.period_start).slice(0, 7), b.prescriptions_count, b.amount, b.status, b.due_date]
         .map((v) => String(v ?? "").toLowerCase())
         .join(" ")
         .includes(q);
     });
-  }, [bills.data, billSearch, doctors.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billList, billSearch, doctorList]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
