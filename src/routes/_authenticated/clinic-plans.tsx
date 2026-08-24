@@ -210,6 +210,21 @@ function ClinicPlansPage() {
     },
   });
 
+  const planLines = useQuery({
+    queryKey: ["clinic-plan-lines", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clinic_plan_lines")
+        .select("plan_id, name, quantity, unit_price, line_total")
+        .eq("business_id", businessId!);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+
+
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
   const net = Math.max(0, subtotal - Number(form.discount || 0));
 
