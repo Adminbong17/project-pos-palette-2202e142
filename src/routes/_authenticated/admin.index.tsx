@@ -64,6 +64,14 @@ const CARDS = [
     superOnly: true,
   },
   {
+    to: "/admin/rx-credit-links",
+    label: "Credit Purchase Links",
+    desc: "Payment links for clinics and doctors, and manual top-up approvals.",
+    icon: Wallet,
+    rx: true,
+    superOnly: true,
+  },
+  {
     to: "/admin/business-requests",
     label: "Business Requests",
     desc: "Review new business signup requests.",
