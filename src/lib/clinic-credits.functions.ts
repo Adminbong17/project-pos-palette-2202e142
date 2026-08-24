@@ -62,18 +62,30 @@ export const grantClinicCredits = createServerFn({ method: "POST" })
     await assertClinicAdmin(context, data.business_id);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Clinic pool
+    // Clinic pool (create an empty pool row on first use)
     const { data: poolRow } = await supabaseAdmin
       .from("rx_billing_accounts")
       .select("id, credits")
       .eq("business_id", data.business_id)
       .is("user_id", null)
       .maybeSingle();
-    const pool = poolRow as any;
-    if (!pool) throw new Error("Your clinic has no credit pool yet — contact the platform admin");
+    let pool = poolRow as any;
+    if (!pool) {
+      const { data: createdPool, error: poolErr } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .insert({ business_id: data.business_id, user_id: null, mode: "credit", credits: 0 } as never)
+        .select("id, credits")
+        .single();
+      if (poolErr) throw new Error(poolErr.message);
+      pool = createdPool as any;
+    }
     const poolCredits = Number(pool.credits ?? 0);
     if (data.delta > 0 && poolCredits < data.delta)
-      throw new Error(`Clinic pool has only ${poolCredits} credit(s)`);
+      throw new Error(
+        poolCredits === 0
+          ? "Clinic credit pool is empty — ask the platform admin to top it up"
+          : `Clinic pool has only ${poolCredits} credit(s)`,
+      );
 
     // Doctor account (create on first grant)
     const { data: docRow } = await supabaseAdmin
