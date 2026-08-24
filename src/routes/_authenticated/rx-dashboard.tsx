@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/utils";
 import { AppointmentQueue, useChambers } from "@/components/appointment-queue";
 import { dhakaToday } from "@/lib/appointments";
 import { Users, FileText, CalendarClock, Stethoscope } from "lucide-react";
+import { RxBillingSummaryCard } from "@/components/rx-billing-summary-card";
 
 export const Route = createFileRoute("/_authenticated/rx-dashboard")({
   head: () => ({
@@ -106,6 +107,8 @@ function RxDashboard() {
           <Link to="/rx-lists" className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">My Rx Lists</Link>
         </div>
       </div>
+
+      <RxBillingSummaryCard />
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
