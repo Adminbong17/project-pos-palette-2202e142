@@ -268,6 +268,14 @@ function ClinicDoctorsPage() {
         </CardContent>
       </Card>
 
+      <ClinicStaffCard
+        businessId={businessId}
+        staff={(assistants.data ?? []).filter((a) => a.staff_kind === "clinic_staff")}
+        chambers={chambers.data ?? []}
+        onChanged={() => qc.invalidateQueries({ queryKey: ["clinic-assistants", businessId] })}
+      />
+
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
