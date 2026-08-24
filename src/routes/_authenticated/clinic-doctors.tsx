@@ -273,12 +273,18 @@ function ClinicDoctorsPage() {
         </CardContent>
       </Card>
 
+      <ClinicCreditsCard
+        businessId={businessId}
+        doctors={(doctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
+      />
+
       <ClinicStaffCard
         businessId={businessId}
         staff={(assistants.data ?? []).filter((a) => a.staff_kind === "clinic_staff")}
         chambers={chambers.data ?? []}
         onChanged={() => qc.invalidateQueries({ queryKey: ["clinic-assistants", businessId] })}
       />
+
 
 
       <Card>
