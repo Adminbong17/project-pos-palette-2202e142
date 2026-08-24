@@ -291,6 +291,17 @@ function AdminRxBillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billList, billSearch, doctorList]);
 
+  if (!roleLoading && !isAdmin) {
+    return (
+      <div className="p-6">
+        <h1 className="font-display text-xl font-semibold">Rx Billing</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Only business admins can open this page.</p>
+      </div>
+    );
+  }
+
+
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
