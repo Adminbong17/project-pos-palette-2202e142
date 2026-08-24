@@ -24,6 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrintSizeButton } from "@/components/print-size-select";
+import { printClinicPlan } from "@/lib/clinic-print";
+
 
 export const Route = createFileRoute("/_authenticated/clinic-plans")({
   head: () => ({
@@ -209,6 +212,21 @@ function ClinicPlansPage() {
       return (data ?? []) as Payment[];
     },
   });
+
+  const planLines = useQuery({
+    queryKey: ["clinic-plan-lines", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clinic_plan_lines")
+        .select("plan_id, name, quantity, unit_price, line_total")
+        .eq("business_id", businessId!);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+
 
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
   const net = Math.max(0, subtotal - Number(form.discount || 0));
@@ -654,7 +672,48 @@ function ClinicPlansPage() {
                         )}
                       </div>
 
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
+                        <PrintSizeButton
+                          label="Print plan"
+                          defaultSize="A4"
+                          onPrint={(size) =>
+                            printClinicPlan(
+                              {
+                                patient_name: p.patient_name,
+                                patient_code: p.patient_code,
+                                patient_phone: p.patient_phone,
+                                doctor_name: doctorName(p.doctor_id),
+                                start_date: p.start_date,
+                                total_amount: Number(p.total_amount || 0),
+                                discount: Number(p.discount || 0),
+                                paid,
+                                notes: p.notes,
+                                lines: (planLines.data ?? [])
+                                  .filter((l: any) => l.plan_id === p.id)
+                                  .map((l: any) => ({
+                                    name: l.name,
+                                    quantity: Number(l.quantity || 0),
+                                    unit_price: Number(l.unit_price || 0),
+                                    line_total: Number(l.line_total || 0),
+                                  })),
+                                installments: inst.map((i) => ({
+                                  seq: i.seq,
+                                  due_date: i.due_date,
+                                  amount: Number(i.amount || 0),
+                                  paid_amount: Number(i.paid_amount || 0),
+                                  status: i.status,
+                                })),
+                              },
+                              {
+                                businessName: (business as any)?.name ?? null,
+                                address: (business as any)?.address ?? null,
+                                phone: (business as any)?.notify_phone ?? null,
+                              },
+                              size,
+                            )
+                          }
+                        />
+
                         <Button
                           size="sm"
                           variant="ghost"

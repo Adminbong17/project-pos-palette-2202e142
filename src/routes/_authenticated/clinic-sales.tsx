@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PrintSizeButton } from "@/components/print-size-select";
+import { printClinicSale } from "@/lib/clinic-print";
+
 
 export const Route = createFileRoute("/_authenticated/clinic-sales")({
   head: () => ({
@@ -50,7 +53,7 @@ function ClinicSalesPage() {
   const [lines, setLines] = useState<Line[]>([]);
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
-  const [invoiceNo, setInvoiceNo] = useState("");
+  const [refDoctor, setRefDoctor] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [billDiscount, setBillDiscount] = useState("");
   const [paid, setPaid] = useState("");
@@ -112,7 +115,9 @@ function ClinicSalesPage() {
         .from("clinic_sales")
         .insert({
           business_id: business!.id,
-          invoice_no: invoiceNo.trim() || nextInvoiceNo,
+          invoice_no: nextInvoiceNo,
+          ref_doctor_name: refDoctor.trim() || null,
+
           sale_date: new Date(date).toISOString(),
           patient_name: patientName.trim() || null,
           patient_phone: patientPhone.trim() || null,
@@ -148,7 +153,7 @@ function ClinicSalesPage() {
       setLines([]);
       setPatientName("");
       setPatientPhone("");
-      setInvoiceNo("");
+      setRefDoctor("");
       setBillDiscount("");
       setPaid("");
       setNotes("");
@@ -164,7 +169,7 @@ function ClinicSalesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinic_sales")
-        .select("id, invoice_no, sale_date, patient_name, patient_phone, subtotal, discount_amount, total, paid, clinic_sale_lines(name, quantity, unit_price, line_total)")
+        .select("id, invoice_no, sale_date, patient_name, patient_phone, ref_doctor_name, notes, subtotal, discount_amount, total, paid, clinic_sale_lines(name, quantity, unit_price, line_total)")
         .eq("business_id", business!.id)
         .order("sale_date", { ascending: false })
         .limit(200);
@@ -208,6 +213,12 @@ function ClinicSalesPage() {
     );
   }, [history.data, historySearch]);
 
+  const printHeader = {
+    businessName: (business as any)?.name ?? null,
+    address: (business as any)?.address ?? null,
+    phone: (business as any)?.notify_phone ?? null,
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-full overflow-x-hidden">
       <div className="flex items-start justify-between gap-2">
@@ -215,10 +226,46 @@ function ClinicSalesPage() {
           <h1 className="font-display text-2xl font-semibold">Clinic Sales</h1>
           <p className="text-sm text-muted-foreground">Sell clinic services & products with discount.</p>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> {save.isPending ? "Saving…" : "Save sale"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <PrintSizeButton
+            label="Print bill"
+            defaultSize="80mm"
+            onPrint={(size) =>
+              printClinicSale(
+                {
+                  invoice_no: nextInvoiceNo,
+                  sale_date: new Date(date).toISOString(),
+                  patient_name: patientName || null,
+                  patient_phone: patientPhone || null,
+                  ref_doctor_name: refDoctor || null,
+                  notes: notes || null,
+                  subtotal,
+                  discount_amount: Number(billDiscount || 0),
+                  total,
+                  paid: Number(paid || 0),
+                  lines: lines
+                    .filter((l) => l.name.trim())
+                    .map((l) => ({
+                      name: l.name,
+                      quantity: Number(l.quantity || 0),
+                      unit_price: Number(l.unit_price || 0),
+                      line_total: Math.max(
+                        Number(l.quantity || 0) * Number(l.unit_price || 0) - Number(l.discount || 0),
+                        0,
+                      ),
+                    })),
+                },
+                printHeader,
+                size,
+              )
+            }
+          />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> {save.isPending ? "Saving…" : "Save sale"}
+          </Button>
+        </div>
       </div>
+
 
       <div className="rounded-2xl border border-border/60 bg-card p-4 grid gap-3 sm:grid-cols-3">
         <label className="block">
@@ -230,16 +277,17 @@ function ClinicSalesPage() {
           <Input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} />
         </label>
         <label className="block">
-          <span className="block text-xs text-muted-foreground mb-1.5">Invoice no.</span>
-          <Input
-            value={invoiceNo}
-            onChange={(e) => setInvoiceNo(e.target.value)}
-            placeholder={nextInvoiceNo}
-          />
+          <span className="block text-xs text-muted-foreground mb-1.5">Invoice no. (auto)</span>
+          <Input value={nextInvoiceNo} readOnly className="bg-muted/40" />
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            Auto: {nextInvoiceNo} (edit only if needed)
+            Generated automatically on save.
           </span>
         </label>
+        <label className="block">
+          <span className="block text-xs text-muted-foreground mb-1.5">Ref. doctor name (optional)</span>
+          <Input value={refDoctor} onChange={(e) => setRefDoctor(e.target.value)} placeholder="Dr. …" />
+        </label>
+
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Date & time</span>
           <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -377,7 +425,35 @@ function ClinicSalesPage() {
                   .map((l: any) => `${l.name} × ${Number(l.quantity)}`)
                   .join(", ")}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <PrintSizeButton
+                  label="Print"
+                  defaultSize="80mm"
+                  onPrint={(size) =>
+                    printClinicSale(
+                      {
+                        invoice_no: r.invoice_no,
+                        sale_date: r.sale_date,
+                        patient_name: r.patient_name,
+                        patient_phone: r.patient_phone,
+                        ref_doctor_name: r.ref_doctor_name,
+                        notes: r.notes,
+                        subtotal: Number(r.subtotal || 0),
+                        discount_amount: Number(r.discount_amount || 0),
+                        total: Number(r.total || 0),
+                        paid: Number(r.paid || 0),
+                        lines: (r.clinic_sale_lines ?? []).map((l: any) => ({
+                          name: l.name,
+                          quantity: Number(l.quantity || 0),
+                          unit_price: Number(l.unit_price || 0),
+                          line_total: Number(l.line_total || 0),
+                        })),
+                      },
+                      printHeader,
+                      size,
+                    )
+                  }
+                />
                 <Button
                   size="sm"
                   variant="ghost"
@@ -389,6 +465,7 @@ function ClinicSalesPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+
             </div>
           ))
         )}

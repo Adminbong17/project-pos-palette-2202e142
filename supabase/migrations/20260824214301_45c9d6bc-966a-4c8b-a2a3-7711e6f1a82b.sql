@@ -1,0 +1,1 @@
+ALTER TABLE public.clinic_sales ADD COLUMN IF NOT EXISTS ref_doctor_name text;

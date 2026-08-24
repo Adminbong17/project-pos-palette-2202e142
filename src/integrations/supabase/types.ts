@@ -986,6 +986,7 @@ export type Database = {
           paid: number
           patient_name: string | null
           patient_phone: string | null
+          ref_doctor_name: string | null
           sale_date: string
           subtotal: number
           total: number
@@ -1003,6 +1004,7 @@ export type Database = {
           paid?: number
           patient_name?: string | null
           patient_phone?: string | null
+          ref_doctor_name?: string | null
           sale_date?: string
           subtotal?: number
           total?: number
@@ -1020,6 +1022,7 @@ export type Database = {
           paid?: number
           patient_name?: string | null
           patient_phone?: string | null
+          ref_doctor_name?: string | null
           sale_date?: string
           subtotal?: number
           total?: number
