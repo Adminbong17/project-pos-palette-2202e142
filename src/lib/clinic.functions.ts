@@ -145,3 +145,95 @@ export const setClinicDoctorPassword = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Update a clinic doctor's display name, qualification and phone. */
+export const updateClinicDoctor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      business_id: string;
+      user_id: string;
+      name: string;
+      qualification?: string;
+      phone?: string;
+    }) => {
+      if (!data?.business_id || !data?.user_id) throw new Error("business_id and user_id required");
+      if (!data?.name?.trim()) throw new Error("Doctor name is required");
+      return data;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: me } = await supabase
+      .from("business_users")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!me) throw new Error("You are not a member of this clinic");
+
+    const { data: target } = await supabase
+      .from("business_users")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+    if (!target) throw new Error("This doctor is not part of your clinic");
+
+    const patch: Record<string, string | null> = {
+      doctor_name: data.name.trim(),
+      first_name: data.name.trim(),
+      doctor_qualification: data.qualification?.trim() || null,
+    };
+    if (data.phone !== undefined) patch["phone"] = data.phone?.trim() || null;
+
+    const { error } = await supabase.from("profiles").update(patch as any).eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Remove a doctor from the clinic (login stays, clinic access is revoked). */
+export const removeClinicDoctor = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { business_id: string; user_id: string }) => {
+    if (!data?.business_id || !data?.user_id) throw new Error("business_id and user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.user_id === userId) throw new Error("You cannot remove your own account");
+
+    const { data: me } = await supabase
+      .from("business_users")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!me) throw new Error("You are not a member of this clinic");
+
+    // Drop assistants working under this doctor first.
+    const { data: staff } = await supabase
+      .from("rx_staff")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("doctor_id", data.user_id);
+    for (const s of staff ?? []) {
+      await supabase.rpc("deactivate_rx_staff", { _staff_id: s.id });
+    }
+
+    await supabase
+      .from("user_roles")
+      .delete()
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id);
+
+    const { error } = await supabase
+      .from("business_users")
+      .update({ is_active: false })
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
