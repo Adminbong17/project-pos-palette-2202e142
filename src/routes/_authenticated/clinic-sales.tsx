@@ -173,6 +173,17 @@ function ClinicSalesPage() {
     },
   });
 
+  // Auto invoice number: CS-000123, continuing from the highest existing number.
+  const nextInvoiceNo = useMemo(() => {
+    const rows = (history.data ?? []) as any[];
+    let max = 0;
+    for (const r of rows) {
+      const m = /(\d+)\s*$/.exec(String(r.invoice_no ?? ""));
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return `CS-${String(max + 1).padStart(6, "0")}`;
+  }, [history.data]);
+
   const removeSale = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("clinic_sales").delete().eq("id", id);
