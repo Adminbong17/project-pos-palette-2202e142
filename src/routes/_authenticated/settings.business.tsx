@@ -97,10 +97,23 @@ function BusinessSettings() {
             <input value={form.sms_sender_id} onChange={(e) => setForm({ ...form, sms_sender_id: e.target.value })}
               placeholder="e.g. SHEIKHRX or 8801XXXXXXXXX" maxLength={20} className={input} />
             <p className="mt-1 text-[11px] text-muted-foreground">
+              Used for all SMS from this account (payment reminders, OTP, notices).
               Leave empty to use the system default sender. The ID must be approved by the SMS gateway,
               otherwise messages will fail.
             </p>
           </Field>
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="block text-xs font-medium text-muted-foreground mb-1.5">Test number</span>
+              <input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} inputMode="tel"
+                placeholder="01XXXXXXXXX" className={`${input} w-40`} />
+            </label>
+            <button type="button" disabled={test.isPending || !testPhone.trim()}
+              onClick={() => test.mutate()}
+              className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">
+              {test.isPending ? "Sending…" : "Send test SMS"}
+            </button>
+          </div>
         </div>
         <Field label="Time zone">
           <input value={form.time_zone} onChange={(e) => setForm({ ...form, time_zone: e.target.value })} className={input} />
