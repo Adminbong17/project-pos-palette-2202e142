@@ -118,10 +118,12 @@ export const sendPlanCreatedSms = createServerFn({ method: "POST" })
     if (p.doctor_id) {
       const { data: doc } = await context.supabase
         .from("profiles")
-        .select("full_name")
+        .select("doctor_name, first_name, last_name")
         .eq("id", p.doctor_id)
         .maybeSingle();
-      doctorName = (doc as any)?.full_name || "-";
+      const d = doc as any;
+      doctorName =
+        d?.doctor_name || [d?.first_name, d?.last_name].filter(Boolean).join(" ") || "-";
     }
 
     const { data: biz } = await context.supabase
