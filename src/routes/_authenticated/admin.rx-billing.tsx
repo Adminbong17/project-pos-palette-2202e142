@@ -1,16 +1,26 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Wallet, Receipt, CalendarClock, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import { rxTierAmount, rxTierRate } from "@/hooks/use-rx-billing";
+import {
+  listRxBillingAll,
+  saveRxBillingAccount,
+  grantRxCredits,
+  patchRxBill,
+} from "@/lib/rx-billing-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+type DoctorRow = { id: string; label: string; business_id: string; business_name: string };
 
 export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
   head: () => ({
