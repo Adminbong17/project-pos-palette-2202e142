@@ -11,10 +11,15 @@ export type NamedOption = { id: string; name: string };
  * account still gets the full C/C, investigation, frequency, instruction,
  * advice and medicine lists.
  */
-export async function fetchMasterOptions(kind: MasterKind, limit = 3000): Promise<NamedOption[]> {
+export async function fetchMasterOptions(
+  kind: MasterKind,
+  limit = 3000,
+  search?: string,
+): Promise<NamedOption[]> {
   const { data, error } = await (supabase as any).rpc("rx_master_options", {
     _kind: kind,
     _limit: limit,
+    _search: (search ?? "").trim() || null,
   });
   if (error) return [];
   return ((data ?? []) as NamedOption[]).filter((r) => !!r?.name);

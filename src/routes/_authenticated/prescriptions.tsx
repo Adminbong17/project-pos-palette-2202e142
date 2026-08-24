@@ -475,8 +475,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("chief_complaints").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("cc", 2000),
+        supabase.from("chief_complaints").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("cc", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -521,8 +521,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("investigations").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("investigation", 2000),
+        supabase.from("investigations").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("investigation", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -549,8 +549,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_frequencies").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("frequency", 2000),
+        supabase.from("rx_frequencies").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("frequency", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -577,8 +577,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_instructions").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("instruction", 2000),
+        supabase.from("rx_instructions").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("instruction", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -605,8 +605,8 @@ function PrescriptionsPage() {
     enabled: !!businessId,
     queryFn: async () => {
       const [own, master] = await Promise.all([
-        supabase.from("rx_advices").select("id, name").eq("business_id", businessId!).order("name").limit(2000),
-        fetchMasterOptions("advice", 2000),
+        supabase.from("rx_advices").select("id, name").eq("business_id", businessId!).order("name").limit(20000),
+        fetchMasterOptions("advice", 20000),
       ]);
       if (own.error) throw own.error;
       return mergeByName((own.data ?? []) as CcOption[], master) as CcOption[];
@@ -659,7 +659,7 @@ function PrescriptionsPage() {
       }
       // Shared medicine library curated by the super admin — available to every
       // doctor even when their own business has no products yet.
-      const master = await fetchMasterOptions("medicine", 5000);
+      const master = await fetchMasterOptions("medicine", 20000);
       for (const m of master) {
         const k = m.name.trim().toLowerCase();
         if (!k || seen.has(k)) continue;
@@ -1546,6 +1546,14 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   // Typing stays smooth: filtering runs on a deferred value and the rendered
   // list is capped, so a 7000-item catalog never blocks the keystroke.
   const deferredSearch = useDeferredValue(pSearch);
+  // The shared library can hold tens of thousands of medicines, more than one
+  // page of rows — so typed searches also hit the server for exact matches.
+  const remote = useQuery({
+    queryKey: ["rx-master-medicine-search", deferredSearch.trim().toLowerCase()],
+    enabled: deferredSearch.trim().length >= 2,
+    staleTime: 60_000,
+    queryFn: () => fetchMasterOptions("medicine", 200, deferredSearch.trim()),
+  });
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
     if (!q) return allOptions.slice(0, 50);
@@ -1558,8 +1566,16 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       else if (i > 0) contains.push(p);
       if (starts.length >= 50) break;
     }
-    return [...starts, ...contains].slice(0, 50);
-  }, [allOptions, deferredSearch]);
+    const merged = [...starts, ...contains];
+    const seen = new Set(merged.map((p) => p.name.trim().toLowerCase()));
+    for (const m of remote.data ?? []) {
+      const k = m.name.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      merged.push({ id: m.id, name: m.name, variation_id: null });
+    }
+    return merged.slice(0, 80);
+  }, [allOptions, deferredSearch, remote.data]);
   const query = pSearch.trim();
   const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
   return (
@@ -1589,7 +1605,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
                   </CommandGroup>
                 )}
                 {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
-                {filtered.length >= 50 && (
+                {filtered.length >= 80 && (
                   <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
                     Showing first 50 — keep typing to narrow.
                   </div>

@@ -4604,13 +4604,21 @@ export type Database = {
         Args: { _account_id: string; _delta: number; _reason?: string }
         Returns: number
       }
-      rx_master_options: {
-        Args: { _kind: string; _limit?: number }
-        Returns: {
-          id: string
-          name: string
-        }[]
-      }
+      rx_master_options:
+        | {
+            Args: { _kind: string; _limit?: number }
+            Returns: {
+              id: string
+              name: string
+            }[]
+          }
+        | {
+            Args: { _kind: string; _limit: number; _search: string }
+            Returns: {
+              id: string
+              name: string
+            }[]
+          }
       rx_owner_doctor: {
         Args: { _business_id: string; _user_id: string }
         Returns: string
