@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, UserCog, ListChecks, Building2, KeyRound, MessageSquare } from "lucide-react";
+import {
+  ClipboardList,
+  UserCog,
+  ListChecks,
+  Building2,
+  KeyRound,
+  MessageSquare,
+  Wallet,
+} from "lucide-react";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { isRxMode } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
