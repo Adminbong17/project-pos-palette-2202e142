@@ -197,6 +197,8 @@ function RxBillingPage() {
         </Card>
       </div>
 
+      <RxCreditBuyCard businessId={business?.id} />
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Monthly bills</CardTitle>
