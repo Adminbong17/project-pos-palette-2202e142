@@ -37,17 +37,22 @@ export async function getSmsConfig(): Promise<SmsConfig | null> {
 function sendUrl(cfg: SmsConfig, phone: string, message: string) {
   const base = cfg.base_url.replace(/\/+$/, "");
   const root = /\/sendtext$/i.test(base) ? base : `${base}/sendtext`;
-  const q = new URLSearchParams({
-    apikey: cfg.api_key,
-    secretkey: cfg.secret_key,
-    toUser: phone,
-    messageContent: message,
-  });
+  // URLSearchParams encodes spaces as "+", which some REVE gateways deliver
+  // literally or drop — the message then arrives empty. Encode manually so
+  // spaces become %20.
+  const enc = (v: string) => encodeURIComponent(v).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  const parts = [
+    `apikey=${enc(cfg.api_key)}`,
+    `secretkey=${enc(cfg.secret_key)}`,
+    `toUser=${enc(phone)}`,
+    `messageContent=${enc(message)}`,
+  ];
   // An empty callerID makes the gateway answer "114 Inappropriate request
   // parameter", so the parameter is only sent when a sender ID is configured.
-  if (cfg.caller_id) q.set("callerID", cfg.caller_id);
-  return `${root}?${q.toString()}`;
+  if (cfg.caller_id) parts.push(`callerID=${enc(cfg.caller_id)}`);
+  return `${root}?${parts.join("&")}`;
 }
+
 
 /** Turns the gateway's numeric status into something a human can act on. */
 function explain(status: string | undefined, text: string | undefined) {
