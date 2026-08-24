@@ -138,7 +138,9 @@ function ClinicDoctorsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_staff")
-        .select("id, doctor_id, name, username, phone, chamber_id, is_active")
+        .select(
+          "id, doctor_id, name, username, phone, chamber_id, is_active, staff_kind, role_label, allowed_sections",
+        )
         .eq("business_id", businessId!)
         .eq("is_active", true)
         .order("name");
