@@ -188,7 +188,14 @@ function SmsSettingsPage() {
         </div>
         {testing.data && (
           <p className="text-xs text-muted-foreground">
-            Gateway response: {(testing.data as any).status ?? "—"} {(testing.data as any).text ?? ""}
+            Gateway response: {(testing.data as any).status ?? "—"}{" "}
+            {(testing.data as any).error ?? (testing.data as any).text ?? ""}
+          </p>
+        )}
+        {!q.data?.caller_id && (
+          <p className="text-xs text-amber-600">
+            Sender / caller ID is empty. REVE accounts usually reject requests without an approved sender ID
+            (error 114). Save your masking/sender ID above, then test again.
           </p>
         )}
       </div>
