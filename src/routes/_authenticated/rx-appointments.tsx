@@ -42,7 +42,9 @@ function AppointmentsPage() {
   const businessId = business?.id;
   const qc = useQueryClient();
 
-  const { isAssistant } = useCurrentRole();
+  const { isAssistant, role } = useCurrentRole();
+  // Clinic staff (reception/billing) only take serials — they don't manage locations or fees.
+  const isClinicStaff = !!role?.startsWith("Clinic Staff");
   const chambers = useChambers(businessId);
   const chamberList = chambers.data ?? [];
   const myStaff = useMyStaffChamber(businessId);
@@ -191,7 +193,7 @@ function AppointmentsPage() {
         </p>
       </div>
 
-      {!isAssistant && (
+      {!isAssistant && !isClinicStaff && (
       <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5">
         <div className="mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />

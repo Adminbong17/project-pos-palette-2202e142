@@ -3085,6 +3085,7 @@ export type Database = {
       }
       rx_staff: {
         Row: {
+          allowed_sections: string[] | null
           business_id: string
           chamber_id: string | null
           created_at: string
@@ -3093,11 +3094,14 @@ export type Database = {
           is_active: boolean
           name: string
           phone: string | null
+          role_label: string | null
+          staff_kind: string
           updated_at: string
           user_id: string | null
           username: string
         }
         Insert: {
+          allowed_sections?: string[] | null
           business_id: string
           chamber_id?: string | null
           created_at?: string
@@ -3106,11 +3110,14 @@ export type Database = {
           is_active?: boolean
           name: string
           phone?: string | null
+          role_label?: string | null
+          staff_kind?: string
           updated_at?: string
           user_id?: string | null
           username: string
         }
         Update: {
+          allowed_sections?: string[] | null
           business_id?: string
           chamber_id?: string | null
           created_at?: string
@@ -3119,6 +3126,8 @@ export type Database = {
           is_active?: boolean
           name?: string
           phone?: string | null
+          role_label?: string | null
+          staff_kind?: string
           updated_at?: string
           user_id?: string | null
           username?: string
@@ -4255,6 +4264,22 @@ export type Database = {
               _email: string
               _name: string
               _phone: string
+              _user_id: string
+              _username: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _business_id: string
+              _chamber_id: string
+              _doctor_id: string
+              _email: string
+              _name: string
+              _phone: string
+              _role_label: string
+              _sections: string[]
+              _staff_kind: string
               _user_id: string
               _username: string
             }

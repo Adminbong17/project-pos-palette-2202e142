@@ -27,6 +27,8 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "clinic", label: "Clinic Doctors", path: "/clinic-doctors" },
   { key: "clinic", label: "Products & Services", path: "/clinic-services" },
   { key: "clinic", label: "Clinic Sales", path: "/clinic-sales" },
+  { key: "clinic-services", label: "Products & Services", path: "/clinic-services" },
+  { key: "clinic-sales", label: "Clinic Sales", path: "/clinic-sales" },
   { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
@@ -43,7 +45,13 @@ const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 const ALWAYS_ALLOWED = ["quick-box"];
 
 // Clinical-only keys: users limited to these never get POS/inventory extras.
-const CLINICAL_KEYS = ["prescriptions", "rx-queue", "clinic"];
+const CLINICAL_KEYS = [
+  "prescriptions",
+  "rx-queue",
+  "clinic",
+  "clinic-services",
+  "clinic-sales",
+];
 
 // A clinic admin only manages doctors, assistants and the serial queue.
 const DEFAULT_CLINIC = ["clinic", "rx-queue"];
@@ -127,6 +135,8 @@ export function sectionHomePath(sections: string[] | null) {
   if (sections.includes("clinic")) return "/clinic-dashboard";
   if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
     return "/rx-appointments";
+  if (sections.includes("clinic-sales")) return "/clinic-sales";
+  if (sections.includes("clinic-services")) return "/clinic-services";
   if (sections.includes("prescriptions")) return "/rx-dashboard";
   if (sections.includes("dashboard")) return "/dashboard";
   const match = ALL_SECTIONS.find((s) => sections.includes(s.key));

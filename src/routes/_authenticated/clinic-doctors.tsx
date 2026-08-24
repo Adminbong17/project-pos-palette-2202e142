@@ -53,7 +53,26 @@ type Assistant = {
   phone: string | null;
   chamber_id: string | null;
   is_active: boolean;
+  staff_kind?: string | null;
+  role_label?: string | null;
+  allowed_sections?: string[] | null;
 };
+
+/** Clinic-level staff roles: each one only unlocks the screens it needs. */
+const CLINIC_STAFF_ROLES: { value: string; label: string; sections: string[] }[] = [
+  { value: "Reception", label: "Reception — patient serial only", sections: ["rx-queue"] },
+  { value: "Billing", label: "Billing — clinic sales only", sections: ["clinic-sales"] },
+  {
+    value: "Reception + Billing",
+    label: "Reception + Billing — serial & sales",
+    sections: ["rx-queue", "clinic-sales"],
+  },
+  {
+    value: "Store",
+    label: "Store — products & services list",
+    sections: ["clinic-services"],
+  },
+];
 
 function ClinicDoctorsPage() {
   const { data: business } = useCurrentBusiness();
@@ -119,7 +138,9 @@ function ClinicDoctorsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_staff")
-        .select("id, doctor_id, name, username, phone, chamber_id, is_active")
+        .select(
+          "id, doctor_id, name, username, phone, chamber_id, is_active, staff_kind, role_label, allowed_sections",
+        )
         .eq("business_id", businessId!)
         .eq("is_active", true)
         .order("name");
@@ -247,6 +268,14 @@ function ClinicDoctorsPage() {
         </CardContent>
       </Card>
 
+      <ClinicStaffCard
+        businessId={businessId}
+        staff={(assistants.data ?? []).filter((a) => a.staff_kind === "clinic_staff")}
+        chambers={chambers.data ?? []}
+        onChanged={() => qc.invalidateQueries({ queryKey: ["clinic-assistants", businessId] })}
+      />
+
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -279,7 +308,9 @@ function ClinicDoctorsPage() {
                 key={d.user_id}
                 doctor={d}
                 businessId={businessId}
-                assistants={(assistants.data ?? []).filter((a) => a.doctor_id === d.user_id)}
+                assistants={(assistants.data ?? []).filter(
+                  (a) => a.doctor_id === d.user_id && a.staff_kind !== "clinic_staff",
+                )}
                 chambers={chambers.data ?? []}
                 onSetPassword={async (password) => {
                   if (!businessId) return;
@@ -506,5 +537,206 @@ function DoctorBlock({
         </form>
       </div>
     </div>
+  );
+}
+
+function ClinicStaffCard({
+  businessId,
+  staff,
+  chambers,
+  onChanged,
+}: {
+  businessId: string | undefined;
+  staff: Assistant[];
+  chambers: { id: string; name: string }[];
+  onChanged: () => void;
+}) {
+  const addStaff = useServerFn(createRxStaff);
+  const setStaffPw = useServerFn(setRxStaffPassword);
+  const dropStaff = useServerFn(removeRxStaff);
+
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    username: "",
+    phone: "",
+    password: "",
+    chamber_id: "",
+    role: CLINIC_STAFF_ROLES[0]!.value,
+  });
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!businessId || busy) return;
+    const role = CLINIC_STAFF_ROLES.find((r) => r.value === form.role) ?? CLINIC_STAFF_ROLES[0]!;
+    setBusy(true);
+    try {
+      await addStaff({
+        data: {
+          business_id: businessId,
+          name: form.name,
+          username: form.username,
+          password: form.password,
+          phone: form.phone,
+          chamber_id: form.chamber_id || null,
+          staff_kind: "clinic_staff",
+          role_label: role.value,
+          sections: role.sections,
+        },
+      });
+      toast.success("Clinic staff created");
+      setForm({
+        name: "",
+        username: "",
+        phone: "",
+        password: "",
+        chamber_id: "",
+        role: CLINIC_STAFF_ROLES[0]!.value,
+      });
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not create the staff account");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Users className="h-4 w-4 text-primary" /> Clinic staff (not under a doctor)
+          <span className="text-xs font-normal text-muted-foreground">{staff.length}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Clinic staff work for the clinic itself. Pick a role — the account can only open the screens
+          that role needs.
+        </p>
+
+        {staff.length > 0 && (
+          <div className="space-y-1">
+            {staff.map((s) => {
+              const chamber = chambers.find((c) => c.id === s.chamber_id);
+              return (
+                <div
+                  key={s.id}
+                  className="flex flex-wrap items-center gap-2 rounded-md bg-muted/30 px-2 py-1 text-xs"
+                >
+                  <span className="font-medium">{s.name}</span>
+                  <Badge variant="secondary">{s.username}</Badge>
+                  <Badge variant="outline">{s.role_label ?? "Staff"}</Badge>
+                  {s.phone && <span className="text-muted-foreground">📞 {s.phone}</span>}
+                  {chamber && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <MapPin className="h-3 w-3" /> {chamber.name}
+                    </span>
+                  )}
+                  <div className="ml-auto flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={async () => {
+                        const next = window.prompt(`New password for ${s.name}`);
+                        if (!next || next.length < 6) return;
+                        try {
+                          await setStaffPw({ data: { staff_id: s.id, password: next } });
+                          toast.success("Password updated");
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Could not change the password");
+                        }
+                      }}
+                    >
+                      Password
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px] text-destructive"
+                      onClick={async () => {
+                        if (!window.confirm(`Remove ${s.name}?`)) return;
+                        try {
+                          await dropStaff({ data: { staff_id: s.id } });
+                          toast.success("Removed");
+                          onChanged();
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Could not remove");
+                        }
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <form className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6" onSubmit={submit}>
+          <Input
+            required
+            className="h-9 text-xs"
+            placeholder="Staff name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <Input
+            required
+            className="h-9 text-xs"
+            placeholder="Username"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+          />
+          <Input
+            className="h-9 text-xs"
+            placeholder="Phone"
+            inputMode="tel"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+          <Input
+            required
+            minLength={6}
+            className="h-9 text-xs"
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
+          <select
+            value={form.role}
+            onChange={(e) => setForm({ ...form, role: e.target.value })}
+            className="h-9 min-w-0 rounded-md border border-border bg-input px-2 text-xs"
+          >
+            {CLINIC_STAFF_ROLES.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <select
+              value={form.chamber_id}
+              onChange={(e) => setForm({ ...form, chamber_id: e.target.value })}
+              className="h-9 min-w-0 flex-1 rounded-md border border-border bg-input px-2 text-xs"
+            >
+              <option value="">Location…</option>
+              {chambers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" size="sm" disabled={busy}>
+              Add
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
