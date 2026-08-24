@@ -153,7 +153,7 @@ function ClinicSalesPage() {
       setLines([]);
       setPatientName("");
       setPatientPhone("");
-      setInvoiceNo("");
+      setRefDoctor("");
       setBillDiscount("");
       setPaid("");
       setNotes("");
