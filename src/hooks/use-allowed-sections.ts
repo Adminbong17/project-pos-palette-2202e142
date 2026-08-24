@@ -117,8 +117,9 @@ export function useAllowedSections() {
   const hasExplicitGrant = Array.isArray(q.data) && q.data.length > 0;
   const sections =
     raw && clinicalOnlyRole && !hasExplicitGrant
-      ? (isClinicAdmin ? DEFAULT_CLINIC : ["prescriptions"])
+      ? (isClinicAdmin ? DEFAULT_CLINIC : ["prescriptions", "rx-queue"])
       : raw;
+
 
 
   return {
