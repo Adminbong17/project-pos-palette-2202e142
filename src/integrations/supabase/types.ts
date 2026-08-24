@@ -544,6 +544,7 @@ export type Database = {
           accounting_method: string
           biz_kind: string
           clinic_mode: boolean
+          clinic_type: string
           created_at: string
           currency_id: number
           default_profit_percent: number
@@ -573,6 +574,7 @@ export type Database = {
           accounting_method?: string
           biz_kind?: string
           clinic_mode?: boolean
+          clinic_type?: string
           created_at?: string
           currency_id: number
           default_profit_percent?: number
@@ -602,6 +604,7 @@ export type Database = {
           accounting_method?: string
           biz_kind?: string
           clinic_mode?: boolean
+          clinic_type?: string
           created_at?: string
           currency_id?: number
           default_profit_percent?: number
@@ -3954,6 +3957,7 @@ export type Database = {
       approve_access_request_clinic: {
         Args: {
           _clinic_name?: string
+          _clinic_type?: string
           _id: string
           _notes?: string
           _sections?: string[]
