@@ -19,7 +19,7 @@ function BusinessSettings() {
   const [form, setForm] = useState({
     name: "", sku_prefix: "", time_zone: "UTC", tax_number_1: "", tax_label_1: "",
     default_profit_percent: 25, fy_start_month: 1, accounting_method: "fifo",
-    address: "", notify_phone: "",
+    address: "", notify_phone: "", sms_sender_id: "",
   });
 
   const isOwner = !!business && !!user && business.owner_id === user.id;
@@ -39,6 +39,7 @@ function BusinessSettings() {
           default_profit_percent: Number(data.default_profit_percent),
           fy_start_month: data.fy_start_month, accounting_method: data.accounting_method,
           address: (data as any).address ?? "", notify_phone: (data as any).notify_phone ?? "",
+          sms_sender_id: (data as any).sms_sender_id ?? "",
         });
       });
     }
@@ -51,6 +52,7 @@ function BusinessSettings() {
         ...form,
         address: form.address.trim() || null,
         notify_phone: form.notify_phone.trim() || null,
+        sms_sender_id: form.sms_sender_id.trim() || null,
       };
       const { error } = await supabase.from("businesses").update(payload as never).eq("id", business.id);
       if (error) throw error;
@@ -90,6 +92,16 @@ function BusinessSettings() {
           <input value={form.notify_phone} onChange={(e) => setForm({ ...form, notify_phone: e.target.value })}
             inputMode="tel" placeholder="01XXXXXXXXX" className={input} />
         </Field>
+        <div className="sm:col-span-2">
+          <Field label="SMS sender name / ID (shown to customers)">
+            <input value={form.sms_sender_id} onChange={(e) => setForm({ ...form, sms_sender_id: e.target.value })}
+              placeholder="e.g. SHEIKHRX or 8801XXXXXXXXX" maxLength={20} className={input} />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Leave empty to use the system default sender. The ID must be approved by the SMS gateway,
+              otherwise messages will fail.
+            </p>
+          </Field>
+        </div>
         <Field label="Time zone">
           <input value={form.time_zone} onChange={(e) => setForm({ ...form, time_zone: e.target.value })} className={input} />
         </Field>
