@@ -10,7 +10,7 @@ import {
   Search,
   Trash2,
   Wallet,
-  Phone,
+
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
