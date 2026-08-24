@@ -8,7 +8,12 @@ import { Stethoscope, UserPlus, KeyRound, Users, Search, MapPin } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { createClinicDoctor, setClinicDoctorPassword } from "@/lib/clinic.functions";
-import { createRxStaff, setRxStaffPassword, removeRxStaff } from "@/lib/rx-staff.functions";
+import {
+  createRxStaff,
+  setRxStaffPassword,
+  removeRxStaff,
+  setRxStaffRoles,
+} from "@/lib/rx-staff.functions";
 import { staffUsernameToEmail } from "@/lib/rx-staff";
 import { useChambers } from "@/components/appointment-queue";
 import { ClinicCreditsCard } from "@/components/clinic-credits-card";
