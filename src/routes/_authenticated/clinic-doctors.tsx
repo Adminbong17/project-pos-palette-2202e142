@@ -12,6 +12,7 @@ import { createRxStaff, setRxStaffPassword, removeRxStaff } from "@/lib/rx-staff
 import { staffUsernameToEmail } from "@/lib/rx-staff";
 import { useChambers } from "@/components/appointment-queue";
 import { ClinicCreditsCard } from "@/components/clinic-credits-card";
+import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
