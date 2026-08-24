@@ -133,6 +133,39 @@ function ClinicPlansPage() {
     },
   });
 
+  // Look up patients the doctors already printed a prescription for, by patient ID.
+  const patientLookup = useQuery({
+    queryKey: ["clinic-plan-patient-lookup", businessId, form.patient_code.trim()],
+    enabled: !!businessId && form.patient_code.trim().length >= 2,
+    queryFn: async () => {
+      const term = form.patient_code.trim();
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select("patient_code, patient_name, patient_phone, created_at")
+        .eq("business_id", businessId!)
+        .ilike("patient_code", `%${term}%`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const rows: { patient_code: string | null; patient_name: string; patient_phone: string | null }[] = [];
+      for (const r of (data ?? []) as any[]) {
+        const key = String(r.patient_code ?? "");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        rows.push({ patient_code: r.patient_code, patient_name: r.patient_name, patient_phone: r.patient_phone });
+        if (rows.length >= 10) break;
+      }
+      return rows;
+    },
+  });
+  const patientMatches =
+    form.patient_code.trim() && form.patient_code.trim() !== (patientLookup.data?.[0]?.patient_code ?? "\u0000")
+      ? (patientLookup.data ?? [])
+      : (patientLookup.data ?? []).filter((m) => m.patient_code !== form.patient_code.trim());
+
+
+
   const plans = useQuery({
     queryKey: ["clinic-plans", businessId],
     enabled: !!businessId,
