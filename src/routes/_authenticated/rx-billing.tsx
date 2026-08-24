@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Wallet, ShieldCheck, Receipt } from "lucide-react";
+import { Wallet, ShieldCheck, Receipt, History } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { useClinicDoctors } from "@/hooks/use-clinic-doctors";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { RxBillingBanner } from "@/components/rx-billing-banner";
 import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
+import { ClinicCreditsCard } from "@/components/clinic-credits-card";
 import { sendRxBillingOtp, verifyRxBillingOtp } from "@/lib/rx-billing.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +44,9 @@ function RxBillingPage() {
   const { isDoctor, isAdmin } = useCurrentRole();
   // Doctors working under a clinic are funded by their clinic, not the platform.
   const clinicFunded = !!business?.clinic_mode && isDoctor && !isAdmin;
+  // Clinic admins manage the shared pool and hand credits to their doctors.
+  const clinicAdmin = !!business?.clinic_mode && isAdmin;
+  const clinicDoctors = useClinicDoctors(clinicAdmin ? business?.id : undefined);
   const { state, isLoading, refetch } = useRxBillingState();
   const send = useServerFn(sendRxBillingOtp);
   const verify = useServerFn(verifyRxBillingOtp);
@@ -199,6 +204,21 @@ function RxBillingPage() {
       </div>
 
       <RxCreditBuyCard businessId={business?.id} />
+
+      {clinicAdmin && (
+        <ClinicCreditsCard
+          businessId={business?.id}
+          doctors={(clinicDoctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
+        />
+      )}
+
+      <div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/rx-credit-history">
+            <History className="h-4 w-4" /> Payment &amp; credit history
+          </Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
