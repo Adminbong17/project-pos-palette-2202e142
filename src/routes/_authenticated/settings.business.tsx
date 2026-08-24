@@ -24,6 +24,19 @@ function BusinessSettings() {
 
   const isOwner = !!business && !!user && business.owner_id === user.id;
   const canEdit = isOwner || isAdmin || isClinicAdmin;
+  const [testPhone, setTestPhone] = useState("");
+  const sendTest = useServerFn(sendBusinessTestSms);
+  const test = useMutation({
+    mutationFn: async () => {
+      if (!business) throw new Error("No business");
+      return await sendTest({ data: { businessId: business.id, phone: testPhone, message: "Test SMS from your account." } });
+    },
+    onSuccess: (res: any) => {
+      if (res?.ok) toast.success(`Test SMS sent${res.senderId ? ` as "${res.senderId}"` : " (default sender)"}`);
+      else toast.error(res?.error ?? "Could not send test SMS");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: currencies = [] } = useQuery({
     queryKey: ["currencies"],
