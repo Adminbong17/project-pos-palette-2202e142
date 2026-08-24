@@ -115,7 +115,9 @@ function ClinicSalesPage() {
         .from("clinic_sales")
         .insert({
           business_id: business!.id,
-          invoice_no: invoiceNo.trim() || nextInvoiceNo,
+          invoice_no: nextInvoiceNo,
+          ref_doctor_name: refDoctor.trim() || null,
+
           sale_date: new Date(date).toISOString(),
           patient_name: patientName.trim() || null,
           patient_phone: patientPhone.trim() || null,
