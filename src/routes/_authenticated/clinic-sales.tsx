@@ -231,7 +231,14 @@ function ClinicSalesPage() {
         </label>
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Invoice no.</span>
-          <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="optional" />
+          <Input
+            value={invoiceNo}
+            onChange={(e) => setInvoiceNo(e.target.value)}
+            placeholder={nextInvoiceNo}
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            Auto: {nextInvoiceNo} (edit only if needed)
+          </span>
         </label>
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Date & time</span>
