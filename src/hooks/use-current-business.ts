@@ -11,6 +11,7 @@ export type Business = {
   time_zone: string;
   clinic_mode?: boolean | null;
   clinic_type?: "general" | "dental" | null;
+  notify_phone?: string | null;
 };
 
 export function useCurrentBusiness() {
