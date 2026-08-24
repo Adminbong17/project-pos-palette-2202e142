@@ -64,6 +64,7 @@ function AdminRxBillingPage() {
   const [month, setMonth] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
   const [billSearch, setBillSearch] = useState("");
+  const [poolSearch, setPoolSearch] = useState("");
 
   const accounts = useQuery({
     queryKey: ["rx-billing-accounts", businessId],
