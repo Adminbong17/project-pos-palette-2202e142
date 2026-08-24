@@ -53,7 +53,26 @@ type Assistant = {
   phone: string | null;
   chamber_id: string | null;
   is_active: boolean;
+  staff_kind?: string | null;
+  role_label?: string | null;
+  allowed_sections?: string[] | null;
 };
+
+/** Clinic-level staff roles: each one only unlocks the screens it needs. */
+const CLINIC_STAFF_ROLES: { value: string; label: string; sections: string[] }[] = [
+  { value: "Reception", label: "Reception — patient serial only", sections: ["rx-queue"] },
+  { value: "Billing", label: "Billing — clinic sales only", sections: ["clinic-sales"] },
+  {
+    value: "Reception + Billing",
+    label: "Reception + Billing — serial & sales",
+    sections: ["rx-queue", "clinic-sales"],
+  },
+  {
+    value: "Store",
+    label: "Store — products & services list",
+    sections: ["clinic-services"],
+  },
+];
 
 function ClinicDoctorsPage() {
   const { data: business } = useCurrentBusiness();
