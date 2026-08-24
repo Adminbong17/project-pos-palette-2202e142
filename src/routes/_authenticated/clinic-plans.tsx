@@ -180,20 +180,6 @@ function ClinicPlansPage() {
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
   const net = Math.max(0, subtotal - Number(form.discount || 0));
 
-  const saveNotifyPhone = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("businesses")
-        .update({ notify_phone: notifyPhone.trim() || null } as never)
-        .eq("id", businessId!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Clinic SMS number saved");
-      qc.invalidateQueries({ queryKey: ["current-business"] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Could not save the number"),
-  });
 
   const createPlan = useMutation({
     mutationFn: async () => {
