@@ -51,7 +51,11 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
     const roleById = new Map((roles ?? []).map((r: any) => [r.id, String(r.name ?? "").split("#")[0]]));
 
     return (businesses ?? []).map((b: any) => {
-      const rows = (members ?? []).filter((m: any) => m.business_id === b.id);
+      // Removed / revoked members (is_active = false) and members whose account
+      // no longer exists must not show up in the super-admin views.
+      const rows = (members ?? []).filter(
+        (m: any) => m.business_id === b.id && m.is_active !== false && profileById.has(m.user_id),
+      );
       const memberList: BizMember[] = rows.map((m: any) => {
         const p: any = profileById.get(m.user_id) ?? {};
         const ur: any = (userRoles ?? []).find(

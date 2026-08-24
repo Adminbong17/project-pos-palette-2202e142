@@ -57,6 +57,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
 
     const bizByUser = new Map<string, Set<string>>();
     for (const m of members ?? []) {
+      if ((m as any).is_active === false) continue; // revoked membership
       const set = bizByUser.get(m.user_id) ?? new Set<string>();
       set.add(bizName.get(m.business_id) ?? m.business_id);
       bizByUser.set(m.user_id, set);
