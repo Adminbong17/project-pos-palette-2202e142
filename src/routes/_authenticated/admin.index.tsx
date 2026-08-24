@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, UserCog, ListChecks, Building2, KeyRound } from "lucide-react";
+import { ClipboardList, UserCog, ListChecks, Building2, KeyRound, MessageSquare } from "lucide-react";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { isRxMode } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -52,6 +52,14 @@ const CARDS = [
     label: "All Users & Logins",
     desc: "Every account with email, username, role and password control.",
     icon: KeyRound,
+    rx: true,
+    superOnly: true,
+  },
+  {
+    to: "/admin/sms",
+    label: "SMS Gateway",
+    desc: "API key, secret key and sender ID for all SMS sending.",
+    icon: MessageSquare,
     rx: true,
     superOnly: true,
   },
