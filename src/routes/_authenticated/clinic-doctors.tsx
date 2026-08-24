@@ -7,7 +7,12 @@ import { Stethoscope, UserPlus, KeyRound, Users, Search, MapPin } from "lucide-r
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
-import { createClinicDoctor, setClinicDoctorPassword } from "@/lib/clinic.functions";
+import {
+  createClinicDoctor,
+  setClinicDoctorPassword,
+  updateClinicDoctor,
+  removeClinicDoctor,
+} from "@/lib/clinic.functions";
 import {
   createRxStaff,
   setRxStaffPassword,
