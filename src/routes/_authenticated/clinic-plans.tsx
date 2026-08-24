@@ -345,22 +345,12 @@ function ClinicPlansPage() {
             <Phone className="h-4 w-4 text-primary" /> Clinic SMS number
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          <Input
-            className="h-9 max-w-56 text-sm"
-            placeholder={business?.notify_phone ?? "01XXXXXXXXX"}
-            value={notifyPhone}
-            onChange={(e) => setNotifyPhone(e.target.value)}
-            inputMode="tel"
-          />
-          <Button size="sm" onClick={() => saveNotifyPhone.mutate()} disabled={saveNotifyPhone.isPending}>
-            Save
-          </Button>
-          {business?.notify_phone && (
-            <span className="text-xs text-muted-foreground">
-              Current: <b>{business.notify_phone}</b>
-            </span>
-          )}
+        <CardContent className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Payment receipts are sent to:</span>
+          <b>{business?.notify_phone || "not set"}</b>
+          <Link to="/settings/business" className="text-xs text-primary underline">
+            Change in Settings → Business (admin only)
+          </Link>
         </CardContent>
       </Card>
 
