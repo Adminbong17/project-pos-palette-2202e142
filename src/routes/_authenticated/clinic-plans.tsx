@@ -102,7 +102,7 @@ function ClinicPlansPage() {
 
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [notifyPhone, setNotifyPhone] = useState<string>("");
+  
   const [form, setForm] = useState({
     patient_name: "",
     patient_code: "",
