@@ -133,7 +133,7 @@ function SalesPage() {
       const [txRes, linesRes, bizRes] = await Promise.all([
         supabase.from("transactions").select("id, invoice_no, ref_no, transaction_date, final_total, discount_amount, total_paid, location_id, contact:contacts(name), location:business_locations(name, landmark, city, state, country, zip_code, mobile, alternate_number)").eq("id", saleId).single(),
         supabase.from("transaction_sell_lines").select("quantity, unit_price, product:products(name), variation:variations(name, sub_sku)").eq("transaction_id", saleId),
-        supabase.from("businesses").select("name").eq("id", business.id).single(),
+        supabase.from("businesses").select("name, address, notify_phone").eq("id", business.id).single(),
       ]);
       if (txRes.error) throw txRes.error;
       if (linesRes.error) throw linesRes.error;
@@ -149,8 +149,9 @@ function SalesPage() {
       const total = Number(tx.final_total || 0);
       const paid = Number(tx.total_paid || 0);
       const loc = tx.location;
-      const address = loc ? [loc.landmark, loc.city, loc.state, loc.zip_code, loc.country].filter(Boolean).join(", ") : "";
-      const mobile = loc ? [loc.mobile, loc.alternate_number].filter(Boolean).join(" / ") : "";
+      const bizInfo: any = bizRes.data ?? {};
+      const address = (loc ? [loc.landmark, loc.city, loc.state, loc.zip_code, loc.country].filter(Boolean).join(", ") : "") || (bizInfo.address ?? "");
+      const mobile = (loc ? [loc.mobile, loc.alternate_number].filter(Boolean).join(" / ") : "") || (bizInfo.notify_phone ?? "");
       const sale: ReceiptSale = {
         invoice_no: tx.invoice_no ?? tx.ref_no ?? "—",
         lines, subtotal, discount, total, paid,

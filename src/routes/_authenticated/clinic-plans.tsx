@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -102,7 +102,7 @@ function ClinicPlansPage() {
 
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [notifyPhone, setNotifyPhone] = useState<string>("");
+  
   const [form, setForm] = useState({
     patient_name: "",
     patient_code: "",
@@ -180,20 +180,6 @@ function ClinicPlansPage() {
   const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0);
   const net = Math.max(0, subtotal - Number(form.discount || 0));
 
-  const saveNotifyPhone = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("businesses")
-        .update({ notify_phone: notifyPhone.trim() || null } as never)
-        .eq("id", businessId!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Clinic SMS number saved");
-      qc.invalidateQueries({ queryKey: ["current-business"] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Could not save the number"),
-  });
 
   const createPlan = useMutation({
     mutationFn: async () => {
@@ -345,22 +331,12 @@ function ClinicPlansPage() {
             <Phone className="h-4 w-4 text-primary" /> Clinic SMS number
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          <Input
-            className="h-9 max-w-56 text-sm"
-            placeholder={business?.notify_phone ?? "01XXXXXXXXX"}
-            value={notifyPhone}
-            onChange={(e) => setNotifyPhone(e.target.value)}
-            inputMode="tel"
-          />
-          <Button size="sm" onClick={() => saveNotifyPhone.mutate()} disabled={saveNotifyPhone.isPending}>
-            Save
-          </Button>
-          {business?.notify_phone && (
-            <span className="text-xs text-muted-foreground">
-              Current: <b>{business.notify_phone}</b>
-            </span>
-          )}
+        <CardContent className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Payment receipts are sent to:</span>
+          <b>{business?.notify_phone || "not set"}</b>
+          <Link to="/settings/business" className="text-xs text-primary underline">
+            Change in Settings → Business (admin only)
+          </Link>
         </CardContent>
       </Card>
 
