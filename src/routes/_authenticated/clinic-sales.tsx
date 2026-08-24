@@ -169,7 +169,7 @@ function ClinicSalesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinic_sales")
-        .select("id, invoice_no, sale_date, patient_name, patient_phone, subtotal, discount_amount, total, paid, clinic_sale_lines(name, quantity, unit_price, line_total)")
+        .select("id, invoice_no, sale_date, patient_name, patient_phone, ref_doctor_name, notes, subtotal, discount_amount, total, paid, clinic_sale_lines(name, quantity, unit_price, line_total)")
         .eq("business_id", business!.id)
         .order("sale_date", { ascending: false })
         .limit(200);
