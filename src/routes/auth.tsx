@@ -160,14 +160,14 @@ function AuthPage() {
 
           <input
             required
-            type="email"
-            inputMode="email"
-            autoComplete="email"
+            type={mode === "signup" ? "email" : "text"}
+            inputMode={mode === "signup" ? "email" : "text"}
+            autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
+            placeholder={mode === "signup" ? "Email" : "Email or username"}
             className={inputCls}
           />
           <div className="relative">
