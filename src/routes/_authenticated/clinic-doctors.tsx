@@ -683,7 +683,15 @@ function ClinicStaffCard({
                 >
                   <span className="font-medium">{s.name}</span>
                   <Badge variant="secondary">{s.username}</Badge>
-                  <Badge variant="outline">{s.role_label ?? "Staff"}</Badge>
+                  {(s.role_label ?? "Staff")
+                    .split("+")
+                    .map((r) => r.trim())
+                    .filter(Boolean)
+                    .map((r) => (
+                      <Badge key={r} variant="outline">
+                        {r}
+                      </Badge>
+                    ))}
                   {s.phone && <span className="text-muted-foreground">📞 {s.phone}</span>}
                   {chamber && (
                     <span className="flex items-center gap-1 text-muted-foreground">
@@ -691,6 +699,28 @@ function ClinicStaffCard({
                     </span>
                   )}
                   <div className="ml-auto flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() =>
+                        setEditing(
+                          editing?.id === s.id
+                            ? null
+                            : {
+                                id: s.id,
+                                roles: (s.role_label ?? "")
+                                  .split("+")
+                                  .map((r) => r.trim())
+                                  .filter((r) =>
+                                    CLINIC_STAFF_ROLES.some((cr) => cr.value === r),
+                                  ),
+                              },
+                        )
+                      }
+                    >
+                      Roles
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
