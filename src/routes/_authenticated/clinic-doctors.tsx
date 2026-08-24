@@ -570,21 +570,39 @@ function ClinicStaffCard({
   const addStaff = useServerFn(createRxStaff);
   const setStaffPw = useServerFn(setRxStaffPassword);
   const dropStaff = useServerFn(removeRxStaff);
+  const setRoles = useServerFn(setRxStaffRoles);
 
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     username: "",
     phone: "",
     password: "",
     chamber_id: "",
-    role: CLINIC_STAFF_ROLES[0]!.value,
-  });
+    roles: [CLINIC_STAFF_ROLES[0]!.value] as string[],
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState<{ id: string; roles: string[] } | null>(null);
+
+  function sectionsFor(values: string[]) {
+    return Array.from(
+      new Set(
+        values.flatMap((v) => CLINIC_STAFF_ROLES.find((r) => r.value === v)?.sections ?? []),
+      ),
+    );
+  }
+
+  function toggle(values: string[], value: string) {
+    return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!businessId || busy) return;
-    const role = CLINIC_STAFF_ROLES.find((r) => r.value === form.role) ?? CLINIC_STAFF_ROLES[0]!;
+    if (!form.roles.length) {
+      toast.error("Pick at least one role");
+      return;
+    }
     setBusy(true);
     try {
       await addStaff({
@@ -596,22 +614,40 @@ function ClinicStaffCard({
           phone: form.phone,
           chamber_id: form.chamber_id || null,
           staff_kind: "clinic_staff",
-          role_label: role.value,
-          sections: role.sections,
+          role_label: form.roles.join(" + "),
+          sections: sectionsFor(form.roles),
         },
       });
       toast.success("Clinic staff created");
-      setForm({
-        name: "",
-        username: "",
-        phone: "",
-        password: "",
-        chamber_id: "",
-        role: CLINIC_STAFF_ROLES[0]!.value,
-      });
+      setForm(emptyForm);
       onChanged();
     } catch (err: any) {
       toast.error(err?.message ?? "Could not create the staff account");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRoles() {
+    if (!editing || busy) return;
+    if (!editing.roles.length) {
+      toast.error("Pick at least one role");
+      return;
+    }
+    setBusy(true);
+    try {
+      await setRoles({
+        data: {
+          staff_id: editing.id,
+          roles: editing.roles,
+          sections: sectionsFor(editing.roles),
+        },
+      });
+      toast.success("Roles updated");
+      setEditing(null);
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not update roles");
     } finally {
       setBusy(false);
     }
