@@ -22,8 +22,9 @@ export const sendRxBillingOtp = createServerFn({ method: "POST" })
     } as never);
     if (error) throw new Error(error.message);
 
-    const { sendSms } = await import("./sms.server");
-    const res = await sendSms(data.phone, `QweekRx verification code: ${code}`);
+    const { sendSms, senderIdForUser } = await import("./sms.server");
+    const sender = await senderIdForUser(context.userId);
+    const res = await sendSms(data.phone, `QweekRx verification code: ${code}`, sender);
     if (res.ok) return { delivered: true as const };
     return { delivered: false as const, code };
   });
