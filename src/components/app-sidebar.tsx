@@ -119,7 +119,9 @@ export function AppSidebar() {
     // owner is an admin of their own business, not of the whole platform.
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
       .filter((it) =>
-        it.to === "/clinic-dashboard" || it.to === "/clinic-doctors" ? clinicMode : true,
+        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales"].includes(it.to)
+          ? clinicMode
+          : true,
       ),
   }));
   const visibleSections = modeScoped
