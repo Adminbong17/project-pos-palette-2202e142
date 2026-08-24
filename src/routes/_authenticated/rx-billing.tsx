@@ -44,6 +44,9 @@ function RxBillingPage() {
   const { isDoctor, isAdmin } = useCurrentRole();
   // Doctors working under a clinic are funded by their clinic, not the platform.
   const clinicFunded = !!business?.clinic_mode && isDoctor && !isAdmin;
+  // Clinic admins manage the shared pool and hand credits to their doctors.
+  const clinicAdmin = !!business?.clinic_mode && isAdmin;
+  const clinicDoctors = useClinicDoctors(clinicAdmin ? business?.id : undefined);
   const { state, isLoading, refetch } = useRxBillingState();
   const send = useServerFn(sendRxBillingOtp);
   const verify = useServerFn(verifyRxBillingOtp);
