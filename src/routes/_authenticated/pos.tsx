@@ -96,8 +96,8 @@ function PosScreen() {
     enabled: !!business,
   });
   const currentLocation = locations.find((l: any) => l.id === locationId) as any;
-  const locAddress = currentLocation ? [currentLocation.landmark, currentLocation.city, currentLocation.state, currentLocation.zip_code, currentLocation.country].filter(Boolean).join(", ") : "";
-  const locMobile = currentLocation ? [currentLocation.mobile, currentLocation.alternate_number].filter(Boolean).join(" / ") : "";
+  const locAddress = (currentLocation ? [currentLocation.landmark, currentLocation.city, currentLocation.state, currentLocation.zip_code, currentLocation.country].filter(Boolean).join(", ") : "") || (business?.address ?? "");
+  const locMobile = (currentLocation ? [currentLocation.mobile, currentLocation.alternate_number].filter(Boolean).join(" / ") : "") || (business?.notify_phone ?? "");
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-customers", business?.id],
