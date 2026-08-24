@@ -7,6 +7,7 @@ import { Wallet, ShieldCheck, Receipt } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { RxBillingBanner } from "@/components/rx-billing-banner";
 import { sendRxBillingOtp, verifyRxBillingOtp } from "@/lib/rx-billing.functions";
@@ -37,6 +38,9 @@ export const Route = createFileRoute("/_authenticated/rx-billing")({
 
 function RxBillingPage() {
   const { data: business } = useCurrentBusiness();
+  const { isDoctor, isAdmin } = useCurrentRole();
+  // Doctors working under a clinic are funded by their clinic, not the platform.
+  const clinicFunded = !!business?.clinic_mode && isDoctor && !isAdmin;
   const { state, isLoading, refetch } = useRxBillingState();
   const send = useServerFn(sendRxBillingOtp);
   const verify = useServerFn(verifyRxBillingOtp);
