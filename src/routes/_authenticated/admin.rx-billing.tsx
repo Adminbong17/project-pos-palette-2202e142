@@ -127,16 +127,52 @@ function AdminRxBillingPage() {
     },
   });
 
+  // The platform owner manages every doctor of every business/clinic, not just their own.
+  const loadAll = useServerFn(listRxBillingAll);
+  const all = useQuery({
+    queryKey: ["rx-billing-all"],
+    enabled: isSuperAdmin,
+    queryFn: () => loadAll({}),
+  });
+
+  const doctorList: DoctorRow[] = isSuperAdmin
+    ? ((all.data?.doctors ?? []) as DoctorRow[])
+    : (doctors.data ?? []).map((d) => ({
+        ...d,
+        business_id: businessId ?? "",
+        business_name: business?.name ?? "",
+      }));
+  const accountList: Account[] = isSuperAdmin
+    ? ((all.data?.accounts ?? []) as Account[])
+    : accounts.data ?? [];
+  const billList: any[] = isSuperAdmin ? (all.data?.bills ?? []) : bills.data ?? [];
+  const countMap: Record<string, number> = (isSuperAdmin ? all.data?.counts : counts.data) ?? {};
+  const listLoading = isSuperAdmin ? all.isLoading : doctors.isLoading;
+  const billsLoading = isSuperAdmin ? all.isLoading : bills.isLoading;
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["rx-billing-accounts", businessId] });
     qc.invalidateQueries({ queryKey: ["rx-bills-admin", businessId] });
+    qc.invalidateQueries({ queryKey: ["rx-billing-all"] });
     qc.invalidateQueries({ queryKey: ["rx-billing-state"] });
   };
 
+  const saveAccountFn = useServerFn(saveRxBillingAccount);
+  const grantFn = useServerFn(grantRxCredits);
+  const patchBillFn = useServerFn(patchRxBill);
+
   const upsertAccount = useMutation({
-    mutationFn: async (row: Partial<Account> & { user_id: string | null }) => {
-      if (!businessId) throw new Error("No business");
-      const existing = (accounts.data ?? []).find((a) => a.user_id === row.user_id);
+    mutationFn: async (
+      row: Partial<Account> & { user_id: string | null; business_id?: string },
+    ) => {
+      const { business_id, user_id, ...patch } = row;
+      const target = business_id || businessId;
+      if (!target) throw new Error("No business");
+      if (isSuperAdmin) {
+        await saveAccountFn({ data: { business_id: target, user_id, patch } });
+        return;
+      }
+      const existing = accountList.find((a) => a.user_id === user_id);
       if (existing) {
         const { error } = await (supabase as any)
           .from("rx_billing_accounts")
