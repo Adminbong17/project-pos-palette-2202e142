@@ -86,7 +86,13 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
       counts[k] = (counts[k] ?? 0) + 1;
     }
 
-    return { doctors, accounts: accounts ?? [], bills: bills ?? [], counts };
+    const businessList = ((businesses ?? []) as any[]).map((b) => ({
+      id: b.id as string,
+      name: (b.name as string) ?? "—",
+      clinic_mode: !!b.clinic_mode,
+    }));
+
+    return { doctors, businesses: businessList, accounts: accounts ?? [], bills: bills ?? [], counts };
   });
 
 /** Create/update a doctor's (or a business pool's) billing account from the super-admin page. */
