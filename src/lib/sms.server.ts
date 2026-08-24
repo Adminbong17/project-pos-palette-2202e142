@@ -81,9 +81,7 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
   const to = normalizePhone(phone);
   if (to.length < 11) return { ok: false, error: "Invalid phone number" };
 
-  try {
-    const res = await fetch(sendUrl(cfg, to, message), { method: "GET" });
-    const body = await res.text();
+  const parse = (res: Response, body: string): SmsResult => {
     let status: string | undefined;
     let text: string | undefined;
     try {
@@ -94,7 +92,30 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
       text = body.slice(0, 200);
     }
     const ok = res.ok && (status === undefined || status === "" || status === "0");
-    return { ok, status, text, error: ok ? undefined : text || `HTTP ${res.status}` };
+    return { ok, status, text, error: ok ? undefined : explain(status, text || `HTTP ${res.status}`) };
+  };
+
+  try {
+    const getRes = await fetch(sendUrl(cfg, to, message), { method: "GET" });
+    const first = parse(getRes, await getRes.text());
+    if (first.ok) return first;
+
+    // Some REVE accounts only accept the JSON POST form; retry once before failing.
+    const base = cfg.base_url.replace(/\/+$/, "");
+    const root = /\/sendtext$/i.test(base) ? base : `${base}/sendtext`;
+    const postRes = await fetch(root, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apikey: cfg.api_key,
+        secretkey: cfg.secret_key,
+        ...(cfg.caller_id ? { callerID: cfg.caller_id } : {}),
+        toUser: to,
+        messageContent: message,
+      }),
+    });
+    const second = parse(postRes, await postRes.text());
+    return second.ok ? second : first;
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "Network error" };
   }
