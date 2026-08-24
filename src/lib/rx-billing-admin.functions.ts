@@ -143,13 +143,30 @@ export const grantRxCredits = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertSuperAdmin(context.claims);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.rpc("rx_grant_credits", {
-      _account_id: data.account_id,
-      _delta: data.delta,
-      _reason: data.delta >= 0 ? "admin top-up" : "admin deduction",
-    } as never);
+
+    const { data: acc, error: accErr } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("id, credits")
+      .eq("id", data.account_id)
+      .maybeSingle();
+    if (accErr) throw new Error(accErr.message);
+    if (!acc) throw new Error("Account not found");
+
+    const next = Math.max(0, (Number((acc as any).credits) || 0) + data.delta);
+    const { error } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .update({ credits: next } as never)
+      .eq("id", data.account_id);
     if (error) throw new Error(error.message);
-    return { ok: true as const };
+
+    await supabaseAdmin.from("rx_credit_ledger").insert({
+      account_id: data.account_id,
+      delta: data.delta,
+      reason: data.delta >= 0 ? "admin top-up" : "admin deduction",
+      created_by: context.userId,
+    } as never);
+
+    return { ok: true as const, credits: next };
   });
 
 /** Mark a monthly bill paid/waived or attach a payment link. */
