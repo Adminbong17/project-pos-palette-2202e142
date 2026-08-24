@@ -1,16 +1,26 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Wallet, Receipt, CalendarClock, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import { rxTierAmount, rxTierRate } from "@/hooks/use-rx-billing";
+import {
+  listRxBillingAll,
+  saveRxBillingAccount,
+  grantRxCredits,
+  patchRxBill,
+} from "@/lib/rx-billing-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+type DoctorRow = { id: string; label: string; business_id: string; business_name: string };
 
 export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
   head: () => ({
@@ -48,6 +58,7 @@ type Account = {
 function AdminRxBillingPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const businessId = business?.id;
   const qc = useQueryClient();
   const [month, setMonth] = useState("");
@@ -127,27 +138,63 @@ function AdminRxBillingPage() {
     },
   });
 
+  // The platform owner manages every doctor of every business/clinic, not just their own.
+  const loadAll = useServerFn(listRxBillingAll);
+  const all = useQuery({
+    queryKey: ["rx-billing-all"],
+    enabled: isSuperAdmin,
+    queryFn: () => loadAll({}),
+  });
+
+  const doctorList: DoctorRow[] = isSuperAdmin
+    ? ((all.data?.doctors ?? []) as DoctorRow[])
+    : (doctors.data ?? []).map((d) => ({
+        ...d,
+        business_id: businessId ?? "",
+        business_name: business?.name ?? "",
+      }));
+  const accountList: Account[] = isSuperAdmin
+    ? ((all.data?.accounts ?? []) as Account[])
+    : accounts.data ?? [];
+  const billList: any[] = isSuperAdmin ? (all.data?.bills ?? []) : bills.data ?? [];
+  const countMap: Record<string, number> = (isSuperAdmin ? all.data?.counts : counts.data) ?? {};
+  const listLoading = isSuperAdmin ? all.isLoading : doctors.isLoading;
+  const billsLoading = isSuperAdmin ? all.isLoading : bills.isLoading;
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["rx-billing-accounts", businessId] });
     qc.invalidateQueries({ queryKey: ["rx-bills-admin", businessId] });
+    qc.invalidateQueries({ queryKey: ["rx-billing-all"] });
     qc.invalidateQueries({ queryKey: ["rx-billing-state"] });
   };
 
+  const saveAccountFn = useServerFn(saveRxBillingAccount);
+  const grantFn = useServerFn(grantRxCredits);
+  const patchBillFn = useServerFn(patchRxBill);
+
   const upsertAccount = useMutation({
-    mutationFn: async (row: Partial<Account> & { user_id: string | null }) => {
-      if (!businessId) throw new Error("No business");
-      const existing = (accounts.data ?? []).find((a) => a.user_id === row.user_id);
+    mutationFn: async (
+      row: Partial<Account> & { user_id: string | null; business_id?: string },
+    ) => {
+      const { business_id, user_id, ...patch } = row;
+      const target = business_id || businessId;
+      if (!target) throw new Error("No business");
+      if (isSuperAdmin) {
+        await saveAccountFn({ data: { business_id: target, user_id, patch } });
+        return;
+      }
+      const existing = accountList.find((a) => a.user_id === user_id);
       if (existing) {
         const { error } = await (supabase as any)
           .from("rx_billing_accounts")
-          .update(row)
+          .update(patch)
           .eq("id", existing.id);
         if (error) throw error;
         return;
       }
       const { error } = await (supabase as any)
         .from("rx_billing_accounts")
-        .insert({ business_id: businessId, mode: "credit", credits: 0, ...row });
+        .insert({ business_id: target, user_id, mode: "credit", credits: 0, ...patch });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -159,6 +206,10 @@ function AdminRxBillingPage() {
 
   const grant = useMutation({
     mutationFn: async ({ accountId, delta }: { accountId: string; delta: number }) => {
+      if (isSuperAdmin) {
+        await grantFn({ data: { account_id: accountId, delta } });
+        return;
+      }
       const { error } = await (supabase as any).rpc("rx_grant_credits", {
         _account_id: accountId,
         _delta: delta,
@@ -189,6 +240,10 @@ function AdminRxBillingPage() {
 
   const setBill = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+      if (isSuperAdmin) {
+        await patchBillFn({ data: { id, patch } });
+        return;
+      }
       const { error } = await (supabase as any).from("rx_bills").update(patch).eq("id", id);
       if (error) throw error;
     },
@@ -208,34 +263,41 @@ function AdminRxBillingPage() {
     );
   }
 
-  const pool = (accounts.data ?? []).find((a) => a.user_id === null) ?? null;
-  const byUser = new Map((accounts.data ?? []).filter((a) => a.user_id).map((a) => [a.user_id!, a]));
+  const pool =
+    accountList.find((a) => a.user_id === null && (!businessId || a.business_id === businessId)) ??
+    null;
+  const byUser = new Map(
+    accountList.filter((a) => a.user_id).map((a) => [`${a.user_id}:${a.business_id}`, a]),
+  );
+  const accOf = (d: DoctorRow) => byUser.get(`${d.id}:${d.business_id}`) ?? null;
 
   const filteredDoctors = useMemo(() => {
     const q = doctorSearch.trim().toLowerCase();
-    const list = doctors.data ?? [];
-    if (!q) return list;
-    return list.filter((d) => {
-      const acc = byUser.get(d.id);
-      return [d.label, acc?.mode, acc?.phone, acc?.payment_link, acc?.helpline]
+    if (!q) return doctorList;
+    return doctorList.filter((d) => {
+      const acc = byUser.get(`${d.id}:${d.business_id}`);
+      return [d.label, d.business_name, acc?.mode, acc?.phone, acc?.payment_link, acc?.helpline]
         .map((v) => String(v ?? "").toLowerCase())
         .join(" ")
         .includes(q);
     });
-  }, [doctors.data, doctorSearch, byUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorList, doctorSearch, accountList]);
 
   const filteredBills = useMemo(() => {
     const q = billSearch.trim().toLowerCase();
-    const list = bills.data ?? [];
-    if (!q) return list;
-    return list.filter((b) => {
-      const label = b.user_id ? (doctors.data ?? []).find((d) => d.id === b.user_id)?.label ?? "Doctor" : "Whole clinic";
+    if (!q) return billList;
+    return billList.filter((b) => {
+      const label = b.user_id
+        ? doctorList.find((d) => d.id === b.user_id)?.label ?? "Doctor"
+        : "Whole clinic";
       return [label, String(b.period_start).slice(0, 7), b.prescriptions_count, b.amount, b.status, b.due_date]
         .map((v) => String(v ?? "").toLowerCase())
         .join(" ")
         .includes(q);
     });
-  }, [bills.data, billSearch, doctors.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billList, billSearch, doctorList]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
