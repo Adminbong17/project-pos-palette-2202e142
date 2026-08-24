@@ -256,9 +256,6 @@ function AdminRxBillingPage() {
   });
 
 
-  const pool =
-    accountList.find((a) => a.user_id === null && (!businessId || a.business_id === businessId)) ??
-    null;
   const byUser = new Map(
     accountList.filter((a) => a.user_id).map((a) => [`${a.user_id}:${a.business_id}`, a]),
   );
