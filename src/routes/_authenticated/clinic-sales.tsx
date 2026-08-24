@@ -383,7 +383,35 @@ function ClinicSalesPage() {
                   .map((l: any) => `${l.name} × ${Number(l.quantity)}`)
                   .join(", ")}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <PrintSizeButton
+                  label="Print"
+                  defaultSize="80mm"
+                  onPrint={(size) =>
+                    printClinicSale(
+                      {
+                        invoice_no: r.invoice_no,
+                        sale_date: r.sale_date,
+                        patient_name: r.patient_name,
+                        patient_phone: r.patient_phone,
+                        ref_doctor_name: r.ref_doctor_name,
+                        notes: r.notes,
+                        subtotal: Number(r.subtotal || 0),
+                        discount_amount: Number(r.discount_amount || 0),
+                        total: Number(r.total || 0),
+                        paid: Number(r.paid || 0),
+                        lines: (r.clinic_sale_lines ?? []).map((l: any) => ({
+                          name: l.name,
+                          quantity: Number(l.quantity || 0),
+                          unit_price: Number(l.unit_price || 0),
+                          line_total: Number(l.line_total || 0),
+                        })),
+                      },
+                      printHeader,
+                      size,
+                    )
+                  }
+                />
                 <Button
                   size="sm"
                   variant="ghost"
@@ -395,6 +423,7 @@ function ClinicSalesPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+
             </div>
           ))
         )}
