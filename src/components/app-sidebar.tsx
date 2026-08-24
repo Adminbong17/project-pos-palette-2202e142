@@ -130,7 +130,7 @@ export function AppSidebar() {
             items: sec.items.filter((it: any) => allowed!.includes(it.key)),
           }))
           .filter((sec) => sec.items.length > 0);
-  const scoped = rxMode
+  const scoped = rxMode || isDoctor
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
     : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
   // Same destination can be listed under multiple permission keys — show it once.
@@ -139,12 +139,16 @@ export function AppSidebar() {
     // Platform-wide admin tools belong to the super admin only; a business
     // owner is an admin of their own business, not of the whole platform.
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
+      // A doctor sees only their own clinical pages — no clinic admin pages,
+      // no business settings, even inside a clinic business.
+      .filter((it) => (isDoctor && !isAdmin ? DOCTOR_PATHS.includes(it.to) : true))
       .filter((it) =>
         ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
           ? clinicMode
           : true,
       ),
   }));
+
   const visibleSections = modeScoped
     .map((sec) => {
       const seen = new Set<string>();
