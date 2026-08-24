@@ -17,6 +17,9 @@ const tabs = [
 
 function SettingsLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAdmin, sections } = useAllowedSections();
+  // Clinic / doctor accounts only reach the Business tab — hide the rest.
+  const visibleTabs = tabs.filter((t) => isAdmin || isPathAllowed(t.to, sections));
   return (
     <div className="p-6 space-y-6">
       <div>
