@@ -5,9 +5,9 @@ function digits(v: unknown) {
   return String(v ?? "").replace(/[^\d+]/g, "");
 }
 
-async function sendSms(phone: string, message: string) {
+async function sendSms(phone: string, message: string, senderId?: string | null) {
   const { sendSms: send } = await import("./sms.server");
-  return (await send(phone, message)).ok;
+  return (await send(phone, message, senderId)).ok;
 }
 
 /**
@@ -47,7 +47,7 @@ export const sendPlanPaymentSms = createServerFn({ method: "POST" })
 
     const { data: biz } = await context.supabase
       .from("businesses")
-      .select("name, notify_phone")
+      .select("name, notify_phone, sms_sender_id")
       .eq("id", (pay as any).business_id)
       .maybeSingle();
 
@@ -67,7 +67,7 @@ export const sendPlanPaymentSms = createServerFn({ method: "POST" })
 
     let sent = 0;
     for (const t of targets) {
-      if (await sendSms(t, message)) sent += 1;
+      if (await sendSms(t, message, (biz as any)?.sms_sender_id)) sent += 1;
     }
 
     const status =

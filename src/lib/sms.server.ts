@@ -74,8 +74,15 @@ export function normalizePhone(raw: unknown) {
 export type SmsResult = { ok: boolean; status?: string; text?: string; error?: string };
 
 /** Sends one SMS. Never throws — callers treat a false result as "not sent". */
-export async function sendSms(phone: string, message: string): Promise<SmsResult> {
-  const cfg = await getSmsConfig();
+export async function sendSms(
+  phone: string,
+  message: string,
+  /** Per-business Sender / Caller ID override (must be approved at the gateway). */
+  senderId?: string | null,
+): Promise<SmsResult> {
+  const base = await getSmsConfig();
+  const override = String(senderId ?? "").trim();
+  const cfg = base && override ? { ...base, caller_id: override } : base;
   if (!cfg) return { ok: false, error: "SMS gateway is not configured" };
   if (!cfg.enabled) return { ok: false, error: "SMS sending is turned off" };
   const to = normalizePhone(phone);

@@ -564,6 +564,7 @@ export type Database = {
           notify_phone: string | null
           owner_id: string
           sku_prefix: string | null
+          sms_sender_id: string | null
           start_date: string | null
           tax_label_1: string | null
           tax_label_2: string | null
@@ -596,6 +597,7 @@ export type Database = {
           notify_phone?: string | null
           owner_id: string
           sku_prefix?: string | null
+          sms_sender_id?: string | null
           start_date?: string | null
           tax_label_1?: string | null
           tax_label_2?: string | null
@@ -628,6 +630,7 @@ export type Database = {
           notify_phone?: string | null
           owner_id?: string
           sku_prefix?: string | null
+          sms_sender_id?: string | null
           start_date?: string | null
           tax_label_1?: string | null
           tax_label_2?: string | null
