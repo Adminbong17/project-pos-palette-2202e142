@@ -427,13 +427,75 @@ function DoctorBlock({
     <div className="rounded-lg border border-border/60 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold">{doctor.name}</div>
-          <div className="text-xs text-muted-foreground">{doctor.email}</div>
-          {doctor.qualification && (
-            <div className="text-xs text-muted-foreground">{doctor.qualification}</div>
+          {editing ? (
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!businessId || docBusy) return;
+                setDocBusy(true);
+                try {
+                  await editDoctor({
+                    data: {
+                      business_id: businessId,
+                      user_id: doctor.user_id,
+                      name: docForm.name,
+                      qualification: docForm.qualification,
+                    },
+                  });
+                  toast.success("Doctor updated");
+                  setEditing(false);
+                  qcDoc.invalidateQueries({ queryKey: ["clinic-doctors", businessId] });
+                } catch (err: any) {
+                  toast.error(err?.message ?? "Could not update the doctor");
+                } finally {
+                  setDocBusy(false);
+                }
+              }}
+            >
+              <div>
+                <Label className="text-[11px]">Name</Label>
+                <Input
+                  required
+                  className="h-9 w-44 text-xs"
+                  value={docForm.name}
+                  onChange={(e) => setDocForm({ ...docForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-[11px]">Qualification</Label>
+                <Input
+                  className="h-9 w-44 text-xs"
+                  value={docForm.qualification}
+                  onChange={(e) => setDocForm({ ...docForm, qualification: e.target.value })}
+                />
+              </div>
+              <Button size="sm" type="submit" disabled={docBusy}>
+                {docBusy ? "Saving…" : "Save"}
+              </Button>
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditing(false);
+                  setDocForm({ name: doctor.name, qualification: doctor.qualification });
+                }}
+              >
+                Cancel
+              </Button>
+            </form>
+          ) : (
+            <>
+              <div className="text-sm font-semibold">{doctor.name}</div>
+              <div className="text-xs text-muted-foreground">{doctor.email}</div>
+              {doctor.qualification && (
+                <div className="text-xs text-muted-foreground">{doctor.qualification}</div>
+              )}
+            </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             className="h-9 w-40 text-xs"
             placeholder="New password"
@@ -450,6 +512,39 @@ function DoctorBlock({
             }}
           >
             <KeyRound className="h-4 w-4" /> Set
+          </Button>
+          {!editing && (
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" /> Edit
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive"
+            disabled={docBusy}
+            onClick={async () => {
+              if (!businessId) return;
+              if (
+                !window.confirm(
+                  `Remove ${doctor.name} from this clinic? Their assistants will be removed too.`,
+                )
+              )
+                return;
+              setDocBusy(true);
+              try {
+                await dropDoctor({ data: { business_id: businessId, user_id: doctor.user_id } });
+                toast.success("Doctor removed");
+                qcDoc.invalidateQueries({ queryKey: ["clinic-doctors", businessId] });
+                onChanged();
+              } catch (err: any) {
+                toast.error(err?.message ?? "Could not remove the doctor");
+              } finally {
+                setDocBusy(false);
+              }
+            }}
+          >
+            <Trash2 className="h-4 w-4" /> Remove
           </Button>
         </div>
       </div>
