@@ -27,6 +27,8 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "clinic", label: "Clinic Doctors", path: "/clinic-doctors" },
   { key: "clinic", label: "Products & Services", path: "/clinic-services" },
   { key: "clinic", label: "Clinic Sales", path: "/clinic-sales" },
+  { key: "clinic", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
+  { key: "clinic-plans", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
   { key: "clinic-services", label: "Products & Services", path: "/clinic-services" },
   { key: "clinic-sales", label: "Clinic Sales", path: "/clinic-sales" },
   { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
@@ -51,6 +53,7 @@ const CLINICAL_KEYS = [
   "clinic",
   "clinic-services",
   "clinic-sales",
+  "clinic-plans",
 ];
 
 // A clinic admin only manages doctors, assistants and the serial queue.
@@ -136,6 +139,7 @@ export function sectionHomePath(sections: string[] | null) {
   if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
     return "/rx-appointments";
   if (sections.includes("clinic-sales")) return "/clinic-sales";
+  if (sections.includes("clinic-plans")) return "/clinic-plans";
   if (sections.includes("clinic-services")) return "/clinic-services";
   if (sections.includes("prescriptions")) return "/rx-dashboard";
   if (sections.includes("dashboard")) return "/dashboard";

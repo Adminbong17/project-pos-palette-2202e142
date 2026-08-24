@@ -61,6 +61,8 @@ const sections = [
       { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
       { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "prescriptions" },
@@ -121,7 +123,7 @@ export function AppSidebar() {
     // owner is an admin of their own business, not of the whole platform.
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
       .filter((it) =>
-        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales"].includes(it.to)
+        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
           ? clinicMode
           : true,
       ),
