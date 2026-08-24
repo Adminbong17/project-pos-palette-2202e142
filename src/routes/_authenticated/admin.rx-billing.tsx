@@ -254,14 +254,6 @@ function AdminRxBillingPage() {
     onError: (e: any) => toast.error(e.message ?? "Could not update the bill"),
   });
 
-  if (!roleLoading && !isAdmin) {
-    return (
-      <div className="p-6">
-        <h1 className="font-display text-xl font-semibold">Rx Billing</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Only business admins can open this page.</p>
-      </div>
-    );
-  }
 
   const pool =
     accountList.find((a) => a.user_id === null && (!businessId || a.business_id === businessId)) ??
