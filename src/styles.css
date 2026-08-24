@@ -189,11 +189,6 @@
   [class*="bg-card"]:nth-child(6n + 5) { --panel-hue: 25; }
   [class*="bg-card"]:nth-child(6n + 6) { --panel-hue: 195; }
 
-  /* Slightly airier spacing so the colours have room to breathe */
-  [class*="bg-card"][class*="rounded-2xl"] > * + * {
-    margin-top: 0.125rem;
-  }
-
   /* Nested panels stay calm (no double accent bar) */
   [class*="bg-card"] [class*="bg-card"][class*="rounded-xl"],
   [class*="bg-card"] [class*="bg-card"][class*="rounded-2xl"] {
