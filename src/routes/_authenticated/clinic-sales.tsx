@@ -53,7 +53,7 @@ function ClinicSalesPage() {
   const [lines, setLines] = useState<Line[]>([]);
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
-  const [invoiceNo, setInvoiceNo] = useState("");
+  const [refDoctor, setRefDoctor] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [billDiscount, setBillDiscount] = useState("");
   const [paid, setPaid] = useState("");
