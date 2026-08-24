@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PrintSizeButton } from "@/components/print-size-select";
+import { printClinicSale } from "@/lib/clinic-print";
+
 
 export const Route = createFileRoute("/_authenticated/clinic-sales")({
   head: () => ({
