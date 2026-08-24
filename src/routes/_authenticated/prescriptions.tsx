@@ -1546,6 +1546,14 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   // Typing stays smooth: filtering runs on a deferred value and the rendered
   // list is capped, so a 7000-item catalog never blocks the keystroke.
   const deferredSearch = useDeferredValue(pSearch);
+  // The shared library can hold tens of thousands of medicines, more than one
+  // page of rows — so typed searches also hit the server for exact matches.
+  const remote = useQuery({
+    queryKey: ["rx-master-medicine-search", deferredSearch.trim().toLowerCase()],
+    enabled: deferredSearch.trim().length >= 2,
+    staleTime: 60_000,
+    queryFn: () => fetchMasterOptions("medicine", 200, deferredSearch.trim()),
+  });
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
     if (!q) return allOptions.slice(0, 50);
@@ -1558,8 +1566,16 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       else if (i > 0) contains.push(p);
       if (starts.length >= 50) break;
     }
-    return [...starts, ...contains].slice(0, 50);
-  }, [allOptions, deferredSearch]);
+    const merged = [...starts, ...contains];
+    const seen = new Set(merged.map((p) => p.name.trim().toLowerCase()));
+    for (const m of remote.data ?? []) {
+      const k = m.name.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      merged.push({ id: m.id, name: m.name, variation_id: null });
+    }
+    return merged.slice(0, 80);
+  }, [allOptions, deferredSearch, remote.data]);
   const query = pSearch.trim();
   const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
   return (
@@ -1589,7 +1605,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
                   </CommandGroup>
                 )}
                 {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
-                {filtered.length >= 50 && (
+                {filtered.length >= 80 && (
                   <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
                     Showing first 50 — keep typing to narrow.
                   </div>
