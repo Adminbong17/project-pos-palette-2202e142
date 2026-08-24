@@ -103,7 +103,8 @@ export const createRxStaff = createServerFn({ method: "POST" })
       if (!staffUserId) throw new Error("Could not create the staff login. Try another username.");
     }
 
-    const { error: pErr } = await supabase.rpc("provision_rx_staff", {
+    const kind = data.staff_kind === "clinic_staff" ? "clinic_staff" : "doctor_assistant";
+    const { error: pErr } = await (supabase.rpc as any)("provision_rx_staff", {
       _business_id: data.business_id,
       _user_id: staffUserId,
       _email: email,
@@ -111,7 +112,10 @@ export const createRxStaff = createServerFn({ method: "POST" })
       _phone: data.phone?.trim() || "",
       _username: data.username,
       _chamber_id: data.chamber_id || null,
-      _doctor_id: data.doctor_id || null,
+      _doctor_id: kind === "clinic_staff" ? null : data.doctor_id || null,
+      _staff_kind: kind,
+      _role_label: data.role_label?.trim() || null,
+      _sections: kind === "clinic_staff" ? (data.sections ?? ["rx-queue"]) : ["rx-queue"],
     });
     if (pErr) throw new Error(pErr.message);
 
