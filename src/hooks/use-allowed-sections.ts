@@ -27,6 +27,8 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "clinic", label: "Clinic Doctors", path: "/clinic-doctors" },
   { key: "clinic", label: "Products & Services", path: "/clinic-services" },
   { key: "clinic", label: "Clinic Sales", path: "/clinic-sales" },
+  { key: "clinic-services", label: "Products & Services", path: "/clinic-services" },
+  { key: "clinic-sales", label: "Clinic Sales", path: "/clinic-sales" },
   { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
   { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
   { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
