@@ -132,6 +132,10 @@ export async function sendSms(
   if (!cfg.enabled) return { ok: false, error: "SMS sending is turned off" };
   const to = normalizePhone(phone);
   if (to.length < 11) return { ok: false, error: "Invalid phone number" };
+  const body = String(message ?? "").trim();
+  if (!body) return { ok: false, error: "Message text is empty" };
+  message = body;
+
 
   const parse = (res: Response, body: string): SmsResult => {
     let status: string | undefined;
