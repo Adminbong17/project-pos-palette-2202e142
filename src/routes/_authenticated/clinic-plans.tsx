@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import {
   Search,
   Trash2,
   Wallet,
-  Phone,
+
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -132,6 +132,38 @@ function ClinicPlansPage() {
       return (data ?? []) as Service[];
     },
   });
+
+  // Look up patients the doctors already printed a prescription for, by patient ID.
+  const patientLookup = useQuery({
+    queryKey: ["clinic-plan-patient-lookup", businessId, form.patient_code.trim()],
+    enabled: !!businessId && form.patient_code.trim().length >= 2,
+    queryFn: async () => {
+      const term = form.patient_code.trim();
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select("patient_code, patient_name, patient_phone, created_at")
+        .eq("business_id", businessId!)
+        .ilike("patient_code", `%${term}%`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const rows: { patient_code: string | null; patient_name: string; patient_phone: string | null }[] = [];
+      for (const r of (data ?? []) as any[]) {
+        const key = String(r.patient_code ?? "");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        rows.push({ patient_code: r.patient_code, patient_name: r.patient_name, patient_phone: r.patient_phone });
+        if (rows.length >= 10) break;
+      }
+      return rows;
+    },
+  });
+  const patientMatches = (patientLookup.data ?? []).filter(
+    (m) => !(m.patient_code === form.patient_code.trim() && m.patient_name === form.patient_name),
+  );
+
+
 
   const plans = useQuery({
     queryKey: ["clinic-plans", businessId],
@@ -328,41 +360,54 @@ function ClinicPlansPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Phone className="h-4 w-4 text-primary" /> Clinic SMS number
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Payment receipts are sent to:</span>
-          <b>{business?.notify_phone || "not set"}</b>
-          <Link to="/settings/business" className="text-xs text-primary underline">
-            Change in Settings → Business (admin only)
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4 text-primary" /> New treatment plan
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative">
+              <Label className="mb-1 block text-xs">Patient ID (search)</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-9 pl-8 text-sm"
+                  placeholder="e.g. JOY258369"
+                  value={form.patient_code}
+                  onChange={(e) => setForm({ ...form, patient_code: e.target.value })}
+                />
+              </div>
+              {patientMatches.length > 0 && (
+                <div className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover shadow-lg">
+                  {patientMatches.map((m) => (
+                    <button
+                      key={`${m.patient_code}-${m.patient_name}-${m.patient_phone ?? ""}`}
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          patient_code: m.patient_code ?? "",
+                          patient_name: m.patient_name ?? "",
+                          patient_phone: m.patient_phone ?? "",
+                        })
+                      }
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-muted/50"
+                    >
+                      <span className="font-medium">{m.patient_code}</span>
+                      <span className="text-xs text-muted-foreground"> — {m.patient_name}</span>
+                      {m.patient_phone && (
+                        <span className="text-xs text-muted-foreground"> · {m.patient_phone}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div>
               <Label className="mb-1 block text-xs">Patient name *</Label>
               <Input
                 className="h-9 text-sm"
                 value={form.patient_name}
                 onChange={(e) => setForm({ ...form, patient_name: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="mb-1 block text-xs">Patient ID</Label>
-              <Input
-                className="h-9 text-sm"
-                placeholder="e.g. JOY258369"
-                value={form.patient_code}
-                onChange={(e) => setForm({ ...form, patient_code: e.target.value })}
               />
             </div>
             <div>

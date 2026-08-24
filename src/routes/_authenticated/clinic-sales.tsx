@@ -112,7 +112,7 @@ function ClinicSalesPage() {
         .from("clinic_sales")
         .insert({
           business_id: business!.id,
-          invoice_no: invoiceNo.trim() || null,
+          invoice_no: invoiceNo.trim() || nextInvoiceNo,
           sale_date: new Date(date).toISOString(),
           patient_name: patientName.trim() || null,
           patient_phone: patientPhone.trim() || null,
@@ -173,6 +173,17 @@ function ClinicSalesPage() {
     },
   });
 
+  // Auto invoice number: CS-000123, continuing from the highest existing number.
+  const nextInvoiceNo = useMemo(() => {
+    const rows = (history.data ?? []) as any[];
+    let max = 0;
+    for (const r of rows) {
+      const m = /(\d+)\s*$/.exec(String(r.invoice_no ?? ""));
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return `CS-${String(max + 1).padStart(6, "0")}`;
+  }, [history.data]);
+
   const removeSale = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("clinic_sales").delete().eq("id", id);
@@ -220,7 +231,14 @@ function ClinicSalesPage() {
         </label>
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Invoice no.</span>
-          <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="optional" />
+          <Input
+            value={invoiceNo}
+            onChange={(e) => setInvoiceNo(e.target.value)}
+            placeholder={nextInvoiceNo}
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            Auto: {nextInvoiceNo} (edit only if needed)
+          </span>
         </label>
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Date & time</span>
