@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScanSessionIdRouteImport } from './routes/scan.$sessionId'
+import { Route as RxPayTokenRouteImport } from './routes/rx-pay.$token'
 import { Route as AuthenticatedStockTransfersRouteImport } from './routes/_authenticated/stock-transfers'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -81,6 +82,7 @@ import { Route as AuthenticatedCrmFollowupsRouteImport } from './routes/_authent
 import { Route as AuthenticatedCrmCampaignsRouteImport } from './routes/_authenticated/crm.campaigns'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSmsRouteImport } from './routes/_authenticated/admin.sms'
+import { Route as AuthenticatedAdminRxCreditLinksRouteImport } from './routes/_authenticated/admin.rx-credit-links'
 import { Route as AuthenticatedAdminRxBillingRouteImport } from './routes/_authenticated/admin.rx-billing'
 import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_authenticated/admin.prescriptions'
 import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
@@ -113,6 +115,11 @@ const IndexRoute = IndexRouteImport.update({
 const ScanSessionIdRoute = ScanSessionIdRouteImport.update({
   id: '/scan/$sessionId',
   path: '/scan/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RxPayTokenRoute = RxPayTokenRouteImport.update({
+  id: '/rx-pay/$token',
+  path: '/rx-pay/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStockTransfersRoute =
@@ -486,6 +493,12 @@ const AuthenticatedAdminSmsRoute = AuthenticatedAdminSmsRouteImport.update({
   path: '/admin/sms',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRxCreditLinksRoute =
+  AuthenticatedAdminRxCreditLinksRouteImport.update({
+    id: '/admin/rx-credit-links',
+    path: '/admin/rx-credit-links',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRxBillingRoute =
   AuthenticatedAdminRxBillingRouteImport.update({
     id: '/admin/rx-billing',
@@ -575,6 +588,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -582,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/admin/rx-credit-links': typeof AuthenticatedAdminRxCreditLinksRoute
   '/admin/sms': typeof AuthenticatedAdminSmsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
@@ -650,6 +665,7 @@ export interface FileRoutesByTo {
   '/sales': typeof AuthenticatedSalesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -657,6 +673,7 @@ export interface FileRoutesByTo {
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/admin/rx-credit-links': typeof AuthenticatedAdminRxCreditLinksRoute
   '/admin/sms': typeof AuthenticatedAdminSmsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
@@ -734,6 +751,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -741,6 +759,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/_authenticated/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/_authenticated/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
+  '/_authenticated/admin/rx-credit-links': typeof AuthenticatedAdminRxCreditLinksRoute
   '/_authenticated/admin/sms': typeof AuthenticatedAdminSmsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/crm/campaigns': typeof AuthenticatedCrmCampaignsRoute
@@ -818,6 +837,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
     | '/admin/business-requests'
@@ -825,6 +845,7 @@ export interface FileRouteTypes {
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
+    | '/admin/rx-credit-links'
     | '/admin/sms'
     | '/admin/users'
     | '/crm/campaigns'
@@ -893,6 +914,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/setup'
     | '/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
     | '/admin/business-requests'
@@ -900,6 +922,7 @@ export interface FileRouteTypes {
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
+    | '/admin/rx-credit-links'
     | '/admin/sms'
     | '/admin/users'
     | '/crm/campaigns'
@@ -976,6 +999,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/setup'
     | '/_authenticated/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/_authenticated/admin/backups'
     | '/_authenticated/admin/business-requests'
@@ -983,6 +1007,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/doctors'
     | '/_authenticated/admin/prescriptions'
     | '/_authenticated/admin/rx-billing'
+    | '/_authenticated/admin/rx-credit-links'
     | '/_authenticated/admin/sms'
     | '/_authenticated/admin/users'
     | '/_authenticated/crm/campaigns'
@@ -1029,6 +1054,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   RxRoute: typeof RxRoute
+  RxPayTokenRoute: typeof RxPayTokenRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
   ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
@@ -1068,6 +1094,13 @@ declare module '@tanstack/react-router' {
       path: '/scan/$sessionId'
       fullPath: '/scan/$sessionId'
       preLoaderRoute: typeof ScanSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rx-pay/$token': {
+      id: '/rx-pay/$token'
+      path: '/rx-pay/$token'
+      fullPath: '/rx-pay/$token'
+      preLoaderRoute: typeof RxPayTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/stock-transfers': {
@@ -1539,6 +1572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSmsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/rx-credit-links': {
+      id: '/_authenticated/admin/rx-credit-links'
+      path: '/admin/rx-credit-links'
+      fullPath: '/admin/rx-credit-links'
+      preLoaderRoute: typeof AuthenticatedAdminRxCreditLinksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/rx-billing': {
       id: '/_authenticated/admin/rx-billing'
       path: '/admin/rx-billing'
@@ -1807,6 +1847,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
   AuthenticatedAdminRxBillingRoute: typeof AuthenticatedAdminRxBillingRoute
+  AuthenticatedAdminRxCreditLinksRoute: typeof AuthenticatedAdminRxCreditLinksRoute
   AuthenticatedAdminSmsRoute: typeof AuthenticatedAdminSmsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -1852,6 +1893,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
   AuthenticatedAdminPrescriptionsRoute: AuthenticatedAdminPrescriptionsRoute,
   AuthenticatedAdminRxBillingRoute: AuthenticatedAdminRxBillingRoute,
+  AuthenticatedAdminRxCreditLinksRoute: AuthenticatedAdminRxCreditLinksRoute,
   AuthenticatedAdminSmsRoute: AuthenticatedAdminSmsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -1866,6 +1908,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   RxRoute: RxRoute,
+  RxPayTokenRoute: RxPayTokenRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
   ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }

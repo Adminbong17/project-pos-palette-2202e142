@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, UserCog, ListChecks, Building2, KeyRound, MessageSquare } from "lucide-react";
+import {
+  ClipboardList,
+  UserCog,
+  ListChecks,
+  Building2,
+  KeyRound,
+  MessageSquare,
+  Wallet,
+} from "lucide-react";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { isRxMode } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -60,6 +68,14 @@ const CARDS = [
     label: "SMS Gateway",
     desc: "API key, secret key and sender ID for all SMS sending.",
     icon: MessageSquare,
+    rx: true,
+    superOnly: true,
+  },
+  {
+    to: "/admin/rx-credit-links",
+    label: "Credit Purchase Links",
+    desc: "Payment links for clinics and doctors, and manual top-up approvals.",
+    icon: Wallet,
     rx: true,
     superOnly: true,
   },

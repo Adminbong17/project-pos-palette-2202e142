@@ -12,6 +12,7 @@ import { createRxStaff, setRxStaffPassword, removeRxStaff } from "@/lib/rx-staff
 import { staffUsernameToEmail } from "@/lib/rx-staff";
 import { useChambers } from "@/components/appointment-queue";
 import { ClinicCreditsCard } from "@/components/clinic-credits-card";
+import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -279,6 +280,8 @@ function ClinicDoctorsPage() {
         businessId={businessId}
         doctors={(doctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
       />
+
+      <RxCreditBuyCard businessId={businessId} />
 
       <ClinicStaffCard
         businessId={businessId}

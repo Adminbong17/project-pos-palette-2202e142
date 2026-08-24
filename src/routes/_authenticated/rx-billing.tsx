@@ -10,6 +10,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { RxBillingBanner } from "@/components/rx-billing-banner";
+import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
 import { sendRxBillingOtp, verifyRxBillingOtp } from "@/lib/rx-billing.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -196,6 +197,8 @@ function RxBillingPage() {
           </CardContent>
         </Card>
       </div>
+
+      <RxCreditBuyCard businessId={business?.id} />
 
       <Card>
         <CardHeader className="pb-3">

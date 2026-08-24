@@ -3206,6 +3206,128 @@ export type Database = {
           },
         ]
       }
+      rx_credit_links: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          rate_per_credit: number
+          token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          rate_per_credit?: number
+          token: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          rate_per_credit?: number
+          token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_credit_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rx_credit_orders: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          business_id: string
+          created_at: string
+          credits: number
+          id: string
+          link_id: string | null
+          method: string
+          notes: string | null
+          paid_at: string | null
+          payer_name: string | null
+          payer_phone: string | null
+          rate_per_credit: number
+          status: string
+          txn_ref: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          approved_by?: string | null
+          business_id: string
+          created_at?: string
+          credits?: number
+          id?: string
+          link_id?: string | null
+          method?: string
+          notes?: string | null
+          paid_at?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
+          rate_per_credit?: number
+          status?: string
+          txn_ref?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          business_id?: string
+          created_at?: string
+          credits?: number
+          id?: string
+          link_id?: string | null
+          method?: string
+          notes?: string | null
+          paid_at?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
+          rate_per_credit?: number
+          status?: string
+          txn_ref?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rx_credit_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rx_credit_orders_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "rx_credit_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rx_frequencies: {
         Row: {
           business_id: string
