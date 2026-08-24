@@ -159,10 +159,9 @@ function ClinicPlansPage() {
       return rows;
     },
   });
-  const patientMatches =
-    form.patient_code.trim() && form.patient_code.trim() !== (patientLookup.data?.[0]?.patient_code ?? "\u0000")
-      ? (patientLookup.data ?? [])
-      : (patientLookup.data ?? []).filter((m) => m.patient_code !== form.patient_code.trim());
+  const patientMatches = (patientLookup.data ?? []).filter(
+    (m) => !(m.patient_code === form.patient_code.trim() && m.patient_name === form.patient_name),
+  );
 
 
 
