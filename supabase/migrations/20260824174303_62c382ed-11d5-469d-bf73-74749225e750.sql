@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.tg_clinic_plan_payment_sync() FROM PUBLIC, anon, authenticated;
