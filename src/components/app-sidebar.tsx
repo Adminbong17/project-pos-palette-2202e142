@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useCurrentRole } from "@/hooks/use-current-role";
+
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
@@ -98,15 +100,26 @@ const sections = [
   },
 ];
 
+// A doctor account (under a clinic or standalone) only ever needs these pages.
+const DOCTOR_PATHS = [
+  "/rx-dashboard",
+  "/prescriptions",
+  "/rx-appointments",
+  "/rx-staff",
+  "/rx-lists",
+];
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
   const rxMode = isRxMode();
   const { data: business } = useCurrentBusiness();
+  const { isDoctor } = useCurrentRole();
   // Doctor mode and clinic mode are separate: the clinic dashboard only
   // appears for businesses marked as a clinic (multi-doctor + reception).
   const clinicMode = !!business?.clinic_mode;
   const { isSuperAdmin } = useIsSuperAdmin();
+
   const base = isLoading
     ? []
     : isAdmin
@@ -117,7 +130,7 @@ export function AppSidebar() {
             items: sec.items.filter((it: any) => allowed!.includes(it.key)),
           }))
           .filter((sec) => sec.items.length > 0);
-  const scoped = rxMode
+  const scoped = rxMode || isDoctor
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
     : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
   // Same destination can be listed under multiple permission keys — show it once.
@@ -126,12 +139,16 @@ export function AppSidebar() {
     // Platform-wide admin tools belong to the super admin only; a business
     // owner is an admin of their own business, not of the whole platform.
     items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
+      // A doctor sees only their own clinical pages — no clinic admin pages,
+      // no business settings, even inside a clinic business.
+      .filter((it) => (isDoctor && !isAdmin ? DOCTOR_PATHS.includes(it.to) : true))
       .filter((it) =>
         ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to)
           ? clinicMode
           : true,
       ),
   }));
+
   const visibleSections = modeScoped
     .map((sec) => {
       const seen = new Set<string>();
