@@ -300,7 +300,9 @@ function ClinicDoctorsPage() {
                 key={d.user_id}
                 doctor={d}
                 businessId={businessId}
-                assistants={(assistants.data ?? []).filter((a) => a.doctor_id === d.user_id)}
+                assistants={(assistants.data ?? []).filter(
+                  (a) => a.doctor_id === d.user_id && a.staff_kind !== "clinic_staff",
+                )}
                 chambers={chambers.data ?? []}
                 onSetPassword={async (password) => {
                   if (!businessId) return;
