@@ -240,6 +240,10 @@ function AdminRxBillingPage() {
 
   const setBill = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
+      if (isSuperAdmin) {
+        await patchBillFn({ data: { id, patch } });
+        return;
+      }
       const { error } = await (supabase as any).from("rx_bills").update(patch).eq("id", id);
       if (error) throw error;
     },
