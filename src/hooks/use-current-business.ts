@@ -43,7 +43,7 @@ export function useCurrentBusiness() {
       const { data: biz } = await supabase
         .from("businesses")
         .select(
-          "id, name, owner_id, currency_id, sku_prefix, logo, time_zone, clinic_mode, clinic_type, notify_phone",
+          "id, name, owner_id, currency_id, sku_prefix, logo, time_zone, clinic_mode, clinic_type, notify_phone, address",
         )
         .eq("id", bizId)
         .maybeSingle();
