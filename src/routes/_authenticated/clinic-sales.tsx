@@ -235,16 +235,17 @@ function ClinicSalesPage() {
           <Input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} />
         </label>
         <label className="block">
-          <span className="block text-xs text-muted-foreground mb-1.5">Invoice no.</span>
-          <Input
-            value={invoiceNo}
-            onChange={(e) => setInvoiceNo(e.target.value)}
-            placeholder={nextInvoiceNo}
-          />
+          <span className="block text-xs text-muted-foreground mb-1.5">Invoice no. (auto)</span>
+          <Input value={nextInvoiceNo} readOnly className="bg-muted/40" />
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            Auto: {nextInvoiceNo} (edit only if needed)
+            Generated automatically on save.
           </span>
         </label>
+        <label className="block">
+          <span className="block text-xs text-muted-foreground mb-1.5">Ref. doctor name (optional)</span>
+          <Input value={refDoctor} onChange={(e) => setRefDoctor(e.target.value)} placeholder="Dr. …" />
+        </label>
+
         <label className="block">
           <span className="block text-xs text-muted-foreground mb-1.5">Date & time</span>
           <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
