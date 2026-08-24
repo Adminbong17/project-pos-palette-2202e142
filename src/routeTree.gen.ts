@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScanSessionIdRouteImport } from './routes/scan.$sessionId'
+import { Route as RxPayTokenRouteImport } from './routes/rx-pay.$token'
 import { Route as AuthenticatedStockTransfersRouteImport } from './routes/_authenticated/stock-transfers'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -113,6 +114,11 @@ const IndexRoute = IndexRouteImport.update({
 const ScanSessionIdRoute = ScanSessionIdRouteImport.update({
   id: '/scan/$sessionId',
   path: '/scan/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RxPayTokenRoute = RxPayTokenRouteImport.update({
+  id: '/rx-pay/$token',
+  path: '/rx-pay/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStockTransfersRoute =
@@ -575,6 +581,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -650,6 +657,7 @@ export interface FileRoutesByTo {
   '/sales': typeof AuthenticatedSalesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -734,6 +742,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/stock-transfers': typeof AuthenticatedStockTransfersRoute
+  '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
@@ -818,6 +827,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
     | '/admin/business-requests'
@@ -893,6 +903,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/setup'
     | '/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
     | '/admin/business-requests'
@@ -976,6 +987,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/setup'
     | '/_authenticated/stock-transfers'
+    | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/_authenticated/admin/backups'
     | '/_authenticated/admin/business-requests'
@@ -1029,6 +1041,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   RxRoute: typeof RxRoute
+  RxPayTokenRoute: typeof RxPayTokenRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
   ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
@@ -1068,6 +1081,13 @@ declare module '@tanstack/react-router' {
       path: '/scan/$sessionId'
       fullPath: '/scan/$sessionId'
       preLoaderRoute: typeof ScanSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rx-pay/$token': {
+      id: '/rx-pay/$token'
+      path: '/rx-pay/$token'
+      fullPath: '/rx-pay/$token'
+      preLoaderRoute: typeof RxPayTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/stock-transfers': {
@@ -1866,6 +1886,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   RxRoute: RxRoute,
+  RxPayTokenRoute: RxPayTokenRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
   ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }
