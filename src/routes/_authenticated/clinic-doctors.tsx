@@ -280,6 +280,8 @@ function ClinicDoctorsPage() {
         doctors={(doctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
       />
 
+      <RxCreditBuyCard businessId={businessId} />
+
       <ClinicStaffCard
         businessId={businessId}
         staff={(assistants.data ?? []).filter((a) => a.staff_kind === "clinic_staff")}
