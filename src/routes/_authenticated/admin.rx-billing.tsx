@@ -206,6 +206,10 @@ function AdminRxBillingPage() {
 
   const grant = useMutation({
     mutationFn: async ({ accountId, delta }: { accountId: string; delta: number }) => {
+      if (isSuperAdmin) {
+        await grantFn({ data: { account_id: accountId, delta } });
+        return;
+      }
       const { error } = await (supabase as any).rpc("rx_grant_credits", {
         _account_id: accountId,
         _delta: delta,
