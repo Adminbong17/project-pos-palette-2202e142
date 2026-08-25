@@ -159,9 +159,9 @@ export function AppSidebar() {
   // appears for businesses marked as a clinic (multi-doctor + reception).
   const clinicMode = !!business?.clinic_mode;
   const { isSuperAdmin } = useIsSuperAdmin();
-  // A doctor inside a clinic is funded by the clinic, so no platform billing page.
-  // An independent doctor buys credits from the platform and keeps Rx Billing.
-  const doctorPaths = clinicMode ? DOCTOR_PATHS : [...DOCTOR_PATHS, "/rx-billing"];
+  // Clinic doctors see their pool status (read-only), independent doctors buy credits.
+  const doctorPaths = DOCTOR_PATHS;
+
 
   const base = isLoading
     ? []
