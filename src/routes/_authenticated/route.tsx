@@ -105,7 +105,7 @@ function AuthedLayout() {
             )}
             <button
               onClick={signOut}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:text-foreground"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground shadow-sm transition-colors"
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
