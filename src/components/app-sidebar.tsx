@@ -203,9 +203,12 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">Q</div>
+          <img
+            src="/favicon.png"
+            alt="QweekPOS"
+            className="h-8 w-8 rounded-lg object-cover shadow-sm"
+          />
           <div className="leading-tight">
-            <div className="font-display text-sm font-semibold">QweekPOS</div>
             <div className="text-[10px] text-muted-foreground">v1.0</div>
           </div>
         </div>
