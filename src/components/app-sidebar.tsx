@@ -123,6 +123,31 @@ const DOCTOR_PATHS = [
   "/clinic-plans",
 ];
 
+
+// Meaning-based tone per destination (hue in oklch degrees).
+// green = money in / clinical, blue = overview & data, amber = stock & supply,
+// red = money out & danger, purple = people, cyan = catalogue, slate = config.
+const NAV_HUE: Record<string, number> = {
+  "/dashboard": 232, "/rx-dashboard": 232, "/clinic-dashboard": 232,
+  "/pos": 150, "/sales": 150, "/clinic-sales": 150,
+  "/purchases": 55, "/quick-box": 55, "/stock-transfers": 55,
+  "/products": 195, "/clinic-services": 195, "/files": 250, "/contacts": 300,
+  "/expenses": 25, "/accounts": 232,
+  "/reports": 300, "/reports/profit": 150, "/reports/inventory-movement": 195,
+  "/manufacturing": 55, "/restaurant": 25, "/repair": 250, "/crm": 300, "/hrm": 300,
+  "/clinic-doctors": 195, "/clinic-plans": 300,
+  "/prescriptions": 150, "/rx-appointments": 232, "/rx-staff": 300, "/rx-lists": 250,
+  "/rx-billing": 55, "/rx-credit-history": 300,
+  "/rx-options": 250, "/admin/prescriptions": 150, "/admin/doctors": 300,
+  "/admin/rx-billing": 55, "/admin/businesses": 232, "/admin/users": 300,
+  "/admin/backups": 195, "/admin/sms": 232, "/admin/rx-credit-links": 55, "/admin": 25,
+  "/settings/locations": 250, "/settings/users": 300, "/settings/business": 250,
+};
+
+function navHue(to: string) {
+  return NAV_HUE[to] ?? 250;
+}
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
@@ -195,16 +220,26 @@ export function AppSidebar() {
                   const active = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to));
                   return (
                     <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton asChild isActive={active} disabled={!item.enabled}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        disabled={!item.enabled}
+                        className="nav-box h-auto"
+                        style={{ ["--nav-hue" as any]: navHue(item.to) }}
+                      >
                         {item.enabled ? (
                           <Link to={item.to as any}>
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.label}</span>
+                            <span className="nav-box-icon">
+                              <item.icon className="h-4 w-4" />
+                            </span>
+                            <span className="truncate">{item.label}</span>
                           </Link>
                         ) : (
                           <div className="opacity-40 cursor-not-allowed">
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.label}</span>
+                            <span className="nav-box-icon">
+                              <item.icon className="h-4 w-4" />
+                            </span>
+                            <span className="truncate">{item.label}</span>
                             <span className="ml-auto text-[9px] uppercase">soon</span>
                           </div>
                         )}
