@@ -118,6 +118,7 @@ const DOCTOR_PATHS = [
   "/rx-appointments",
   "/rx-staff",
   "/rx-lists",
+  "/rx-billing",
   "/rx-credit-history",
   "/clinic-services",
   "/clinic-plans",
