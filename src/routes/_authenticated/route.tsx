@@ -84,9 +84,13 @@ function AuthedLayout() {
             )}
             <div className="flex-1" />
             {business && (
-              <div className="hidden sm:flex flex-col text-right text-[11px] leading-tight">
+              <div className="hidden sm:flex items-center gap-2 text-right text-[11px] leading-tight">
+                <img
+                  src="/favicon.png"
+                  alt="QweekPOS"
+                  className="h-5 w-5 rounded object-cover opacity-90"
+                />
                 <span className="font-medium text-foreground">{business.name}</span>
-                <span className="text-muted-foreground">QweekPOS</span>
               </div>
             )}
             {canUsePos && (
