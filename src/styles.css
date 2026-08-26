@@ -60,8 +60,8 @@
   --radius: 0.75rem;
 
   /* Light mode - pharmacy POS */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.18 0.02 250);
+  --background: oklch(0.975 0.006 250);
+  --foreground: oklch(0.16 0.025 250);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.02 250);
