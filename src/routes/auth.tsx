@@ -208,7 +208,7 @@ function AuthPage() {
           <button
             disabled={loading}
             type="submit"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60 sm:h-11"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary/75 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/35 hover:brightness-105 active:scale-[0.98] disabled:opacity-60 sm:h-11"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading
