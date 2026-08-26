@@ -60,6 +60,11 @@ const sections = [
       { to: "/repair", label: "Repair", icon: Wrench, enabled: true, key: "repair" },
       { to: "/crm", label: "CRM", icon: HeartHandshake, enabled: true, key: "crm" },
       { to: "/hrm", label: "HRM", icon: Users, enabled: true, key: "hrm" },
+    ],
+  },
+  {
+    label: "Clinic & Rx",
+    items: [
       { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "clinic" },
       { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
@@ -85,6 +90,11 @@ const sections = [
       { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "prescriptions" },
       { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "clinic" },
       { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "clinic" },
+    ],
+  },
+  {
+    label: "Super Admin Tools",
+    items: [
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
       { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
@@ -95,9 +105,9 @@ const sections = [
       { to: "/admin/sms", superOnly: true, label: "SMS Gateway", icon: MessageSquare, enabled: true, key: "__admin" },
       { to: "/admin/rx-credit-links", superOnly: true, label: "Credit Links", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin", superOnly: true, label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
-
     ],
   },
+
   {
     label: "Configure",
     items: [
