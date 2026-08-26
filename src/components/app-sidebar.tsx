@@ -96,9 +96,9 @@ const sections = [
     label: "Super Admin Tools",
     items: [
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
-      { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
-      { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/rx-billing", label: "Bill Page (Admin)", icon: Wallet, enabled: true, key: "__admin" },
+      { to: "/admin/prescriptions", superOnly: true, label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
+      { to: "/admin/doctors", superOnly: true, label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
+      { to: "/admin/rx-billing", superOnly: true, label: "Bill Page (Admin)", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin/businesses", superOnly: true, label: "Businesses & Modules", icon: Building2, enabled: true, key: "__admin" },
       { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
