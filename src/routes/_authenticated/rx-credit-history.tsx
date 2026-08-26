@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FoldTable } from "@/components/fold-table";
+import { BkashPayCard } from "@/components/bkash-pay-card";
 
 export const Route = createFileRoute("/_authenticated/rx-credit-history")({
   head: () => ({
