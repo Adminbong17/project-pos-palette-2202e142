@@ -8,6 +8,7 @@ import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, X, Search, Wallet, Printer } from "lucide-react";
+import { FoldTable } from "@/components/fold-table";
 
 function fmtDate(d: string) {
   const dt = new Date(d);
@@ -355,7 +356,7 @@ function ContactsPage() {
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
+          <FoldTable className="w-full text-sm min-w-[720px]">
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left px-3 py-2">Name</th>
@@ -421,7 +422,7 @@ function ContactsPage() {
                 );
               })}
             </tbody>
-          </table>
+          </FoldTable>
         </div>
       </div>
 
@@ -527,7 +528,7 @@ function ContactsPage() {
               </div>
             </div>
             <div className="overflow-auto flex-1">
-              <table className="w-full text-sm">
+              <FoldTable className="w-full text-sm">
                 <thead className="bg-muted/40 text-xs uppercase text-muted-foreground sticky top-0">
                   <tr>
                     <th className="text-left px-3 py-2">Date</th>
@@ -558,7 +559,7 @@ function ContactsPage() {
                     );
                   })}
                 </tbody>
-              </table>
+              </FoldTable>
             </div>
             <div className="border-t border-border/60 px-5 py-3 flex justify-end">
               <button onClick={() => setLedgerContact(null)} className="h-9 rounded-lg border border-border px-3 text-sm">Close</button>

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { printSkuQr } from "@/lib/sku-qr-print";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/products/")({
   component: ProductsList,
@@ -371,7 +372,7 @@ function ProductsList() {
 
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <FoldTable className="w-full text-sm min-w-[900px]">
           <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left px-4 py-3 font-medium">Product</th>
@@ -456,7 +457,7 @@ function ProductsList() {
               </tr>
             );})}
           </tbody>
-        </table>
+        </FoldTable>
         <div ref={sentinelRef} className="h-8" />
         {isFetchingNextPage && (
           <div className="p-3 text-center text-xs text-muted-foreground">Loading more…</div>

@@ -10,6 +10,7 @@ import { Eye, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
+import { FoldTable } from "@/components/fold-table";
 
 
 export const Route = createFileRoute("/_authenticated/products/stock-adjustments")({
@@ -79,7 +80,7 @@ function StockAdjustments() {
       )}
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[800px]">
+        <FoldTable className="w-full text-sm min-w-[800px]">
           <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left px-4 py-3 font-medium">Ref No</th>
@@ -123,7 +124,7 @@ function StockAdjustments() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
 
       {viewId && <ViewAdjustmentDialog id={viewId} onClose={() => setViewId(null)} />}
@@ -177,7 +178,7 @@ function ViewAdjustmentDialog({ id, onClose }: { id: string; onClose: () => void
             {header.reason && <div className="col-span-2"><span className="text-muted-foreground">Reason: </span>{header.reason}</div>}
           </div>
           <div className="rounded-xl border border-border/60 overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
+            <FoldTable className="w-full text-sm min-w-[560px]">
               <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Product</th>
@@ -203,7 +204,7 @@ function ViewAdjustmentDialog({ id, onClose }: { id: string; onClose: () => void
                   );
                 })}
               </tbody>
-            </table>
+            </FoldTable>
           </div>
         </div>
       </div>

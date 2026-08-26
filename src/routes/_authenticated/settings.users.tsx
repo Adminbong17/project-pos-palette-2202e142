@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/settings/users")({
   head: () => ({ meta: [{ title: "Users & Roles — QweekPOS" }] }),
@@ -279,7 +280,7 @@ function UsersAndRoles() {
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
-        <table className="w-full text-sm">
+        <FoldTable className="w-full text-sm">
           <thead className="bg-muted/40 text-xs text-muted-foreground">
             <tr>
               <th className="text-left p-3">User</th>
@@ -374,7 +375,7 @@ function UsersAndRoles() {
               );
             })}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

@@ -15,6 +15,7 @@ import { patientTypeLabel } from "@/lib/token-print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/rx-appointments")({
   head: () => ({
@@ -440,7 +441,7 @@ function AppointmentsPage() {
             ) : !historyQ.data?.length ? (
               <p className="text-sm text-muted-foreground">No visits found.</p>
             ) : (
-              <table className="w-full text-xs">
+              <FoldTable className="w-full text-xs">
                 <thead className="text-muted-foreground">
                   <tr className="border-b border-border/60 text-left">
                     <th className="py-1.5 pr-2">Date</th>
@@ -478,7 +479,7 @@ function AppointmentsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </FoldTable>
             )}
           </div>
         )}

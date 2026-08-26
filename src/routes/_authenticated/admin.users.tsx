@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Search, KeyRound, Copy, Eye, EyeOff, Ban, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({
@@ -138,7 +139,7 @@ function Page() {
         <div className="text-sm text-destructive">{(users.error as any).message}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[1000px] text-sm">
+          <FoldTable className="w-full min-w-[1000px] text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="p-2 text-left">Email / Username</th>
@@ -286,7 +287,7 @@ function Page() {
                 </tr>
               )}
             </tbody>
-          </table>
+          </FoldTable>
           <AlertDialog
             open={!!confirmDisable}
             onOpenChange={(open) => !open && setConfirmDisable(null)}

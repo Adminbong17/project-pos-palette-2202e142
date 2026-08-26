@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RxBillingSummaryCard } from "@/components/rx-billing-summary-card";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/clinic-dashboard")({
   head: () => ({
@@ -232,7 +233,7 @@ function ClinicDashboard() {
           ) : filteredDoctorRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No match.</p>
           ) : (
-            <table className="w-full text-xs">
+            <FoldTable className="w-full text-xs">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border/60 text-left">
                   <th className="py-1.5">Doctor</th>
@@ -253,7 +254,7 @@ function ClinicDashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </FoldTable>
           )}
         </div>
 
@@ -264,7 +265,7 @@ function ClinicDashboard() {
           ) : filteredChamberRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No match.</p>
           ) : (
-            <table className="w-full text-xs">
+            <FoldTable className="w-full text-xs">
               <thead className="text-muted-foreground">
                 <tr className="border-b border-border/60 text-left">
                   <th className="py-1.5">Location</th>
@@ -281,7 +282,7 @@ function ClinicDashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </FoldTable>
           )}
         </div>
       </div>

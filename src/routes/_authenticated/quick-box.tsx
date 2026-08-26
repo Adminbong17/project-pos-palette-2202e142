@@ -9,6 +9,7 @@ import { fetchAll } from "@/lib/fetch-all";
 import { Button } from "@/components/ui/button";
 import { Check, Save, Search } from "lucide-react";
 import { toast } from "sonner";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/quick-box")({
   head: () => ({
@@ -338,7 +339,7 @@ function QuickBoxPage() {
 
       <div className="hidden sm:block rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[860px]">
+          <FoldTable className="w-full text-sm min-w-[860px]">
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-2">Product</th>
@@ -428,7 +429,7 @@ function QuickBoxPage() {
                 })
               )}
             </tbody>
-          </table>
+          </FoldTable>
         </div>
         {filtered.length > 500 && (
           <div className="px-4 py-2 text-xs text-muted-foreground border-t border-border/60">
