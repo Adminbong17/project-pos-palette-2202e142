@@ -283,6 +283,23 @@ export const getCreditLink = createServerFn({ method: "POST" })
     if (!link) return { found: false as const };
 
     const l = link as any;
+    const membershipQuery = l.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("user_id", l.user_id)
+          .eq("is_active", true)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("is_active", true)
+          .limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) return { found: false as const };
+
     const { data: biz } = await supabaseAdmin
       .from("businesses")
       .select("name")
@@ -356,6 +373,22 @@ export const submitCreditOrder = createServerFn({ method: "POST" })
     if (!link) throw new Error("This payment link is not valid");
     const l = link as any;
     if (!l.active) throw new Error("This payment link is closed — contact the platform admin");
+    const membershipQuery = l.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("user_id", l.user_id)
+          .eq("is_active", true)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("is_active", true)
+          .limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) throw new Error("This payment link is not valid");
 
     const rate = Number(l.rate_per_credit ?? 3);
     const credits = Math.floor(data.amount / rate);
