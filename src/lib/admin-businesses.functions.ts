@@ -141,3 +141,49 @@ export const moveDoctorToOwnBusiness = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { business_id: biz as unknown as string };
   });
+
+/**
+ * Permanently remove a business/clinic/doctor workspace that is no longer used.
+ * Deletes its billing rows, credit links/orders, memberships and roles, then the
+ * business itself, so stale entries stop showing up on the admin pages.
+ */
+export const deleteBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { business_id: string }) => {
+    if (!input?.business_id) throw new Error("business_id required");
+    return { business_id: input.business_id };
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const id = data.business_id;
+
+    // Credit ledger hangs off billing accounts, so clear it first.
+    const { data: accounts } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("id")
+      .eq("business_id", id);
+    const accountIds = ((accounts ?? []) as any[]).map((a) => a.id as string);
+    if (accountIds.length) {
+      await supabaseAdmin.from("rx_credit_ledger").delete().in("account_id", accountIds);
+    }
+
+    for (const table of [
+      "rx_credit_orders",
+      "rx_credit_links",
+      "rx_bills",
+      "rx_billing_accounts",
+      "rx_staff",
+      "rx_appointments",
+      "rx_chambers",
+      "business_users",
+      "user_roles",
+      "roles",
+    ]) {
+      await supabaseAdmin.from(table as never).delete().eq("business_id", id);
+    }
+
+    const { error } = await supabaseAdmin.from("businesses").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });

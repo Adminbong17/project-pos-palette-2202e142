@@ -3314,9 +3314,11 @@ export type Database = {
         Row: {
           amount: number
           approved_by: string | null
+          bill_id: string | null
           business_id: string
           created_at: string
           credits: number
+          gateway: string | null
           id: string
           link_id: string | null
           method: string
@@ -3324,6 +3326,7 @@ export type Database = {
           paid_at: string | null
           payer_name: string | null
           payer_phone: string | null
+          payment_id: string | null
           rate_per_credit: number
           status: string
           txn_ref: string | null
@@ -3333,9 +3336,11 @@ export type Database = {
         Insert: {
           amount?: number
           approved_by?: string | null
+          bill_id?: string | null
           business_id: string
           created_at?: string
           credits?: number
+          gateway?: string | null
           id?: string
           link_id?: string | null
           method?: string
@@ -3343,6 +3348,7 @@ export type Database = {
           paid_at?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          payment_id?: string | null
           rate_per_credit?: number
           status?: string
           txn_ref?: string | null
@@ -3352,9 +3358,11 @@ export type Database = {
         Update: {
           amount?: number
           approved_by?: string | null
+          bill_id?: string | null
           business_id?: string
           created_at?: string
           credits?: number
+          gateway?: string | null
           id?: string
           link_id?: string | null
           method?: string
@@ -3362,6 +3370,7 @@ export type Database = {
           paid_at?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          payment_id?: string | null
           rate_per_credit?: number
           status?: string
           txn_ref?: string | null
@@ -3369,6 +3378,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rx_credit_orders_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "rx_bills"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rx_credit_orders_business_id_fkey"
             columns: ["business_id"]

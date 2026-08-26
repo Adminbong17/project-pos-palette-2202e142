@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FoldTable } from "@/components/fold-table";
+import { BkashPayCard } from "@/components/bkash-pay-card";
 
 export const Route = createFileRoute("/_authenticated/rx-credit-history")({
   head: () => ({
@@ -124,6 +125,8 @@ function RxCreditHistoryPage() {
           Rx Billing
         </Link>
       </div>
+
+      <BkashPayCard businessId={business?.id} />
 
       <div className="flex flex-wrap items-end gap-3">
         {history.data?.can_see_all && (

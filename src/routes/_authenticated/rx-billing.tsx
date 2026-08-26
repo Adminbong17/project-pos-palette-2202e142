@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -12,6 +12,7 @@ import { useClinicDoctors } from "@/hooks/use-clinic-doctors";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { RxBillingBanner } from "@/components/rx-billing-banner";
 import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
+import { BkashPayCard, BkashBillPayButton } from "@/components/bkash-pay-card";
 import { ClinicCreditsCard } from "@/components/clinic-credits-card";
 import { sendRxBillingOtp, verifyRxBillingOtp } from "@/lib/rx-billing.functions";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,18 @@ function RxBillingPage() {
   const verify = useServerFn(verifyRxBillingOtp);
 
   const [phone, setPhone] = useState(state.phone ?? "");
+  // bKash bounces back here with ?bkash=success|failed|cancelled
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const r = q.get("bkash");
+    if (!r) return;
+    if (r === "success") toast.success("bKash payment received — your account is updated");
+    else if (r === "cancelled") toast.info("bKash payment cancelled");
+    else toast.error(q.get("reason") ?? "bKash payment failed");
+    window.history.replaceState({}, "", window.location.pathname);
+    refetch();
+    bills.refetch();
+  }, []);
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -203,6 +216,8 @@ function RxBillingPage() {
         </Card>
       </div>
 
+          <BkashPayCard businessId={business?.id} creditRate={state.credit_rate} />
+
       <RxCreditBuyCard businessId={business?.id} />
 
       {clinicAdmin && (
@@ -250,6 +265,9 @@ function RxBillingPage() {
                 >
                   {b.status}
                 </span>
+                {b.status === "unpaid" && (
+                  <BkashBillPayButton businessId={business?.id} billId={b.id} />
+                )}
                 {b.status === "unpaid" && b.payment_link && (
                   <Button size="sm" asChild>
                     <a href={b.payment_link} target="_blank" rel="noreferrer">

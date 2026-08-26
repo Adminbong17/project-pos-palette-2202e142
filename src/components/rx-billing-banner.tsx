@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, PhoneCall, CreditCard } from "lucide-react";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -43,6 +44,13 @@ export function RxBillingBanner({ compact = false }: { compact?: boolean }) {
                   <a href={state.payment_link} target="_blank" rel="noreferrer">
                     <CreditCard className="mr-1 h-4 w-4" /> Pay bill
                   </a>
+                </Button>
+              )}
+              {!clinicFunded && (
+                <Button size="sm" variant="secondary" asChild>
+                  <Link to="/rx-billing">
+                    <CreditCard className="mr-1 h-4 w-4" /> Pay with bKash
+                  </Link>
                 </Button>
               )}
               {!clinicFunded && (
