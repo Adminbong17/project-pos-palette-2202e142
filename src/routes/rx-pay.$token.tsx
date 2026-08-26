@@ -51,14 +51,15 @@ function RxPayPage() {
   });
 
   const rate = link.data?.found ? link.data.rate_per_credit : 3;
-  const credits = Math.floor((Number(amount) || 0) / rate);
+  const credits = Math.max(0, Math.floor(Number(wantCredits) || 0));
+  const payable = Math.round(credits * rate);
 
   const send = useMutation({
     mutationFn: async () =>
       await submit({
         data: {
           token,
-          amount: Number(amount) || 0,
+          amount: payable,
           method,
           payer_name: name,
           payer_phone: phone,
