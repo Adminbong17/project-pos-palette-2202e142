@@ -11,25 +11,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * approves the request and the credits land on that account automatically.
  */
 
-function makeToken() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
-}
-
-async function assertSuperAdmin(context: any) {
-  const { data, error } = await context.supabase.rpc("is_super_admin", { _user_id: context.userId });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Only the platform admin can do this");
-}
-
 /* ------------------------------- admin side ------------------------------- */
 
 export const listCreditLinks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: links }, { data: orders }, { data: businesses }, { data: members }] = await Promise.all([
@@ -125,21 +117,36 @@ export const createCreditLink = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let membershipQuery = supabaseAdmin
-      .from("business_users")
-      .select("user_id")
-      .eq("business_id", data.business_id)
-      .eq("is_active", true);
-    membershipQuery = data.user_id ? membershipQuery.eq("user_id", data.user_id) : membershipQuery.limit(1);
+    const membershipQuery = data.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", data.business_id)
+          .eq("is_active", true)
+          .eq("user_id", data.user_id)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", data.business_id)
+          .eq("is_active", true)
+          .limit(1);
     const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
     if (membershipError) throw new Error(membershipError.message);
     if (!activeMembership) throw new Error("This clinic/business is deleted or inactive");
 
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let token = "";
+    for (let i = 0; i < 10; i += 1) token += alphabet[Math.floor(Math.random() * alphabet.length)];
     const { data: row, error } = await supabaseAdmin
       .from("rx_credit_links")
-      .insert({ ...data, token: makeToken(), created_by: context.userId } as never)
+      .insert({ ...data, token, created_by: context.userId } as never)
       .select("id, token")
       .single();
     if (error) throw new Error(error.message);
@@ -153,7 +160,12 @@ export const setCreditLinkActive = createServerFn({ method: "POST" })
     return { id: input.id, active: !!input.active };
   })
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("rx_credit_links")
@@ -172,7 +184,12 @@ export const reviewCreditOrder = createServerFn({ method: "POST" })
     return { id: input.id, action: input.action, notes: String(input.notes ?? "").trim() || null };
   })
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: order, error } = await supabaseAdmin
