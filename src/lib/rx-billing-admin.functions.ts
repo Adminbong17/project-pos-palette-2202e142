@@ -1,18 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const SUPER_ADMIN_EMAIL = "admin@bongbangla.top";
-
-function assertSuperAdmin(claims: any) {
-  const email = String(claims?.email ?? "").toLowerCase();
-  if (email !== SUPER_ADMIN_EMAIL) throw new Error("Only the platform super admin can do this");
-}
-
 /** Every doctor on the platform (all businesses/clinics) + billing accounts, month counts and bills. */
 export const listRxBillingAll = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    assertSuperAdmin(context.claims);
+    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
+      throw new Error("Only the platform super admin can do this");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: businesses }, { data: roles }, { data: userRoles }, { data: members }] =
@@ -23,11 +18,21 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
       ]);
 
-    const bizName = new Map((businesses ?? []).map((b: any) => [b.id, b.name as string]));
+    const activeBusinessIds = new Set(
+      (members ?? [])
+        .filter((m: any) => m.is_active !== false)
+        .map((m: any) => m.business_id as string),
+    );
+    const bizName = new Map(
+      (businesses ?? [])
+        .filter((b: any) => activeBusinessIds.has(b.id))
+        .map((b: any) => [b.id, b.name as string]),
+    );
     const roleById = new Map((roles ?? []).map((r: any) => [r.id, String(r.name ?? "")]));
 
-    const doctorRows = (userRoles ?? []).filter((ur: any) =>
-      (roleById.get(ur.role_id) ?? "").startsWith("Doctor"),
+    const doctorRows = (userRoles ?? []).filter(
+      (ur: any) =>
+        activeBusinessIds.has(ur.business_id) && (roleById.get(ur.role_id) ?? "").startsWith("Doctor"),
     );
     const activeSet = new Set(
       (members ?? [])
@@ -86,13 +91,26 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
       counts[k] = (counts[k] ?? 0) + 1;
     }
 
-    const businessList = ((businesses ?? []) as any[]).map((b) => ({
-      id: b.id as string,
-      name: (b.name as string) ?? "—",
-      clinic_mode: !!b.clinic_mode,
-    }));
+    const businessList = ((businesses ?? []) as any[])
+      .filter((b) => activeBusinessIds.has(b.id))
+      .map((b) => ({
+        id: b.id as string,
+        name: (b.name as string) ?? "—",
+        clinic_mode: !!b.clinic_mode,
+      }));
 
-    return { doctors, businesses: businessList, accounts: accounts ?? [], bills: bills ?? [], counts };
+    const validAccounts = ((accounts ?? []) as any[]).filter((a) => {
+      if (!activeBusinessIds.has(a.business_id)) return false;
+      if (!a.user_id) return true;
+      return activeSet.has(`${a.user_id}:${a.business_id}`);
+    });
+    const validBills = ((bills ?? []) as any[]).filter((b) => {
+      if (!activeBusinessIds.has(b.business_id)) return false;
+      if (!b.user_id) return true;
+      return activeSet.has(`${b.user_id}:${b.business_id}`);
+    });
+
+    return { doctors, businesses: businessList, accounts: validAccounts, bills: validBills, counts };
   });
 
 /** Create/update a doctor's (or a business pool's) billing account from the super-admin page. */
@@ -107,8 +125,20 @@ export const saveRxBillingAccount = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }) => {
-    assertSuperAdmin(context.claims);
+    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
+      throw new Error("Only the platform super admin can do this");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let membershipQuery = supabaseAdmin
+      .from("business_users")
+      .select("user_id")
+      .eq("business_id", data.business_id)
+      .eq("is_active", true);
+    membershipQuery = data.user_id ? membershipQuery.eq("user_id", data.user_id) : membershipQuery.limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) throw new Error("This clinic/business is deleted or inactive");
+
     let q = supabaseAdmin
       .from("rx_billing_accounts")
       .select("id")
@@ -147,7 +177,9 @@ export const grantRxCredits = createServerFn({ method: "POST" })
     return { account_id: input.account_id, delta: Number(input.delta) || 0 };
   })
   .handler(async ({ data, context }) => {
-    assertSuperAdmin(context.claims);
+    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
+      throw new Error("Only the platform super admin can do this");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: acc, error: accErr } = await supabaseAdmin
@@ -183,7 +215,9 @@ export const patchRxBill = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }) => {
-    assertSuperAdmin(context.claims);
+    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
+      throw new Error("Only the platform super admin can do this");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("rx_bills")
