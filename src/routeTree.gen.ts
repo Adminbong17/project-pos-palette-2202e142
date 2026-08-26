@@ -92,6 +92,7 @@ import { Route as AuthenticatedAdminBusinessRequestsRouteImport } from './routes
 import { Route as AuthenticatedAdminBkashRouteImport } from './routes/_authenticated/admin.bkash'
 import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
 import { Route as ApiPublicCronBackupRouteImport } from './routes/api/public/cron.backup'
+import { Route as ApiPublicBkashCallbackRouteImport } from './routes/api/public/bkash/callback'
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
 import { Route as AuthenticatedPurchasesIdEditRouteImport } from './routes/_authenticated/purchases.$id.edit'
 
@@ -553,6 +554,11 @@ const ApiPublicCronBackupRoute = ApiPublicCronBackupRouteImport.update({
   path: '/api/public/cron/backup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBkashCallbackRoute = ApiPublicBkashCallbackRouteImport.update({
+  id: '/api/public/bkash/callback',
+  path: '/api/public/bkash/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSalesIdEditRoute =
   AuthenticatedSalesIdEditRouteImport.update({
     id: '/sales_/$id/edit',
@@ -650,6 +656,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/bkash/callback': typeof ApiPublicBkashCallbackRoute
   '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRoutesByTo {
@@ -729,6 +736,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/bkash/callback': typeof ApiPublicBkashCallbackRoute
   '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRoutesById {
@@ -817,6 +825,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/_authenticated/sales_/$id/edit': typeof AuthenticatedSalesIdEditRoute
+  '/api/public/bkash/callback': typeof ApiPublicBkashCallbackRoute
   '/api/public/cron/backup': typeof ApiPublicCronBackupRoute
 }
 export interface FileRouteTypes {
@@ -905,6 +914,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
+    | '/api/public/bkash/callback'
     | '/api/public/cron/backup'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -984,6 +994,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
+    | '/api/public/bkash/callback'
     | '/api/public/cron/backup'
   id:
     | '__root__'
@@ -1071,6 +1082,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/purchases/$id/edit'
     | '/_authenticated/sales_/$id/edit'
+    | '/api/public/bkash/callback'
     | '/api/public/cron/backup'
   fileRoutesById: FileRoutesById
 }
@@ -1081,6 +1093,7 @@ export interface RootRouteChildren {
   RxRoute: typeof RxRoute
   RxPayTokenRoute: typeof RxPayTokenRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
+  ApiPublicBkashCallbackRoute: typeof ApiPublicBkashCallbackRoute
   ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
 
@@ -1667,6 +1680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronBackupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/bkash/callback': {
+      id: '/api/public/bkash/callback'
+      path: '/api/public/bkash/callback'
+      fullPath: '/api/public/bkash/callback'
+      preLoaderRoute: typeof ApiPublicBkashCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/sales_/$id/edit': {
       id: '/_authenticated/sales_/$id/edit'
       path: '/sales/$id/edit'
@@ -1953,6 +1973,7 @@ const rootRouteChildren: RootRouteChildren = {
   RxRoute: RxRoute,
   RxPayTokenRoute: RxPayTokenRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
+  ApiPublicBkashCallbackRoute: ApiPublicBkashCallbackRoute,
   ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }
 export const routeTree = rootRouteImport
