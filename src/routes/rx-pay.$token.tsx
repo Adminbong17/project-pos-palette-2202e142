@@ -38,7 +38,7 @@ function RxPayPage() {
   const load = useServerFn(getCreditLink);
   const submit = useServerFn(submitCreditOrder);
 
-  const [amount, setAmount] = useState("");
+  const [wantCredits, setWantCredits] = useState("");
   const [method, setMethod] = useState("bkash");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
