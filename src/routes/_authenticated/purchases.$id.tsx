@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Pencil, ArrowLeft, Printer } from "lucide-react";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
   component: PurchaseIdRoute,
@@ -110,7 +111,7 @@ function ViewPurchasePage() {
       </div>
 
       <div className="rounded-2xl border bg-card overflow-hidden">
-        <table className="w-full text-sm">
+        <FoldTable className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left p-3">Product</th>
@@ -142,7 +143,7 @@ function ViewPurchasePage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
 
       <div className="card-box rounded-2xl border bg-card p-4 grid gap-2 sm:grid-cols-3 text-sm">

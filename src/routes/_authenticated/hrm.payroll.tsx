@@ -8,6 +8,7 @@ import { Plus, Trash2, Pencil, Printer, Search } from "lucide-react";
 import { printHrmReport } from "@/lib/hrm-print";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { Input } from "@/components/ui/input";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/hrm/payroll")({
   component: PayrollPage,
@@ -209,7 +210,7 @@ function PayrollPage() {
       )}
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[720px]">
+        <FoldTable className="w-full text-sm min-w-[720px]">
           <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left px-4 py-3">Employee</th>
@@ -250,7 +251,7 @@ function PayrollPage() {
               </tr>
             )}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
     </div>
   );

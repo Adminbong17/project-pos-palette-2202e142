@@ -7,6 +7,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll } from "@/lib/fetch-all";
 import { AlertTriangle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/reports/expiry")({
   head: () => ({ meta: [{ title: "Expiring Batches — QweekPOS" }] }),
@@ -74,7 +75,7 @@ function ExpiryPage() {
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-        <table className="w-full text-sm">
+        <FoldTable className="w-full text-sm">
           <thead className="text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left p-2">Product</th>
@@ -109,7 +110,7 @@ function ExpiryPage() {
               );
             })}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
     </div>
   );

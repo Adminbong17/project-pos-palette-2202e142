@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchAllIn } from "@/lib/fetch-all";
 import { useCurrentRole } from "@/hooks/use-current-role";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({ meta: [{ title: "Sales — QweekPOS" }] }),
@@ -341,7 +342,7 @@ function SalesPage() {
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <FoldTable className="w-full text-sm min-w-[900px]">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left p-3">Date</th>
@@ -406,7 +407,7 @@ function SalesPage() {
               })
             )}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
 
       <Dialog open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)}>

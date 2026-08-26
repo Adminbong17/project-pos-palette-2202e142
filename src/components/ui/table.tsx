@@ -1,15 +1,64 @@
 import * as React from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
+/**
+ * Tables can hold a lot of rows and push the rest of the page far down.
+ * Every table gets a small chevron button that folds (minimises) it away and
+ * unfolds it again. Printing always shows the full table.
+ */
+const Table = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement> & {
+    foldable?: boolean;
+    defaultCollapsed?: boolean;
+    foldLabel?: string;
+  }
+>(({ className, foldable = true, defaultCollapsed = false, foldLabel, ...props }, ref) => {
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+  const open = !foldable || !collapsed;
+
+  return (
     <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+      {foldable && (
+        <div className="flex items-center justify-between gap-2 px-2 py-1 print:hidden">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {foldLabel ?? (open ? "" : "Minimised")}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-expanded={open}
+            aria-label={open ? "Minimise table" : "Expand table"}
+            className="ml-auto inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground/80 hover:bg-muted"
+          >
+            {open ? (
+              <>
+                Minimise <ChevronUp className="h-3 w-3" />
+              </>
+            ) : (
+              <>
+                Expand <ChevronDown className="h-3 w-3" />
+              </>
+            )}
+          </button>
+        </div>
+      )}
+      <table
+        ref={ref}
+        className={cn(
+          "w-full caption-bottom text-sm",
+          !open && "hidden print:table",
+          className,
+        )}
+        {...props}
+      />
     </div>
-  ),
-);
+  );
+});
 Table.displayName = "Table";
+
 
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,

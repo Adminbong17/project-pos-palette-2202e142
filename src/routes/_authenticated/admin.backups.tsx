@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import { Input } from "@/components/ui/input";
 import { DatabaseBackup, Download, History, Loader2, RefreshCw, Trash2, Search } from "lucide-react";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/admin/backups")({
   head: () => ({
@@ -269,7 +270,7 @@ function BackupsPage() {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card">
-        <table className="w-full text-sm">
+        <FoldTable className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Time (Dhaka)</th>
@@ -339,7 +340,7 @@ function BackupsPage() {
               ))
             )}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
 
       {/* restore panel */}

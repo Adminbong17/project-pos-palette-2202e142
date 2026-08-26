@@ -6,6 +6,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { FoldTable } from "@/components/fold-table";
 
 export type FieldDef = {
   key: string;
@@ -209,7 +210,7 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
       )}
 
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[640px]">
+        <FoldTable className="w-full text-sm min-w-[640px]">
           <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="w-10 px-4 py-3">
@@ -249,7 +250,7 @@ export function MasterDataTable({ table, title, fields, listColumns, orderBy = "
               </tr>
             ))}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
     </div>
   );

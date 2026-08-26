@@ -8,6 +8,7 @@ import { Plus, Truck, Eye, Pencil, Trash2, Trash, Undo2, XCircle, Search } from 
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/purchases")({
   component: PurchasesPage,
@@ -182,7 +183,7 @@ function PurchasesList() {
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <FoldTable className="w-full text-sm min-w-[900px]">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left p-3">Date</th>
@@ -266,7 +267,7 @@ function PurchasesList() {
               })
             )}
           </tbody>
-        </table>
+        </FoldTable>
       </div>
     </div>
   );

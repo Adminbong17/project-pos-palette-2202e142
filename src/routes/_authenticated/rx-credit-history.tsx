@@ -9,6 +9,7 @@ import { getRxCreditHistory } from "@/lib/rx-credit-history.functions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/rx-credit-history")({
   head: () => ({
@@ -198,7 +199,7 @@ function RxCreditHistoryPage() {
             <>
               {/* Desktop table */}
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full text-sm">
+                <FoldTable className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
                       <th className="px-2 py-2">Date</th>
@@ -228,7 +229,7 @@ function RxCreditHistoryPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </FoldTable>
               </div>
               {/* Mobile cards */}
               <div className="space-y-2 md:hidden">

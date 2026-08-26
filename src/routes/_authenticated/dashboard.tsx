@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Building2, Users, Package, ShoppingCart, BarChart3, AlertTriangle } from "lucide-react";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — QweekPOS" }] }),
@@ -109,7 +110,7 @@ function Dashboard() {
           <p className="text-sm text-muted-foreground">No batches with expiry dates yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <FoldTable className="w-full text-sm">
               <thead className="text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="text-left p-2">Product</th>
@@ -134,7 +135,7 @@ function Dashboard() {
                   );
                 })}
               </tbody>
-            </table>
+            </FoldTable>
             <div className="mt-3 flex justify-center">
               <Link to="/reports/expiry" className="rounded-lg border border-border bg-background px-4 py-2 text-sm hover:bg-accent">Load more</Link>
             </div>

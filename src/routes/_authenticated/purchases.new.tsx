@@ -11,6 +11,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { FloatingPurchaseSearch } from "@/components/floating-purchase-search";
+import { FoldTable } from "@/components/fold-table";
 
 export const Route = createFileRoute("/_authenticated/purchases/new")({
   component: NewPurchasePage,
@@ -506,7 +507,7 @@ function NewPurchasePage() {
 
         {/* Desktop table */}
         <div className="hidden md:block">
-          <table className="w-full text-sm">
+          <FoldTable className="w-full text-sm">
             <thead className="text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left p-2">Product</th>
@@ -597,7 +598,7 @@ function NewPurchasePage() {
                 <td className="p-2 text-right">{fmt(total)}</td>
               </tr>
             </tfoot>
-          </table>
+          </FoldTable>
         </div>
 
 
