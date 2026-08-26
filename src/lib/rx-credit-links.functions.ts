@@ -32,7 +32,7 @@ export const listCreditLinks = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: links }, { data: orders }, { data: businesses }] = await Promise.all([
+    const [{ data: links }, { data: orders }, { data: businesses }, { data: members }] = await Promise.all([
       supabaseAdmin
         .from("rx_credit_links")
         .select("id, token, business_id, user_id, label, rate_per_credit, active, created_at")
@@ -45,13 +45,32 @@ export const listCreditLinks = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(300),
       supabaseAdmin.from("businesses").select("id, name").order("name"),
+      supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
     ]);
 
-    const nameById = new Map((businesses ?? []).map((b: any) => [b.id, b.name as string]));
+    const activeBusinessIds = new Set(
+      (members ?? [])
+        .filter((m: any) => m.is_active !== false)
+        .map((m: any) => m.business_id as string),
+    );
+    const activeMemberSet = new Set(
+      (members ?? [])
+        .filter((m: any) => m.is_active !== false)
+        .map((m: any) => `${m.user_id}:${m.business_id}`),
+    );
+    const activeBusinesses = ((businesses ?? []) as any[]).filter((b) => activeBusinessIds.has(b.id));
+    const validTarget = (row: any) => {
+      if (!activeBusinessIds.has(row.business_id)) return false;
+      if (!row.user_id) return true;
+      return activeMemberSet.has(`${row.user_id}:${row.business_id}`);
+    };
+    const visibleLinks = ((links ?? []) as any[]).filter(validTarget);
+    const visibleOrders = ((orders ?? []) as any[]).filter(validTarget);
+    const nameById = new Map(activeBusinesses.map((b: any) => [b.id, b.name as string]));
     const userIds = Array.from(
       new Set([
-        ...(links ?? []).map((l: any) => l.user_id),
-        ...(orders ?? []).map((o: any) => o.user_id),
+        ...visibleLinks.map((l: any) => l.user_id),
+        ...visibleOrders.map((o: any) => o.user_id),
       ]),
     ).filter(Boolean) as string[];
 
@@ -79,9 +98,9 @@ export const listCreditLinks = createServerFn({ method: "POST" })
     });
 
     return {
-      links: (links ?? []).map(decorate),
-      orders: (orders ?? []).map(decorate),
-      businesses: (businesses ?? []) as { id: string; name: string }[],
+      links: visibleLinks.map(decorate),
+      orders: visibleOrders.map(decorate),
+      businesses: activeBusinesses as { id: string; name: string }[],
     };
   });
 
@@ -108,6 +127,16 @@ export const createCreditLink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let membershipQuery = supabaseAdmin
+      .from("business_users")
+      .select("user_id")
+      .eq("business_id", data.business_id)
+      .eq("is_active", true);
+    membershipQuery = data.user_id ? membershipQuery.eq("user_id", data.user_id) : membershipQuery.limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) throw new Error("This clinic/business is deleted or inactive");
+
     const { data: row, error } = await supabaseAdmin
       .from("rx_credit_links")
       .insert({ ...data, token: makeToken(), created_by: context.userId } as never)
