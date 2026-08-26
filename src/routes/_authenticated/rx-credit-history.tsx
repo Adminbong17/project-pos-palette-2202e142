@@ -125,6 +125,8 @@ function RxCreditHistoryPage() {
         </Link>
       </div>
 
+      <BkashPayCard businessId={business?.id} />
+
       <div className="flex flex-wrap items-end gap-3">
         {history.data?.can_see_all && (
           <div>
