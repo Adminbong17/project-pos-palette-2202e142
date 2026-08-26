@@ -100,27 +100,27 @@
   --chart-4: oklch(0.55 0.2 320);
   --chart-5: oklch(0.6 0.2 30);
 
-  --sidebar: oklch(0.98 0.005 250);
-  --sidebar-foreground: oklch(0.25 0.02 250);
-  --sidebar-primary: oklch(0.62 0.18 145);
-  --sidebar-primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-accent: oklch(0.94 0.02 250);
-  --sidebar-accent-foreground: oklch(0.22 0.02 250);
-  --sidebar-border: oklch(0.9 0.01 250);
-  --sidebar-ring: oklch(0.62 0.18 145);
+  --sidebar: oklch(0.955 0.012 250);
+  --sidebar-foreground: oklch(0.22 0.03 250);
+  --sidebar-primary: oklch(0.55 0.16 152);
+  --sidebar-primary-foreground: oklch(0.99 0.005 250);
+  --sidebar-accent: oklch(0.9 0.03 250);
+  --sidebar-accent-foreground: oklch(0.2 0.04 250);
+  --sidebar-border: oklch(0.855 0.016 250);
+  --sidebar-ring: oklch(0.55 0.18 145);
 
-  --gradient-primary: linear-gradient(135deg, oklch(0.62 0.18 145), oklch(0.55 0.15 175));
+  --gradient-primary: linear-gradient(135deg, oklch(0.55 0.16 152), oklch(0.5 0.14 190));
   --gradient-card: linear-gradient(180deg, oklch(1 0 0), oklch(0.98 0.005 250));
-  --shadow-glow: 0 0 40px -10px oklch(0.62 0.18 145 / 0.25);
-  --shadow-card: 0 1px 0 0 oklch(0 0 0 / 0.02) inset, 0 8px 24px -12px oklch(0 0 0 / 0.12);
+  --shadow-glow: 0 0 40px -10px oklch(0.55 0.16 152 / 0.28);
+  --shadow-card: 0 1px 0 0 oklch(1 0 0 / 0.6) inset, 0 10px 26px -16px oklch(0.3 0.05 250 / 0.22);
 
   /* Panel tone engine (see components layer) */
-  --panel-l1: 0.975;
-  --panel-l2: 1;
-  --panel-border-l: 0.88;
-  --panel-accent-l: 0.66;
-  --panel-nested-l: 0.985;
-  --panel-shadow-a: 0.65;
+  --panel-l1: 0.945;
+  --panel-l2: 0.995;
+  --panel-border-l: 0.8;
+  --panel-accent-l: 0.55;
+  --panel-nested-l: 0.965;
+  --panel-shadow-a: 0.75;
 }
 
 .dark {
