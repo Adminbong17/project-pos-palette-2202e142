@@ -106,18 +106,24 @@ export const saveBkashSettings = createServerFn({ method: "POST" })
       .from("bkash_settings" as never)
       .upsert({ id: true, ...patch } as never, { onConflict: "id" });
     if (error) throw new Error(error.message);
+    // Credentials/environment may have changed — drop the cached token.
+    const { bkashClearTokenCache } = await import("./bkash.server");
+    await bkashClearTokenCache();
     return { ok: true };
   });
 
-/** Verifies the stored credentials by asking bKash for a grant token. */
+/**
+ * Verifies the stored credentials. Reuses the cached token when it is still
+ * valid so the strict bKash grant-token rate limit is respected.
+ */
 export const testBkashCredentials = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { getBkashConfig, bkashGrantToken } = await import("./bkash.server");
+    const { getBkashConfig, bkashGetToken } = await import("./bkash.server");
     const cfg = await getBkashConfig();
     if (!cfg) return { ok: false, error: "Fill in all four bKash credentials first" };
-    const res = await bkashGrantToken(cfg);
+    const res = await bkashGetToken(cfg);
     return res.ok
       ? { ok: true, environment: cfg.environment }
       : { ok: false, error: res.error };
