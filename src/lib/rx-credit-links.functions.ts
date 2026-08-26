@@ -321,17 +321,21 @@ export const getCreditLink = createServerFn({ method: "POST" })
         "Doctor";
     }
 
+    // The super admin's per-credit price on the bill page wins over the link's own rate.
+    let rateQuery = supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("credit_rate")
+      .eq("business_id", l.business_id);
+    rateQuery = l.user_id ? rateQuery.eq("user_id", l.user_id) : rateQuery.is("user_id", null);
+    const { data: rateAcc } = await rateQuery.maybeSingle();
+    const accRate = Number((rateAcc as any)?.credit_rate ?? 0);
+
     return {
       found: true as const,
       token: l.token as string,
       active: !!l.active,
       label: (l.label as string | null) ?? null,
-      rate_per_credit: await accountRate(
-        supabaseAdmin,
-        l.business_id,
-        l.user_id,
-        Number(l.rate_per_credit ?? 3),
-      ),
+      rate_per_credit: accRate > 0 ? accRate : Number(l.rate_per_credit ?? 3),
       business_name: ((biz as any)?.name as string) ?? "—",
       target_name: targetName,
     };
