@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { FoldableList } from "@/components/foldable-list";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -421,10 +422,12 @@ function ClinicSalesPage() {
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">
-                {(r.clinic_sale_lines ?? [])
-                  .map((l: any) => `${l.name} × ${Number(l.quantity)}`)
-                  .join(", ")}
+                <FoldableList
+                  items={(r.clinic_sale_lines ?? []).map((l: any) => `${l.name} × ${Number(l.quantity)}`)}
+                  collapsedCount={3}
+                />
               </div>
+
               <div className="flex justify-end gap-2">
                 <PrintSizeButton
                   label="Print"
