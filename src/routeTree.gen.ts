@@ -87,6 +87,7 @@ import { Route as AuthenticatedAdminRxCreditLinksRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminRxBillingRouteImport } from './routes/_authenticated/admin.rx-billing'
 import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_authenticated/admin.prescriptions'
 import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
+import { Route as AuthenticatedAdminCreditPurchasesRouteImport } from './routes/_authenticated/admin.credit-purchases'
 import { Route as AuthenticatedAdminBusinessesRouteImport } from './routes/_authenticated/admin.businesses'
 import { Route as AuthenticatedAdminBusinessRequestsRouteImport } from './routes/_authenticated/admin.business-requests'
 import { Route as AuthenticatedAdminBkashRouteImport } from './routes/_authenticated/admin.bkash'
@@ -526,6 +527,12 @@ const AuthenticatedAdminDoctorsRoute =
     path: '/admin/doctors',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminCreditPurchasesRoute =
+  AuthenticatedAdminCreditPurchasesRouteImport.update({
+    id: '/admin/credit-purchases',
+    path: '/admin/credit-purchases',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminBusinessesRoute =
   AuthenticatedAdminBusinessesRouteImport.update({
     id: '/admin/businesses',
@@ -614,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
+  '/admin/credit-purchases': typeof AuthenticatedAdminCreditPurchasesRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
@@ -694,6 +702,7 @@ export interface FileRoutesByTo {
   '/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
+  '/admin/credit-purchases': typeof AuthenticatedAdminCreditPurchasesRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
@@ -783,6 +792,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/_authenticated/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
+  '/_authenticated/admin/credit-purchases': typeof AuthenticatedAdminCreditPurchasesRoute
   '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
   '/_authenticated/admin/prescriptions': typeof AuthenticatedAdminPrescriptionsRoute
   '/_authenticated/admin/rx-billing': typeof AuthenticatedAdminRxBillingRoute
@@ -872,6 +882,7 @@ export interface FileRouteTypes {
     | '/admin/bkash'
     | '/admin/business-requests'
     | '/admin/businesses'
+    | '/admin/credit-purchases'
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
@@ -952,6 +963,7 @@ export interface FileRouteTypes {
     | '/admin/bkash'
     | '/admin/business-requests'
     | '/admin/businesses'
+    | '/admin/credit-purchases'
     | '/admin/doctors'
     | '/admin/prescriptions'
     | '/admin/rx-billing'
@@ -1040,6 +1052,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/bkash'
     | '/_authenticated/admin/business-requests'
     | '/_authenticated/admin/businesses'
+    | '/_authenticated/admin/credit-purchases'
     | '/_authenticated/admin/doctors'
     | '/_authenticated/admin/prescriptions'
     | '/_authenticated/admin/rx-billing'
@@ -1645,6 +1658,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDoctorsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/credit-purchases': {
+      id: '/_authenticated/admin/credit-purchases'
+      path: '/admin/credit-purchases'
+      fullPath: '/admin/credit-purchases'
+      preLoaderRoute: typeof AuthenticatedAdminCreditPurchasesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/businesses': {
       id: '/_authenticated/admin/businesses'
       path: '/admin/businesses'
@@ -1905,6 +1925,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminBkashRoute: typeof AuthenticatedAdminBkashRoute
   AuthenticatedAdminBusinessRequestsRoute: typeof AuthenticatedAdminBusinessRequestsRoute
   AuthenticatedAdminBusinessesRoute: typeof AuthenticatedAdminBusinessesRoute
+  AuthenticatedAdminCreditPurchasesRoute: typeof AuthenticatedAdminCreditPurchasesRoute
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
   AuthenticatedAdminPrescriptionsRoute: typeof AuthenticatedAdminPrescriptionsRoute
   AuthenticatedAdminRxBillingRoute: typeof AuthenticatedAdminRxBillingRoute
@@ -1953,6 +1974,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminBusinessRequestsRoute:
     AuthenticatedAdminBusinessRequestsRoute,
   AuthenticatedAdminBusinessesRoute: AuthenticatedAdminBusinessesRoute,
+  AuthenticatedAdminCreditPurchasesRoute:
+    AuthenticatedAdminCreditPurchasesRoute,
   AuthenticatedAdminDoctorsRoute: AuthenticatedAdminDoctorsRoute,
   AuthenticatedAdminPrescriptionsRoute: AuthenticatedAdminPrescriptionsRoute,
   AuthenticatedAdminRxBillingRoute: AuthenticatedAdminRxBillingRoute,
