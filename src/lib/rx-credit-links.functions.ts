@@ -11,28 +11,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * approves the request and the credits land on that account automatically.
  */
 
-function makeToken() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
-}
-
-async function assertSuperAdmin(context: any) {
-  const { data, error } = await context.supabase.rpc("is_super_admin", { _user_id: context.userId });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Only the platform admin can do this");
-}
-
 /* ------------------------------- admin side ------------------------------- */
 
 export const listCreditLinks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: links }, { data: orders }, { data: businesses }] = await Promise.all([
+    const [{ data: links }, { data: orders }, { data: businesses }, { data: members }] = await Promise.all([
       supabaseAdmin
         .from("rx_credit_links")
         .select("id, token, business_id, user_id, label, rate_per_credit, active, created_at")
@@ -45,13 +37,32 @@ export const listCreditLinks = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(300),
       supabaseAdmin.from("businesses").select("id, name").order("name"),
+      supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
     ]);
 
-    const nameById = new Map((businesses ?? []).map((b: any) => [b.id, b.name as string]));
+    const activeBusinessIds = new Set(
+      (members ?? [])
+        .filter((m: any) => m.is_active !== false)
+        .map((m: any) => m.business_id as string),
+    );
+    const activeMemberSet = new Set(
+      (members ?? [])
+        .filter((m: any) => m.is_active !== false)
+        .map((m: any) => `${m.user_id}:${m.business_id}`),
+    );
+    const activeBusinesses = ((businesses ?? []) as any[]).filter((b) => activeBusinessIds.has(b.id));
+    const validTarget = (row: any) => {
+      if (!activeBusinessIds.has(row.business_id)) return false;
+      if (!row.user_id) return true;
+      return activeMemberSet.has(`${row.user_id}:${row.business_id}`);
+    };
+    const visibleLinks = ((links ?? []) as any[]).filter(validTarget);
+    const visibleOrders = ((orders ?? []) as any[]).filter(validTarget);
+    const nameById = new Map(activeBusinesses.map((b: any) => [b.id, b.name as string]));
     const userIds = Array.from(
       new Set([
-        ...(links ?? []).map((l: any) => l.user_id),
-        ...(orders ?? []).map((o: any) => o.user_id),
+        ...visibleLinks.map((l: any) => l.user_id),
+        ...visibleOrders.map((o: any) => o.user_id),
       ]),
     ).filter(Boolean) as string[];
 
@@ -79,9 +90,9 @@ export const listCreditLinks = createServerFn({ method: "POST" })
     });
 
     return {
-      links: (links ?? []).map(decorate),
-      orders: (orders ?? []).map(decorate),
-      businesses: (businesses ?? []) as { id: string; name: string }[],
+      links: visibleLinks.map(decorate),
+      orders: visibleOrders.map(decorate),
+      businesses: activeBusinesses as { id: string; name: string }[],
     };
   });
 
@@ -106,11 +117,36 @@ export const createCreditLink = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const membershipQuery = data.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", data.business_id)
+          .eq("is_active", true)
+          .eq("user_id", data.user_id)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", data.business_id)
+          .eq("is_active", true)
+          .limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) throw new Error("This clinic/business is deleted or inactive");
+
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let token = "";
+    for (let i = 0; i < 10; i += 1) token += alphabet[Math.floor(Math.random() * alphabet.length)];
     const { data: row, error } = await supabaseAdmin
       .from("rx_credit_links")
-      .insert({ ...data, token: makeToken(), created_by: context.userId } as never)
+      .insert({ ...data, token, created_by: context.userId } as never)
       .select("id, token")
       .single();
     if (error) throw new Error(error.message);
@@ -124,7 +160,12 @@ export const setCreditLinkActive = createServerFn({ method: "POST" })
     return { id: input.id, active: !!input.active };
   })
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("rx_credit_links")
@@ -143,7 +184,12 @@ export const reviewCreditOrder = createServerFn({ method: "POST" })
     return { id: input.id, action: input.action, notes: String(input.notes ?? "").trim() || null };
   })
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (roleError) throw new Error(roleError.message);
+    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: order, error } = await supabaseAdmin
@@ -237,6 +283,23 @@ export const getCreditLink = createServerFn({ method: "POST" })
     if (!link) return { found: false as const };
 
     const l = link as any;
+    const membershipQuery = l.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("user_id", l.user_id)
+          .eq("is_active", true)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("is_active", true)
+          .limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) return { found: false as const };
+
     const { data: biz } = await supabaseAdmin
       .from("businesses")
       .select("name")
@@ -310,6 +373,22 @@ export const submitCreditOrder = createServerFn({ method: "POST" })
     if (!link) throw new Error("This payment link is not valid");
     const l = link as any;
     if (!l.active) throw new Error("This payment link is closed — contact the platform admin");
+    const membershipQuery = l.user_id
+      ? supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("user_id", l.user_id)
+          .eq("is_active", true)
+      : supabaseAdmin
+          .from("business_users")
+          .select("user_id")
+          .eq("business_id", l.business_id)
+          .eq("is_active", true)
+          .limit(1);
+    const { data: activeMembership, error: membershipError } = await membershipQuery.maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!activeMembership) throw new Error("This payment link is not valid");
 
     const rate = Number(l.rate_per_credit ?? 3);
     const credits = Math.floor(data.amount / rate);
