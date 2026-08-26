@@ -88,6 +88,14 @@ const CARDS = [
     superOnly: true,
   },
   {
+    to: "/admin/credit-purchases",
+    label: "Credit Purchases",
+    desc: "Who bought how many credits via bKash gateway or manual payment, with totals.",
+    icon: Wallet,
+    rx: true,
+    superOnly: true,
+  },
+  {
     to: "/admin/business-requests",
     label: "Business Requests",
     desc: "Review new business signup requests.",
