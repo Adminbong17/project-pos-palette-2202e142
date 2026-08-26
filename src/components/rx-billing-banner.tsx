@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, PhoneCall, CreditCard } from "lucide-react";
 import { useRxBillingState, rxTierRate } from "@/hooks/use-rx-billing";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
