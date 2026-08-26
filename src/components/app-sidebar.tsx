@@ -96,9 +96,9 @@ const sections = [
     label: "Super Admin Tools",
     items: [
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
-      { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
-      { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/rx-billing", label: "Bill Page (Admin)", icon: Wallet, enabled: true, key: "__admin" },
+      { to: "/admin/prescriptions", superOnly: true, label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
+      { to: "/admin/doctors", superOnly: true, label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
+      { to: "/admin/rx-billing", superOnly: true, label: "Bill Page (Admin)", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin/businesses", superOnly: true, label: "Businesses & Modules", icon: Building2, enabled: true, key: "__admin" },
       { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
@@ -176,16 +176,20 @@ export function AppSidebar() {
   const doctorPaths = DOCTOR_PATHS;
 
 
+  // A business admin is NOT unrestricted: when the super admin picked a module
+  // list for that account, only those modules may appear. `allowed === null`
+  // means "no limit configured" (super admin / legacy accounts).
   const base = isLoading
     ? []
-    : isAdmin
+    : allowed === null
       ? sections
       : sections
           .map((sec) => ({
             ...sec,
-            items: sec.items.filter((it: any) => allowed!.includes(it.key)),
+            items: sec.items.filter((it: any) => allowed.includes(it.key)),
           }))
           .filter((sec) => sec.items.length > 0);
+
   const scoped = rxMode || isDoctor
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
     : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));

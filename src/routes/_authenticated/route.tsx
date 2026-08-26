@@ -6,6 +6,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useAllowedSections, isPathAllowed, sectionHomePath } from "@/hooks/use-allowed-sections";
 import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -24,27 +25,36 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthedLayout() {
   const { data: business } = useCurrentBusiness();
   const { isLoading: roleLoading } = useCurrentRole();
-  const { isAdmin, sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
+  const { sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
+  const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const navigate = useNavigate();
   
   const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
   const rxMode = isRxMode();
-  const canUsePos = !rxMode && (isAdmin || !allowed || allowed.includes("pos"));
-  const homePath = isAdmin
-    ? rxMode
-      ? "/rx-dashboard"
-      : "/dashboard"
-    : sectionHomePath(allowed);
+  const canUsePos = !rxMode && (allowed === null || allowed.includes("pos"));
+  const homePath =
+    allowed === null
+      ? rxMode
+        ? "/rx-dashboard"
+        : "/dashboard"
+      : sectionHomePath(allowed);
   const isHome = pathname === homePath;
 
   if (!roleLoading && !sectionsLoading && rxMode && !isRxPathAllowed(pathname)) {
     return <Navigate to={homePath as any} replace />;
   }
 
-  if (!roleLoading && !sectionsLoading && !isAdmin && !isPathAllowed(pathname, allowed)) {
+  // Platform-wide admin pages belong to the super admin only.
+  if (!superLoading && !isSuperAdmin && pathname.startsWith("/admin")) {
     return <Navigate to={homePath as any} replace />;
   }
+
+  // Module grants apply to business admins too — only `null` means unlimited.
+  if (!roleLoading && !sectionsLoading && !isPathAllowed(pathname, allowed)) {
+    return <Navigate to={homePath as any} replace />;
+  }
+
 
 
 
