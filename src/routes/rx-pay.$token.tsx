@@ -164,7 +164,8 @@ function RxPayPage() {
                 </div>
 
                 <p className="text-sm">
-                  You will get <span className="font-semibold">{credits}</span> credit(s).
+                  {credits} credit(s) × ৳{rate} ={" "}
+                  <span className="font-semibold">৳{payable}</span> payable.
                 </p>
 
                 <Button
