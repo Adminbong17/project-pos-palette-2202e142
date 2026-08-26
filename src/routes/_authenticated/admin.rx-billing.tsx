@@ -49,6 +49,8 @@ type Account = {
   user_id: string | null;
   mode: "credit" | "subscription" | "free";
   credits: number;
+  credit_rate: number | null;
+  monthly_amount: number | null;
   phone: string | null;
   phone_verified_at: string | null;
   payment_link: string | null;
