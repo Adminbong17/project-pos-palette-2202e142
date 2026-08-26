@@ -326,7 +326,12 @@ export const getCreditLink = createServerFn({ method: "POST" })
       token: l.token as string,
       active: !!l.active,
       label: (l.label as string | null) ?? null,
-      rate_per_credit: Number(l.rate_per_credit ?? 3),
+      rate_per_credit: await accountRate(
+        supabaseAdmin,
+        l.business_id,
+        l.user_id,
+        Number(l.rate_per_credit ?? 3),
+      ),
       business_name: ((biz as any)?.name as string) ?? "—",
       target_name: targetName,
     };
