@@ -100,6 +100,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <SessionKeepAlive />
       <Outlet />
+      <SiteFooter />
       <Toaster />
     </QueryClientProvider>
   );
