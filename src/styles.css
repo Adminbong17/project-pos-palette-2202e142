@@ -228,16 +228,16 @@
   [class*="bg-card"][class*="rounded-2xl"],
   [class*="bg-card"][class*="rounded-xl"] {
     --panel-hue: 250;
-    --panel-chroma: 0.03;
+    --panel-chroma: 0.055;
     background-image: linear-gradient(
       160deg,
       oklch(var(--panel-l1) var(--panel-chroma) var(--panel-hue)),
-      oklch(var(--panel-l2) 0 0) 70%
+      oklch(var(--panel-l2) calc(var(--panel-chroma) * 0.25) var(--panel-hue)) 75%
     );
-    border-color: oklch(var(--panel-border-l) calc(var(--panel-chroma) * 1.6) var(--panel-hue)) !important;
+    border-color: oklch(var(--panel-border-l) calc(var(--panel-chroma) * 1.5) var(--panel-hue)) !important;
     box-shadow:
-      inset 0 3px 0 0 oklch(var(--panel-accent-l) 0.15 var(--panel-hue)),
-      0 10px 26px -18px oklch(0.5 0.12 var(--panel-hue) / var(--panel-shadow-a));
+      inset 0 4px 0 0 oklch(var(--panel-accent-l) 0.17 var(--panel-hue)),
+      0 12px 26px -18px oklch(0.45 0.1 var(--panel-hue) / var(--panel-shadow-a));
     transition: transform 160ms ease, box-shadow 200ms ease;
   }
 
@@ -245,26 +245,26 @@
   [class*="bg-card"][class*="rounded-xl"]:hover {
     transform: translateY(-2px);
     box-shadow:
-      inset 0 3px 0 0 oklch(var(--panel-accent-l) 0.15 var(--panel-hue)),
-      0 18px 34px -20px oklch(0.5 0.14 var(--panel-hue) / 0.8);
+      inset 0 4px 0 0 oklch(var(--panel-accent-l) 0.19 var(--panel-hue)),
+      0 20px 34px -20px oklch(0.45 0.12 var(--panel-hue) / 0.9);
   }
 
   /* Rotating tones across sibling panels */
-  [class*="bg-card"]:nth-child(6n + 1) { --panel-hue: 150; }
-  [class*="bg-card"]:nth-child(6n + 2) { --panel-hue: 232; }
-  [class*="bg-card"]:nth-child(6n + 3) { --panel-hue: 300; }
-  [class*="bg-card"]:nth-child(6n + 4) { --panel-hue: 55; }
-  [class*="bg-card"]:nth-child(6n + 5) { --panel-hue: 25; }
-  [class*="bg-card"]:nth-child(6n + 6) { --panel-hue: 195; }
+  [class*="bg-card"]:nth-child(6n + 1) { --panel-hue: 152; }
+  [class*="bg-card"]:nth-child(6n + 2) { --panel-hue: 250; }
+  [class*="bg-card"]:nth-child(6n + 3) { --panel-hue: 310; }
+  [class*="bg-card"]:nth-child(6n + 4) { --panel-hue: 70; }
+  [class*="bg-card"]:nth-child(6n + 5) { --panel-hue: 30; }
+  [class*="bg-card"]:nth-child(6n + 6) { --panel-hue: 200; }
 
   /* Nested panels stay calm (no double accent bar) */
   [class*="bg-card"] [class*="bg-card"][class*="rounded-xl"],
   [class*="bg-card"] [class*="bg-card"][class*="rounded-2xl"] {
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px oklch(var(--panel-border-l) 0.03 var(--panel-hue));
     background-image: linear-gradient(
       160deg,
-      oklch(var(--panel-nested-l) 0.02 var(--panel-hue)),
-      oklch(var(--panel-l2) 0 0) 80%
+      oklch(var(--panel-nested-l) 0.03 var(--panel-hue)),
+      oklch(var(--panel-l2) 0 0) 85%
     );
   }
   [class*="bg-card"] [class*="bg-card"]:hover { transform: none; }
@@ -278,30 +278,30 @@
     transform: none;
   }
 
-  /* ── Small pill / chip buttons and tab links ──────────────────
-     Give every little bordered pill its own rotating tone plus a
-     lively press/hover motion, so tab rows read as colour groups. */
+  /* ── Buttons ──────────────────────────────────────────────────
+     Solid, high-contrast tinted surfaces (no washed-out gradients)
+     so every action reads clearly in light mode. */
   main a[class*="rounded-full"][class*="border"],
   main button[class*="rounded-full"][class*="border"],
   main a[class*="rounded-lg"][class*="border"],
   main button[class*="rounded-lg"][class*="border"] {
     --chip-hue: 250;
-    background-image: linear-gradient(
-      140deg,
-      oklch(var(--panel-l1) 0.035 var(--chip-hue)),
-      oklch(var(--panel-l2) 0 0) 85%
-    );
-    border-color: oklch(var(--panel-border-l) 0.05 var(--chip-hue)) !important;
-    transition: transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
+    background-color: oklch(var(--panel-l1) 0.05 var(--chip-hue));
+    background-image: none;
+    border-color: oklch(var(--panel-border-l) 0.075 var(--chip-hue)) !important;
+    color: oklch(calc(var(--panel-accent-l) - 0.18) 0.1 var(--chip-hue));
+    transition: transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease,
+      background-color 200ms ease;
   }
 
   main a[class*="rounded-full"][class*="border"]:hover,
   main button[class*="rounded-full"][class*="border"]:hover,
   main a[class*="rounded-lg"][class*="border"]:hover,
   main button[class*="rounded-lg"][class*="border"]:hover {
-    transform: translateY(-1px) scale(1.02);
-    border-color: oklch(var(--panel-accent-l) 0.13 var(--chip-hue)) !important;
-    box-shadow: 0 8px 18px -12px oklch(0.55 0.14 var(--chip-hue) / 0.9);
+    transform: translateY(-1px);
+    background-color: oklch(calc(var(--panel-l1) - 0.05) 0.075 var(--chip-hue));
+    border-color: oklch(var(--panel-accent-l) 0.14 var(--chip-hue)) !important;
+    box-shadow: 0 8px 18px -12px oklch(0.5 0.13 var(--chip-hue) / 0.9);
   }
 
   main a[class*="rounded-full"][class*="border"]:active,
@@ -311,26 +311,50 @@
     transform: translateY(0) scale(0.97);
   }
 
+  /* Solid/primary and destructive buttons keep their own colour */
+  main button[class*="bg-primary"],
+  main a[class*="bg-primary"],
+  main button[class*="bg-destructive"],
+  main a[class*="bg-destructive"],
+  main button[class*="bg-secondary"] {
+    background-image: none !important;
+    color: inherit;
+    box-shadow: 0 8px 18px -14px oklch(0.35 0.08 250 / 0.9);
+    transition: transform 150ms ease, box-shadow 200ms ease, filter 200ms ease;
+  }
+  main button[class*="bg-primary"]:hover,
+  main a[class*="bg-primary"]:hover,
+  main button[class*="bg-destructive"]:hover,
+  main a[class*="bg-destructive"]:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.08) brightness(1.04);
+    box-shadow: 0 12px 22px -14px oklch(0.35 0.1 250 / 0.95);
+  }
+  main button[class*="bg-primary"]:active,
+  main a[class*="bg-primary"]:active,
+  main button[class*="bg-destructive"]:active,
+  main a[class*="bg-destructive"]:active { transform: scale(0.97); }
+
   main a[class*="border"]:nth-of-type(6n + 1),
-  main button[class*="border"]:nth-of-type(6n + 1) { --chip-hue: 150; }
+  main button[class*="border"]:nth-of-type(6n + 1) { --chip-hue: 152; }
   main a[class*="border"]:nth-of-type(6n + 2),
-  main button[class*="border"]:nth-of-type(6n + 2) { --chip-hue: 232; }
+  main button[class*="border"]:nth-of-type(6n + 2) { --chip-hue: 250; }
   main a[class*="border"]:nth-of-type(6n + 3),
-  main button[class*="border"]:nth-of-type(6n + 3) { --chip-hue: 300; }
+  main button[class*="border"]:nth-of-type(6n + 3) { --chip-hue: 310; }
   main a[class*="border"]:nth-of-type(6n + 4),
-  main button[class*="border"]:nth-of-type(6n + 4) { --chip-hue: 55; }
+  main button[class*="border"]:nth-of-type(6n + 4) { --chip-hue: 70; }
   main a[class*="border"]:nth-of-type(6n + 5),
-  main button[class*="border"]:nth-of-type(6n + 5) { --chip-hue: 25; }
+  main button[class*="border"]:nth-of-type(6n + 5) { --chip-hue: 30; }
   main a[class*="border"]:nth-of-type(6n + 6),
-  main button[class*="border"]:nth-of-type(6n + 6) { --chip-hue: 195; }
+  main button[class*="border"]:nth-of-type(6n + 6) { --chip-hue: 200; }
 
   /* Page headline + subtitle */
   main h1 {
     background-image: linear-gradient(
       100deg,
-      oklch(var(--panel-accent-l) 0.16 150),
-      oklch(var(--panel-accent-l) 0.15 232) 55%,
-      oklch(var(--panel-accent-l) 0.16 300)
+      oklch(calc(var(--panel-accent-l) - 0.1) 0.15 152),
+      oklch(calc(var(--panel-accent-l) - 0.1) 0.15 250) 55%,
+      oklch(calc(var(--panel-accent-l) - 0.1) 0.15 310)
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -341,6 +365,7 @@
   main h1 + p {
     animation: fade-in 0.45s ease-out;
   }
+
 
   /* Top bar (menu trigger + business info + POS + logout) */
   header[class*="sticky"] {
