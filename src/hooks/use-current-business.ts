@@ -28,12 +28,23 @@ export function useCurrentBusiness() {
         .maybeSingle();
 
       let bizId = profile?.current_business_id ?? null;
+      if (bizId) {
+        const { data: activeCurrent } = await supabase
+          .from("business_users")
+          .select("business_id")
+          .eq("user_id", u.user.id)
+          .eq("business_id", bizId)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (!activeCurrent) bizId = null;
+      }
       if (!bizId) {
-        // fall back to first membership
+        // fall back to first active membership
         const { data: bu } = await supabase
           .from("business_users")
           .select("business_id")
           .eq("user_id", u.user.id)
+          .eq("is_active", true)
           .limit(1)
           .maybeSingle();
         bizId = bu?.business_id ?? null;

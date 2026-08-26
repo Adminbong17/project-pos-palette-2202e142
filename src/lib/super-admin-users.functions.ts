@@ -139,6 +139,12 @@ export const setUserDisabled = createServerFn({ method: "POST" })
       .update({ is_active: !data.disabled })
       .eq("user_id", data.user_id);
 
+    const { error: staffErr } = await supabaseAdmin
+      .from("rx_staff")
+      .update({ is_active: !data.disabled } as never)
+      .or(`user_id.eq.${data.user_id},doctor_id.eq.${data.user_id}`);
+    if (staffErr) throw new Error(staffErr.message);
+
     return { ok: true, disabled: data.disabled };
   });
 
@@ -153,8 +159,36 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
     if (data.user_id === context.userId) throw new Error("You cannot delete your own account");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
-    await supabaseAdmin.from("business_users").delete().eq("user_id", data.user_id);
+    const cleanupResults = await Promise.all([
+      supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("business_users").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_staff").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_staff").delete().eq("doctor_id", data.user_id),
+      supabaseAdmin.from("rx_user_option_settings").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_presets").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_phone_otps").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_billing_accounts").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_bills").delete().eq("user_id", data.user_id),
+    ]);
+    for (const result of cleanupResults) {
+      if (result.error) throw new Error(result.error.message);
+    }
+
+    const detachResults = await Promise.all([
+      supabaseAdmin.from("rx_appointments").update({ doctor_id: null } as never).eq("doctor_id", data.user_id),
+      supabaseAdmin.from("prescriptions").update({ doctor_id: null } as never).eq("doctor_id", data.user_id),
+      supabaseAdmin.from("prescriptions").update({ created_by: null } as never).eq("created_by", data.user_id),
+      supabaseAdmin.from("clinic_sales").update({ doctor_id: null } as never).eq("doctor_id", data.user_id),
+      supabaseAdmin.from("clinic_sales").update({ created_by: null } as never).eq("created_by", data.user_id),
+      supabaseAdmin.from("clinic_treatment_plans").update({ doctor_id: null } as never).eq("doctor_id", data.user_id),
+      supabaseAdmin.from("clinic_treatment_plans").update({ created_by: null } as never).eq("created_by", data.user_id),
+      supabaseAdmin.from("rx_credit_links").update({ user_id: null } as never).eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_credit_orders").update({ user_id: null } as never).eq("user_id", data.user_id),
+      supabaseAdmin.from("rx_credit_orders").update({ approved_by: null } as never).eq("approved_by", data.user_id),
+    ]);
+    for (const result of detachResults) {
+      if (result.error) throw new Error(result.error.message);
+    }
 
     // businesses.owner_id is NOT NULL with ON DELETE RESTRICT — hand ownership
     // to the super admin doing the deletion so the auth user can be removed.
@@ -166,6 +200,7 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     // Already gone (e.g. a previous partial delete) — clean up leftovers and succeed.
     if (error && !/not found/i.test(error.message)) throw new Error(error.message);
-    await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+    const { error: profileErr } = await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+    if (profileErr) throw new Error(profileErr.message);
     return { ok: true };
   });

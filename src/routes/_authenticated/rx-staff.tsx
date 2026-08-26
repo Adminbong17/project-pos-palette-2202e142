@@ -107,6 +107,7 @@ function StaffPage() {
         .from("rx_staff")
         .select("id, business_id, doctor_id, user_id, name, phone, username, is_active, chamber_id, created_at")
         .eq("business_id", businessId!)
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as RxStaff[];

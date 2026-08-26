@@ -18,6 +18,7 @@ export function useMyStaffChamber(businessId?: string) {
         .select("id, chamber_id")
         .eq("business_id", businessId!)
         .eq("user_id", uid)
+        .eq("is_active", true)
         .maybeSingle();
       if (error) throw error;
       return (data as { id: string; chamber_id: string | null } | null) ?? null;
