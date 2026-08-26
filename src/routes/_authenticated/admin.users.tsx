@@ -171,8 +171,9 @@ function Page() {
                       <div>{u.doctor_name || u.name}</div>
                       {u.phone && <div className="text-xs text-muted-foreground">{u.phone}</div>}
                     </td>
-                    <td className="p-2 text-xs">{u.businesses.join(", ") || "—"}</td>
-                    <td className="p-2 text-xs">{u.roles.join(", ") || "—"}</td>
+                    <td className="p-2 text-xs align-top"><FoldableList items={u.businesses} collapsedCount={2} /></td>
+                    <td className="p-2 text-xs align-top"><FoldableList items={u.roles} collapsedCount={2} /></td>
+
                     <td className="p-2 text-xs text-muted-foreground">
                       {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "never"}
                     </td>
