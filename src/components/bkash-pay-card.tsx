@@ -125,6 +125,7 @@ export function BkashBillPayButton({
       disabled={!enabled || busy || !businessId}
       title={enabled ? "Pay this bill with bKash" : "bKash is not enabled by the super admin"}
       onClick={async () => {
+        if (!businessId) return;
         setBusy(true);
         try {
           const res = await start({
