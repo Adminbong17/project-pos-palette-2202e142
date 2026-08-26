@@ -13,6 +13,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { installChunkRecovery, isChunkLoadError, recoverFromChunkError } from "../lib/chunk-recovery";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionKeepAlive } from "@/components/session-keep-alive";
+import { SiteFooter } from "@/components/site-footer";
 
 installChunkRecovery();
 
