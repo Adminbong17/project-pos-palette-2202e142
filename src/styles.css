@@ -371,9 +371,9 @@
   header[class*="sticky"] {
     background-image: linear-gradient(
       92deg,
-      oklch(var(--panel-l1) 0.04 150),
+      oklch(var(--panel-l1) 0.055 152),
       oklch(var(--panel-l2) 0 0) 45%,
-      oklch(var(--panel-l1) 0.04 300)
+      oklch(var(--panel-l1) 0.055 310)
     );
   }
 
@@ -400,13 +400,13 @@
     gap: 0.5rem;
     padding: 0.5rem;
     border-radius: var(--radius-lg);
-    border: 1px solid oklch(var(--panel-border-l) 0.045 var(--nav-hue));
+    border: 1px solid oklch(var(--panel-border-l) 0.08 var(--nav-hue));
     background-image: linear-gradient(
       140deg,
-      oklch(var(--panel-l1) 0.045 var(--nav-hue)),
+      oklch(var(--panel-l1) 0.06 var(--nav-hue)),
       oklch(var(--panel-l2) 0 0) 88%
     );
-    box-shadow: inset 3px 0 0 0 oklch(var(--panel-accent-l) 0.14 var(--nav-hue));
+    box-shadow: inset 4px 0 0 0 oklch(var(--panel-accent-l) 0.17 var(--nav-hue));
     transition: transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
   }
 
@@ -439,7 +439,7 @@
     width: 1.5rem;
     flex-shrink: 0;
     border-radius: var(--radius-md);
-    background-color: oklch(var(--panel-accent-l) 0.14 var(--nav-hue) / 0.18);
+    background-color: oklch(var(--panel-accent-l) 0.16 var(--nav-hue) / 0.2);
     color: oklch(var(--panel-accent-l) 0.16 var(--nav-hue));
     transition: transform 200ms ease;
   }
