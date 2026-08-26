@@ -321,12 +321,21 @@ export const getCreditLink = createServerFn({ method: "POST" })
         "Doctor";
     }
 
+    // The super admin's per-credit price on the bill page wins over the link's own rate.
+    let rateQuery = supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("credit_rate")
+      .eq("business_id", l.business_id);
+    rateQuery = l.user_id ? rateQuery.eq("user_id", l.user_id) : rateQuery.is("user_id", null);
+    const { data: rateAcc } = await rateQuery.maybeSingle();
+    const accRate = Number((rateAcc as any)?.credit_rate ?? 0);
+
     return {
       found: true as const,
       token: l.token as string,
       active: !!l.active,
       label: (l.label as string | null) ?? null,
-      rate_per_credit: Number(l.rate_per_credit ?? 3),
+      rate_per_credit: accRate > 0 ? accRate : Number(l.rate_per_credit ?? 3),
       business_name: ((biz as any)?.name as string) ?? "—",
       target_name: targetName,
     };
@@ -390,7 +399,14 @@ export const submitCreditOrder = createServerFn({ method: "POST" })
     if (membershipError) throw new Error(membershipError.message);
     if (!activeMembership) throw new Error("This payment link is not valid");
 
-    const rate = Number(l.rate_per_credit ?? 3);
+    let rateQuery = supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("credit_rate")
+      .eq("business_id", l.business_id);
+    rateQuery = l.user_id ? rateQuery.eq("user_id", l.user_id) : rateQuery.is("user_id", null);
+    const { data: rateAcc } = await rateQuery.maybeSingle();
+    const accRate = Number((rateAcc as any)?.credit_rate ?? 0);
+    const rate = accRate > 0 ? accRate : Number(l.rate_per_credit ?? 3);
     const credits = Math.floor(data.amount / rate);
     if (credits < 1) throw new Error(`Minimum payment is ${rate} tk (1 credit)`);
 

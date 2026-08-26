@@ -38,7 +38,7 @@ function RxPayPage() {
   const load = useServerFn(getCreditLink);
   const submit = useServerFn(submitCreditOrder);
 
-  const [amount, setAmount] = useState("");
+  const [wantCredits, setWantCredits] = useState("");
   const [method, setMethod] = useState("bkash");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -51,14 +51,15 @@ function RxPayPage() {
   });
 
   const rate = link.data?.found ? link.data.rate_per_credit : 3;
-  const credits = Math.floor((Number(amount) || 0) / rate);
+  const credits = Math.max(0, Math.floor(Number(wantCredits) || 0));
+  const payable = Math.round(credits * rate);
 
   const send = useMutation({
     mutationFn: async () =>
       await submit({
         data: {
           token,
-          amount: Number(amount) || 0,
+          amount: payable,
           method,
           payer_name: name,
           payer_phone: phone,
@@ -119,13 +120,13 @@ function RxPayPage() {
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="text-xs font-medium">
-                    Amount paid (tk)
+                    How many credits do you want?
                     <Input
                       className="mt-1"
                       inputMode="numeric"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="30"
+                      value={wantCredits}
+                      onChange={(e) => setWantCredits(e.target.value)}
+                      placeholder="10"
                     />
                   </label>
                   <label className="text-xs font-medium">
@@ -163,7 +164,8 @@ function RxPayPage() {
                 </div>
 
                 <p className="text-sm">
-                  You will get <span className="font-semibold">{credits}</span> credit(s).
+                  {credits} credit(s) × ৳{rate} ={" "}
+                  <span className="font-semibold">৳{payable}</span> payable.
                 </p>
 
                 <Button

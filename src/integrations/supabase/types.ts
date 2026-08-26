@@ -3064,10 +3064,12 @@ export type Database = {
         Row: {
           business_id: string
           created_at: string
+          credit_rate: number
           credits: number
           helpline: string | null
           id: string
           mode: Database["public"]["Enums"]["rx_billing_mode"]
+          monthly_amount: number
           notes: string | null
           payment_link: string | null
           phone: string | null
@@ -3078,10 +3080,12 @@ export type Database = {
         Insert: {
           business_id: string
           created_at?: string
+          credit_rate?: number
           credits?: number
           helpline?: string | null
           id?: string
           mode?: Database["public"]["Enums"]["rx_billing_mode"]
+          monthly_amount?: number
           notes?: string | null
           payment_link?: string | null
           phone?: string | null
@@ -3092,10 +3096,12 @@ export type Database = {
         Update: {
           business_id?: string
           created_at?: string
+          credit_rate?: number
           credits?: number
           helpline?: string | null
           id?: string
           mode?: Database["public"]["Enums"]["rx_billing_mode"]
+          monthly_amount?: number
           notes?: string | null
           payment_link?: string | null
           phone?: string | null
@@ -4801,10 +4807,12 @@ export type Database = {
         Returns: {
           business_id: string
           created_at: string
+          credit_rate: number
           credits: number
           helpline: string | null
           id: string
           mode: Database["public"]["Enums"]["rx_billing_mode"]
+          monthly_amount: number
           notes: string | null
           payment_link: string | null
           phone: string | null

@@ -6,6 +6,8 @@ export type RxBillingState = {
   account_id?: string | null;
   mode: "credit" | "subscription" | "free";
   credits: number;
+  credit_rate?: number;
+  monthly_amount?: number;
   shared_pool?: boolean;
   phone?: string | null;
   phone_verified?: boolean;

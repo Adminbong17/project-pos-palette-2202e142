@@ -25,13 +25,13 @@ type DoctorRow = { id: string; label: string; business_id: string; business_name
 export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
   head: () => ({
     meta: [
-      { title: "Rx Billing Management — QweekRx Admin" },
+      { title: "Bill Page — QweekRx Admin" },
       {
         name: "description",
         content:
           "Give doctors prescription credits, switch between credit, subscription and free plans, set payment links and close monthly prescription bills.",
       },
-      { property: "og:title", content: "Rx Billing Management — QweekRx Admin" },
+      { property: "og:title", content: "Bill Page — QweekRx Admin" },
       {
         property: "og:description",
         content: "Credits, subscription tiers, payment links and monthly prescription bills.",
@@ -49,6 +49,8 @@ type Account = {
   user_id: string | null;
   mode: "credit" | "subscription" | "free";
   credits: number;
+  credit_rate: number | null;
+  monthly_amount: number | null;
   phone: string | null;
   phone_verified_at: string | null;
   payment_link: string | null;
@@ -72,7 +74,7 @@ function AdminRxBillingPage() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("rx_billing_accounts")
-        .select("id, business_id, user_id, mode, credits, phone, phone_verified_at, payment_link, helpline")
+        .select("id, business_id, user_id, mode, credits, credit_rate, monthly_amount, phone, phone_verified_at, payment_link, helpline")
         .eq("business_id", businessId!);
       if (error) throw error;
       return (data ?? []) as Account[];
@@ -324,12 +326,14 @@ function AdminRxBillingPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Rx Billing Management</h1>
+        <h1 className="font-display text-2xl font-semibold">Bill Page</h1>
         <p className="text-sm text-muted-foreground">
-          Credit mode: 1 credit = 1 prescription. Subscription mode: first 100 prescriptions of a
-          month ৳5 each, above 100 the whole month becomes ৳4 each, above 200 ৳3 each. Bills are due
-          on the 5th of the next month — after that the doctor is locked until payment. Free mode is
-          never charged or locked.
+          Pick the plan for every business, clinic and doctor. <b>Credit</b>: set the price per
+          credit — the payer just types how many credits they want and the price is calculated
+          automatically. <b>Subscription</b>: set the fixed monthly amount. Subscription bills are
+          due on the 8th of the next month; after the 8th an unpaid account is locked until the
+          payment is marked received. <b>Free</b>: never charged or locked. Credits can still be
+          added or deducted manually below.
         </p>
       </div>
 
@@ -444,7 +448,7 @@ function AdminRxBillingPage() {
             />
             <Button size="sm" disabled={closeMonth.isPending} onClick={() => closeMonth.mutate()}>
               <CalendarClock className="mr-1 h-4 w-4" />
-              Generate bills {month ? `for ${month}` : "for last month"}
+              Generate bills {month ? `for ${month}` : "for last month"} (due 8th)
             </Button>
             <span className="text-xs text-muted-foreground">
               (super admin only — subscription accounts)
@@ -497,6 +501,8 @@ function AccountEditor({
   busy: boolean;
 }) {
   const [mode, setMode] = useState<Account["mode"]>(account?.mode ?? "credit");
+  const [rate, setRate] = useState(String(account?.credit_rate ?? 3));
+  const [monthly, setMonthly] = useState(String(account?.monthly_amount ?? 0));
   const [link, setLink] = useState(account?.payment_link ?? "");
   const [helpline, setHelpline] = useState(account?.helpline ?? "");
   const [topUp, setTopUp] = useState("");
@@ -508,9 +514,13 @@ function AccountEditor({
           <div className="text-sm font-semibold">{label}</div>
           <div className="text-xs text-muted-foreground">
             {account
-              ? `${account.credits} credit(s) · ${monthCount} Rx this month · ৳${rxTierAmount(
-                  monthCount,
-                )} (৳${rxTierRate(monthCount)}/Rx)`
+              ? account.mode === "subscription"
+                ? `Subscription ৳${account.monthly_amount ?? 0}/month · ${monthCount} Rx this month`
+                : account.mode === "free"
+                  ? `Free plan · ${monthCount} Rx this month`
+                  : `${account.credits} credit(s) · ৳${account.credit_rate ?? 3}/credit · ${monthCount} Rx this month · ৳${rxTierAmount(
+                      monthCount,
+                    )} (৳${rxTierRate(monthCount)}/Rx)`
               : "No billing account yet"}
             {account?.phone && ` · ${account.phone}${account.phone_verified_at ? " ✓" : " (unverified)"}`}
           </div>
@@ -527,6 +537,36 @@ function AccountEditor({
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {mode === "credit" ? (
+          <label className="text-xs font-medium">
+            Price per credit (৳)
+            <Input
+              className="mt-1 h-9 text-sm"
+              inputMode="decimal"
+              placeholder="3"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+            />
+          </label>
+        ) : mode === "subscription" ? (
+          <label className="text-xs font-medium">
+            Monthly subscription amount (৳)
+            <Input
+              className="mt-1 h-9 text-sm"
+              inputMode="decimal"
+              placeholder="1000"
+              value={monthly}
+              onChange={(e) => setMonthly(e.target.value)}
+            />
+          </label>
+        ) : (
+          <p className="self-center text-xs text-muted-foreground">
+            Free plan — no bill and never locked.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <Input
           className="h-9 text-sm"
           placeholder="Payment link (bKash / invoice URL)"
@@ -548,6 +588,8 @@ function AccountEditor({
           onClick={() =>
             onSave({
               mode,
+              credit_rate: Math.max(0, Number(rate) || 0) || 3,
+              monthly_amount: Math.max(0, Number(monthly) || 0),
               payment_link: link.trim() || null,
               helpline: helpline.trim() || null,
             })
