@@ -339,6 +339,9 @@ export type Database = {
         Row: {
           app_key: string | null
           app_secret: string | null
+          cached_id_token: string | null
+          cached_refresh_token: string | null
+          cached_token_expires_at: string | null
           enabled: boolean
           environment: string
           id: boolean
@@ -351,6 +354,9 @@ export type Database = {
         Insert: {
           app_key?: string | null
           app_secret?: string | null
+          cached_id_token?: string | null
+          cached_refresh_token?: string | null
+          cached_token_expires_at?: string | null
           enabled?: boolean
           environment?: string
           id?: boolean
@@ -363,6 +369,9 @@ export type Database = {
         Update: {
           app_key?: string | null
           app_secret?: string | null
+          cached_id_token?: string | null
+          cached_refresh_token?: string | null
+          cached_token_expires_at?: string | null
           enabled?: boolean
           environment?: string
           id?: boolean

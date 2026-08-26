@@ -77,6 +77,126 @@ export async function bkashGrantToken(cfg: BkashConfig): Promise<
   }
 }
 
+/**
+ * bKash only issues a couple of grant tokens per hour, so the token is cached
+ * in `bkash_settings` and reused for 55 minutes. When it expires we try the
+ * cheaper /token/refresh call first and only fall back to a fresh grant.
+ */
+const TOKEN_TTL_MS = 55 * 60 * 1000;
+
+/** In-process cache so repeated calls in one request don't hit the DB. */
+let memoryToken: { id_token: string; refresh_token?: string; expires: number } | null = null;
+
+async function readCachedToken() {
+  if (memoryToken && memoryToken.expires > Date.now()) return memoryToken;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("bkash_settings" as never)
+      .select("cached_id_token, cached_refresh_token, cached_token_expires_at")
+      .maybeSingle();
+    const row = data as any;
+    if (!row?.cached_id_token || !row?.cached_token_expires_at) return null;
+    const expires = new Date(row.cached_token_expires_at).getTime();
+    if (!Number.isFinite(expires) || expires <= Date.now()) {
+      memoryToken = null;
+      return { id_token: "", refresh_token: row.cached_refresh_token ?? undefined, expires: 0 };
+    }
+    memoryToken = {
+      id_token: String(row.cached_id_token),
+      refresh_token: row.cached_refresh_token ?? undefined,
+      expires,
+    };
+    return memoryToken;
+  } catch {
+    return null;
+  }
+}
+
+async function storeToken(token: BkashToken) {
+  const expires = Date.now() + TOKEN_TTL_MS;
+  memoryToken = { id_token: token.id_token, refresh_token: token.refresh_token, expires };
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("bkash_settings" as never)
+      .update({
+        cached_id_token: token.id_token,
+        cached_refresh_token: token.refresh_token ?? null,
+        cached_token_expires_at: new Date(expires).toISOString(),
+      } as never)
+      .not("id", "is", null);
+  } catch {
+    /* cache is best-effort */
+  }
+}
+
+async function bkashRefreshToken(cfg: BkashConfig, refreshToken: string) {
+  try {
+    const res = await fetch(`${bkashBaseUrl(cfg.environment)}/token/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        username: cfg.username,
+        password: cfg.password,
+      },
+      body: JSON.stringify({
+        app_key: cfg.app_key,
+        app_secret: cfg.app_secret,
+        refresh_token: refreshToken,
+      }),
+    });
+    const json: any = await res.json().catch(() => ({}));
+    if (json?.id_token) return json as BkashToken;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preferred way to get an id_token: reuses the cached token for 55 minutes,
+ * then refreshes / re-grants once and caches the new one.
+ */
+export async function bkashGetToken(
+  cfg: BkashConfig,
+): Promise<{ ok: true; idToken: string } | { ok: false; error: string }> {
+  const cached = await readCachedToken();
+  if (cached?.id_token) return { ok: true, idToken: cached.id_token };
+
+  if (cached?.refresh_token) {
+    const refreshed = await bkashRefreshToken(cfg, cached.refresh_token);
+    if (refreshed?.id_token) {
+      await storeToken(refreshed);
+      return { ok: true, idToken: refreshed.id_token };
+    }
+  }
+
+  const granted = await bkashGrantToken(cfg);
+  if (!granted.ok) return granted;
+  await storeToken(granted.token);
+  return { ok: true, idToken: granted.token.id_token };
+}
+
+/** Drop the cached token (e.g. after credentials change or a 401 from bKash). */
+export async function bkashClearTokenCache() {
+  memoryToken = null;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("bkash_settings" as never)
+      .update({
+        cached_id_token: null,
+        cached_refresh_token: null,
+        cached_token_expires_at: null,
+      } as never)
+      .not("id", "is", null);
+  } catch {
+    /* ignore */
+  }
+}
+
 function authHeaders(cfg: BkashConfig, idToken: string) {
   return {
     "Content-Type": "application/json",
