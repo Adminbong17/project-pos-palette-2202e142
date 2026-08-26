@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Building2, Search, Save, ArrowRightLeft, Users } from "lucide-react";
+import { Building2, Search, Save, ArrowRightLeft, Users, Trash2 } from "lucide-react";
 
 import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -12,6 +12,7 @@ import {
   setMemberSections,
   setBusinessSections,
   moveDoctorToOwnBusiness,
+  deleteBusiness,
   type BizRow,
   type BizMember,
 } from "@/lib/admin-businesses.functions";
@@ -56,6 +57,7 @@ function AdminBusinessesPage() {
   const saveMember = useServerFn(setMemberSections);
   const saveBusiness = useServerFn(setBusinessSections);
   const moveDoctor = useServerFn(moveDoctorToOwnBusiness);
+  const removeBiz = useServerFn(deleteBusiness);
 
   const q = useQuery({
     queryKey: ["admin-businesses"],
@@ -91,6 +93,15 @@ function AdminBusinessesPage() {
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not move the doctor"),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (v: { business_id: string }) => removeBiz({ data: v }),
+    onSuccess: () => {
+      toast.success("Business deleted");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not delete this business"),
   });
 
   const rows = useMemo(() => {
@@ -150,12 +161,20 @@ function AdminBusinessesPage() {
           <BusinessCard
             key={b.id}
             biz={b}
-            busy={memberMut.isPending || bizMut.isPending || moveMut.isPending}
+            busy={memberMut.isPending || bizMut.isPending || moveMut.isPending || deleteMut.isPending}
             onSaveMember={(user_id, sections) =>
               memberMut.mutate({ business_id: b.id, user_id, sections })
             }
             onSaveAll={(sections) => bizMut.mutate({ business_id: b.id, sections })}
             onMoveDoctor={(user_id) => moveMut.mutate({ user_id })}
+            onDelete={() => {
+              if (
+                window.confirm(
+                  `Delete "${b.name}" permanently? Its members, roles, billing and credit records will be removed. This cannot be undone.`,
+                )
+              )
+                deleteMut.mutate({ business_id: b.id });
+            }}
           />
         ))
       )}
@@ -176,12 +195,14 @@ function BusinessCard({
   onSaveMember,
   onSaveAll,
   onMoveDoctor,
+  onDelete,
 }: {
   biz: BizRow;
   busy: boolean;
   onSaveMember: (userId: string, sections: string[] | null) => void;
   onSaveAll: (sections: string[] | null) => void;
   onMoveDoctor: (userId: string) => void;
+  onDelete: () => void;
 }) {
   const options = useSectionOptions();
   const [bulk, setBulk] = useState<string[]>([]);
@@ -203,6 +224,15 @@ function BusinessCard({
               owner: {biz.owner_email}
             </span>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto text-destructive hover:bg-destructive/10"
+            disabled={busy}
+            onClick={onDelete}
+          >
+            <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
