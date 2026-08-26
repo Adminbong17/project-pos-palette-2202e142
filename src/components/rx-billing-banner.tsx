@@ -46,6 +46,13 @@ export function RxBillingBanner({ compact = false }: { compact?: boolean }) {
                 </Button>
               )}
               {!clinicFunded && (
+                <Button size="sm" variant="secondary" asChild>
+                  <Link to="/rx-billing">
+                    <CreditCard className="mr-1 h-4 w-4" /> Pay with bKash
+                  </Link>
+                </Button>
+              )}
+              {!clinicFunded && (
               <Button size="sm" variant="outline" asChild>
                 <a href={`tel:${helpline}`}>
                   <PhoneCall className="mr-1 h-4 w-4" /> Helpline {helpline}
