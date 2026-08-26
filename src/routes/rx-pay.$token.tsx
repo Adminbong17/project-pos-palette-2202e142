@@ -120,13 +120,13 @@ function RxPayPage() {
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="text-xs font-medium">
-                    Amount paid (tk)
+                    How many credits do you want?
                     <Input
                       className="mt-1"
                       inputMode="numeric"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="30"
+                      value={wantCredits}
+                      onChange={(e) => setWantCredits(e.target.value)}
+                      placeholder="10"
                     />
                   </label>
                   <label className="text-xs font-medium">
