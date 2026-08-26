@@ -335,6 +335,45 @@ export type Database = {
           },
         ]
       }
+      bkash_settings: {
+        Row: {
+          app_key: string | null
+          app_secret: string | null
+          enabled: boolean
+          environment: string
+          id: boolean
+          password: string | null
+          rate_per_credit: number
+          updated_at: string
+          updated_by: string | null
+          username: string | null
+        }
+        Insert: {
+          app_key?: string | null
+          app_secret?: string | null
+          enabled?: boolean
+          environment?: string
+          id?: boolean
+          password?: string | null
+          rate_per_credit?: number
+          updated_at?: string
+          updated_by?: string | null
+          username?: string | null
+        }
+        Update: {
+          app_key?: string | null
+          app_secret?: string | null
+          enabled?: boolean
+          environment?: string
+          id?: boolean
+          password?: string | null
+          rate_per_credit?: number
+          updated_at?: string
+          updated_by?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           business_id: string

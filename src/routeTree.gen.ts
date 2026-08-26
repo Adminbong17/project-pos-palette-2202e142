@@ -89,6 +89,7 @@ import { Route as AuthenticatedAdminPrescriptionsRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminDoctorsRouteImport } from './routes/_authenticated/admin.doctors'
 import { Route as AuthenticatedAdminBusinessesRouteImport } from './routes/_authenticated/admin.businesses'
 import { Route as AuthenticatedAdminBusinessRequestsRouteImport } from './routes/_authenticated/admin.business-requests'
+import { Route as AuthenticatedAdminBkashRouteImport } from './routes/_authenticated/admin.bkash'
 import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
 import { Route as ApiPublicCronBackupRouteImport } from './routes/api/public/cron.backup'
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
@@ -536,6 +537,11 @@ const AuthenticatedAdminBusinessRequestsRoute =
     path: '/admin/business-requests',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminBkashRoute = AuthenticatedAdminBkashRouteImport.update({
+  id: '/admin/bkash',
+  path: '/admin/bkash',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminBackupsRoute =
   AuthenticatedAdminBackupsRouteImport.update({
     id: '/admin/backups',
@@ -599,6 +605,7 @@ export interface FileRoutesByFullPath {
   '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
@@ -677,6 +684,7 @@ export interface FileRoutesByTo {
   '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
   '/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
@@ -764,6 +772,7 @@ export interface FileRoutesById {
   '/rx-pay/$token': typeof RxPayTokenRoute
   '/scan/$sessionId': typeof ScanSessionIdRoute
   '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/_authenticated/admin/bkash': typeof AuthenticatedAdminBkashRoute
   '/_authenticated/admin/business-requests': typeof AuthenticatedAdminBusinessRequestsRoute
   '/_authenticated/admin/businesses': typeof AuthenticatedAdminBusinessesRoute
   '/_authenticated/admin/doctors': typeof AuthenticatedAdminDoctorsRoute
@@ -851,6 +860,7 @@ export interface FileRouteTypes {
     | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
+    | '/admin/bkash'
     | '/admin/business-requests'
     | '/admin/businesses'
     | '/admin/doctors'
@@ -929,6 +939,7 @@ export interface FileRouteTypes {
     | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/admin/backups'
+    | '/admin/bkash'
     | '/admin/business-requests'
     | '/admin/businesses'
     | '/admin/doctors'
@@ -1015,6 +1026,7 @@ export interface FileRouteTypes {
     | '/rx-pay/$token'
     | '/scan/$sessionId'
     | '/_authenticated/admin/backups'
+    | '/_authenticated/admin/bkash'
     | '/_authenticated/admin/business-requests'
     | '/_authenticated/admin/businesses'
     | '/_authenticated/admin/doctors'
@@ -1634,6 +1646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBusinessRequestsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/bkash': {
+      id: '/_authenticated/admin/bkash'
+      path: '/admin/bkash'
+      fullPath: '/admin/bkash'
+      preLoaderRoute: typeof AuthenticatedAdminBkashRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/backups': {
       id: '/_authenticated/admin/backups'
       path: '/admin/backups'
@@ -1863,6 +1882,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedStockTransfersRoute: typeof AuthenticatedStockTransfersRoute
   AuthenticatedAdminBackupsRoute: typeof AuthenticatedAdminBackupsRoute
+  AuthenticatedAdminBkashRoute: typeof AuthenticatedAdminBkashRoute
   AuthenticatedAdminBusinessRequestsRoute: typeof AuthenticatedAdminBusinessRequestsRoute
   AuthenticatedAdminBusinessesRoute: typeof AuthenticatedAdminBusinessesRoute
   AuthenticatedAdminDoctorsRoute: typeof AuthenticatedAdminDoctorsRoute
@@ -1909,6 +1929,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedStockTransfersRoute: AuthenticatedStockTransfersRoute,
   AuthenticatedAdminBackupsRoute: AuthenticatedAdminBackupsRoute,
+  AuthenticatedAdminBkashRoute: AuthenticatedAdminBkashRoute,
   AuthenticatedAdminBusinessRequestsRoute:
     AuthenticatedAdminBusinessRequestsRoute,
   AuthenticatedAdminBusinessesRoute: AuthenticatedAdminBusinessesRoute,

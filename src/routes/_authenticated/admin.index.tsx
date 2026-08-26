@@ -72,6 +72,14 @@ const CARDS = [
     superOnly: true,
   },
   {
+    to: "/admin/bkash",
+    label: "bKash Payment Gateway",
+    desc: "App key, app secret, merchant login and credit rate for bKash payments.",
+    icon: Wallet,
+    rx: true,
+    superOnly: true,
+  },
+  {
     to: "/admin/rx-credit-links",
     label: "Credit Purchase Links",
     desc: "Payment links for clinics and doctors, and manual top-up approvals.",
