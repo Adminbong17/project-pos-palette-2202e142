@@ -263,9 +263,10 @@ function ProfitReportPage() {
             {filteredProductRows.map((r) => (
               <TableRow key={r.pid}>
                 <TableCell className="font-medium">{r.name}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground max-w-[220px]">
-                  {r.invoices.join(", ")}
+                <TableCell className="font-mono text-xs text-muted-foreground max-w-[260px] align-top">
+                  <FoldableList items={r.invoices} collapsedCount={3} />
                 </TableCell>
+
                 <TableCell className="text-right">{r.qty}</TableCell>
                 <TableCell className="text-right">{fmt(r.revenue)}</TableCell>
                 <TableCell className="text-right text-muted-foreground">{fmt(r.cost)}</TableCell>
