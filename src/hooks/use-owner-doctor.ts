@@ -16,12 +16,14 @@ export function useOwnerDoctorId(businessId?: string) {
       if (!uid) return null;
       const { data } = await supabase
         .from("rx_staff")
-        .select("doctor_id")
+        .select("doctor_id, staff_kind")
         .eq("business_id", businessId!)
         .eq("user_id", uid)
+        .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (data?.staff_kind === "clinic_staff") return null;
       return (data?.doctor_id as string | undefined) ?? uid;
     },
   });
