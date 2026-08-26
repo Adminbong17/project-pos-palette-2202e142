@@ -90,9 +90,9 @@
   --warning: oklch(0.75 0.16 75);
   --warning-foreground: oklch(0.18 0.03 250);
 
-  --border: oklch(0.9 0.01 250);
-  --input: oklch(0.9 0.01 250);
-  --ring: oklch(0.62 0.18 145);
+  --border: oklch(0.855 0.014 250);
+  --input: oklch(0.845 0.016 250);
+  --ring: oklch(0.55 0.18 145);
 
   --chart-1: oklch(0.62 0.18 145);
   --chart-2: oklch(0.6 0.15 200);
