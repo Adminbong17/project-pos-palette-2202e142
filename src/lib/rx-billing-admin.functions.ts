@@ -69,7 +69,9 @@ export const listRxBillingAll = createServerFn({ method: "GET" })
     const [{ data: accounts }, { data: bills }] = await Promise.all([
       supabaseAdmin
         .from("rx_billing_accounts")
-        .select("id, business_id, user_id, mode, credits, phone, phone_verified_at, payment_link, helpline"),
+        .select(
+          "id, business_id, user_id, mode, credits, credit_rate, monthly_amount, phone, phone_verified_at, payment_link, helpline",
+        ),
       supabaseAdmin
         .from("rx_bills")
         .select("id, business_id, user_id, period_start, prescriptions_count, amount, status, due_date, payment_link")
