@@ -153,7 +153,8 @@ const NAV_HUE: Record<string, number> = {
   "/rx-billing": 55, "/rx-credit-history": 300,
   "/rx-options": 250, "/admin/prescriptions": 150, "/admin/doctors": 300,
   "/admin/rx-billing": 55, "/admin/businesses": 232, "/admin/users": 300,
-  "/admin/backups": 195, "/admin/sms": 232, "/admin/bkash": 150, "/admin/rx-credit-links": 55, "/admin": 25,
+  "/admin/backups": 195, "/admin/sms": 232, "/admin/bkash": 150, "/admin/rx-credit-links": 55,
+  "/admin/credit-purchases": 120, "/admin": 25,
   "/settings/locations": 250, "/settings/users": 300, "/settings/business": 250,
 };
 
