@@ -6,6 +6,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useAllowedSections, isPathAllowed, sectionHomePath } from "@/hooks/use-allowed-sections";
 import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthedLayout() {
   const { data: business } = useCurrentBusiness();
   const { isLoading: roleLoading } = useCurrentRole();
-  const { isAdmin, sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
+  const { sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
   const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const navigate = useNavigate();
   
