@@ -100,13 +100,28 @@ function AuthPage() {
 
 
   const inputCls =
-    "w-full h-12 sm:h-11 rounded-lg border border-border bg-input px-3.5 text-base sm:text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+    "w-full h-12 sm:h-11 rounded-lg border border-border bg-input/80 px-3.5 text-base sm:text-sm outline-none transition-all duration-200 focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/25 focus:-translate-y-px";
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8 sm:p-6">
-      <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-5 shadow-lg sm:p-8">
-        <h1 className="font-display text-xl font-semibold sm:text-2xl">QweekPOS</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/20 px-4 py-8 sm:p-6">
+      {/* soft colour blobs */}
+      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 animate-pulse rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 animate-pulse rounded-full bg-accent/30 blur-3xl [animation-duration:6s]" />
+
+      <div className="relative w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-2xl border border-border/60 bg-card/90 p-5 shadow-2xl backdrop-blur-xl sm:p-8">
+        <div className="absolute inset-x-6 -top-px h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-lg font-bold text-primary-foreground shadow-lg shadow-primary/30 transition-transform duration-300 hover:scale-105 hover:rotate-3">
+            Q
+          </span>
+          <div>
+            <h1 className="font-display bg-gradient-to-r from-primary to-foreground bg-clip-text text-xl font-semibold text-transparent sm:text-2xl">
+              QweekPOS
+            </h1>
+            <p className="text-[11px] text-muted-foreground">POS • Clinic • Prescription</p>
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
           {mode === "signin" ? "Sign in to your account" : "Create a new account"}
         </p>
         <form className="mt-5 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={submit}>
