@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History,
+  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History, FlaskConical, Stamp,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -15,6 +15,15 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+
+// Sub-pages of the Lab module, shown nested under the "Lab" menu button.
+const LAB_CHILDREN = [
+  { to: "/lab-reports", label: "New Report", icon: FileText, exact: true },
+  { to: "/lab-reports/staff", label: "Lab Staff", icon: Users },
+  { to: "/lab-reports/signatures", label: "Signatures & Pad", icon: Stamp },
+];
+
+
 
 
 const sections = [
