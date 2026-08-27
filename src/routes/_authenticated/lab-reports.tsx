@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { LAB_TESTS, type LabTest } from "@/lib/lab-tests";
@@ -333,12 +334,16 @@ function LabReportsPage() {
                   <option value="technologist">Technologist</option>
                   <option value="pathologist">Pathologist</option>
                 </select>
-                <Input
+                <Textarea
+                  rows={2}
+                  className="min-h-[44px] resize-none text-sm"
                   placeholder="Name"
                   value={newSig.name}
                   onChange={(e) => setNewSig((p) => ({ ...p, name: e.target.value }))}
                 />
-                <Input
+                <Textarea
+                  rows={2}
+                  className="min-h-[44px] resize-none text-sm"
                   placeholder="Designation (e.g. MBBS, BCS)"
                   value={newSig.designation}
                   onChange={(e) => setNewSig((p) => ({ ...p, designation: e.target.value }))}
@@ -354,8 +359,8 @@ function LabReportsPage() {
                     className="flex items-center justify-between rounded border border-border/50 px-2 py-1 text-sm"
                   >
                     <span>
-                      <span className="font-medium">{s.name}</span>
-                      {s.designation ? <span className="text-muted-foreground"> · {s.designation}</span> : null}
+                      <span className="font-medium whitespace-pre-wrap">{s.name}</span>
+                      {s.designation ? <span className="text-muted-foreground whitespace-pre-wrap"> · {s.designation}</span> : null}
                       <span className="ml-2 text-[11px] uppercase text-muted-foreground">{s.kind}</span>
                     </span>
                     <Button variant="ghost" size="sm" onClick={() => removeSig.mutate(s.id)}>
@@ -399,7 +404,9 @@ function LabReportsPage() {
                       </option>
                     ))}
                   </select>
-                  <Input
+                  <Textarea
+                    rows={2}
+                    className="min-h-[44px] resize-none text-sm"
                     placeholder="Technologist designation"
                     value={techDesignation}
                     onChange={(e) => setTechDesignation(e.target.value)}
@@ -425,7 +432,9 @@ function LabReportsPage() {
                       </option>
                     ))}
                   </select>
-                  <Input
+                  <Textarea
+                    rows={2}
+                    className="min-h-[44px] resize-none text-sm"
                     placeholder="Pathologist designation"
                     value={pathoDesignation}
                     onChange={(e) => setPathoDesignation(e.target.value)}
