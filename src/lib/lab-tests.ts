@@ -16,6 +16,7 @@ export type LabTest = {
   name: string;
   department: string;
   specimen?: string;
+  price?: number;
   analytes: LabAnalyte[];
 };
 
