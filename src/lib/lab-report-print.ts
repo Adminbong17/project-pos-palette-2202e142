@@ -32,6 +32,10 @@ export type LabReportData = {
   collectedAt?: string | null;
   reportedAt?: string | null;
   comment?: string | null;
+  techName?: string | null;
+  techDesignation?: string | null;
+  pathologistName?: string | null;
+  pathologistDesignation?: string | null;
   rows: LabReportRow[];
 };
 
@@ -121,12 +125,16 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
         : ""
     }
 
-    <div style="margin-top:${compact ? "12px" : "22px"};display:flex;justify-content:space-between;font-size:0.85em;">
-      <div style="text-align:center;">
-        <div style="border-top:1px solid #000;padding-top:2px;min-width:${compact ? "60px" : "120px"};">Lab Technologist</div>
+    <div style="position:absolute;left:6px;right:6px;bottom:22px;display:flex;justify-content:space-between;font-size:0.85em;">
+      <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
+        ${data.techName ? `<div style="font-weight:700;">${esc(data.techName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.techDesignation ? `<div style="font-size:0.85em;">${esc(data.techDesignation)}</div>` : ""}
+        <div style="border-top:1px solid #000;padding-top:2px;">Lab Technologist</div>
       </div>
-      <div style="text-align:center;">
-        <div style="border-top:1px solid #000;padding-top:2px;min-width:${compact ? "60px" : "120px"};">Consultant Pathologist</div>
+      <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
+        ${data.pathologistName ? `<div style="font-weight:700;">${esc(data.pathologistName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.pathologistDesignation ? `<div style="font-size:0.85em;">${esc(data.pathologistDesignation)}</div>` : ""}
+        <div style="border-top:1px solid #000;padding-top:2px;">Consultant Pathologist</div>
       </div>
     </div>
   `;
