@@ -236,8 +236,10 @@ function ClinicDoctorsPage() {
           >
             <div>
               <Label className="text-xs">Doctor name</Label>
-              <Input
+              <Textarea
                 required
+                rows={2}
+                className="min-h-[44px] resize-none text-sm"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Dr. Rahim Uddin"
@@ -281,7 +283,9 @@ function ClinicDoctorsPage() {
             </div>
             <div>
               <Label className="text-xs">Qualification (optional)</Label>
-              <Input
+              <Textarea
+                rows={2}
+                className="min-h-[44px] resize-none text-sm"
                 value={form.qualification}
                 onChange={(e) => setForm({ ...form, qualification: e.target.value })}
                 placeholder="MBBS, FCPS"
@@ -465,17 +469,19 @@ function DoctorBlock({
             >
               <div>
                 <Label className="text-[11px]">Name</Label>
-                <Input
+                <Textarea
                   required
-                  className="h-9 w-44 text-xs"
+                  rows={2}
+                  className="min-h-[44px] resize-none text-xs w-44"
                   value={docForm.name}
                   onChange={(e) => setDocForm({ ...docForm, name: e.target.value })}
                 />
               </div>
               <div>
                 <Label className="text-[11px]">Qualification</Label>
-                <Input
-                  className="h-9 w-44 text-xs"
+                <Textarea
+                  rows={2}
+                  className="min-h-[44px] resize-none text-xs w-44"
                   value={docForm.qualification}
                   onChange={(e) => setDocForm({ ...docForm, qualification: e.target.value })}
                 />
@@ -496,13 +502,13 @@ function DoctorBlock({
               </Button>
             </form>
           ) : (
-            <>
-              <div className="text-sm font-semibold">{doctor.name}</div>
-              <div className="text-xs text-muted-foreground">{doctor.email}</div>
-              {doctor.qualification && (
-                <div className="text-xs text-muted-foreground">{doctor.qualification}</div>
-              )}
-            </>
+              <>
+                <div className="text-sm font-semibold whitespace-pre-wrap">{doctor.name}</div>
+                <div className="text-xs text-muted-foreground">{doctor.email}</div>
+                {doctor.qualification && (
+                  <div className="text-xs text-muted-foreground whitespace-pre-wrap">{doctor.qualification}</div>
+                )}
+              </>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
