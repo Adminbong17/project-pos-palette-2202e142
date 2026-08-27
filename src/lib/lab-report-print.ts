@@ -170,7 +170,8 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
   const page = document.createElement("div");
   page.id = pageId;
   page.className = "lab-doc";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
+  const topPad = data.ownPad && size === "A4" ? "38.1mm" : "6px";
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:${topPad} 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
   page.innerHTML = `${inner}
     <div style="position:absolute;left:6px;right:6px;bottom:4px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
       QweekRx ${new Date().getFullYear()} · 01712472839 (Phone/WhatsApp)
