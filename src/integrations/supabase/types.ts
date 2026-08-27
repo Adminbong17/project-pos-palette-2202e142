@@ -1981,6 +1981,39 @@ export type Database = {
         }
         Relationships: []
       }
+      lab_signatories: {
+        Row: {
+          business_id: string
+          created_at: string
+          designation: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          designation?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          designation?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mfg_bom_lines: {
         Row: {
           bom_id: string
