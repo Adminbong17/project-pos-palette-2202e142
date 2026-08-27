@@ -36,8 +36,11 @@ export type LabReportData = {
   techDesignation?: string | null;
   pathologistName?: string | null;
   pathologistDesignation?: string | null;
+  /** When true, leaves 1.5 inch blank space on top (A4) and hides the clinic header. */
+  ownPad?: boolean;
   rows: LabReportRow[];
 };
+
 
 function geometry(size: PrintSize) {
   if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px", minHeight: "270mm" };
@@ -91,13 +94,19 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
     ["Sample Type", data.specimen],
   ]);
 
-  const inner = `
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:5px;">
+  const header = data.ownPad
+    ? `<div style="text-align:center;border-bottom:1px solid #000;padding-bottom:4px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.6px;">LABORATORY REPORT</div>
+    </div>`
+    : `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:5px;">
       <div style="font-size:${compact ? "15px" : "20px"};font-weight:800;">${esc(data.clinicName ?? "Diagnostic Centre")}</div>
       ${data.address ? `<div style="font-size:10px;">${esc(data.address)}</div>` : ""}
       ${data.phone ? `<div style="font-size:10px;">Phone: ${esc(data.phone)}</div>` : ""}
       <div style="margin-top:3px;font-size:11px;font-weight:700;letter-spacing:.6px;">LABORATORY REPORT</div>
-    </div>
+    </div>`;
+
+  const inner = `
+    ${header}
 
     <div style="margin-top:6px;${compact ? "" : "display:flex;gap:14px;"}">
       <div style="flex:1;">${patientLeft}</div>
@@ -161,7 +170,8 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
   const page = document.createElement("div");
   page.id = pageId;
   page.className = "lab-doc";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
+  const topPad = data.ownPad && size === "A4" ? "38.1mm" : "6px";
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:${topPad} 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
   page.innerHTML = `${inner}
     <div style="position:absolute;left:6px;right:6px;bottom:4px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
       QweekRx ${new Date().getFullYear()} · 01712472839 (Phone/WhatsApp)

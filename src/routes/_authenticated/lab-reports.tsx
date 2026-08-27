@@ -1,14 +1,20 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FlaskConical, Search, Eraser } from "lucide-react";
+import { FlaskConical, Search, Eraser, Plus, Trash2, UserSearch } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { LAB_TESTS, type LabTest } from "@/lib/lab-tests";
 import { printLabReport } from "@/lib/lab-report-print";
+
 
 export const Route = createFileRoute("/_authenticated/lab-reports")({
   head: () => ({
@@ -58,6 +64,100 @@ function LabReportsPage() {
   const [techDesignation, setTechDesignation] = useState("");
   const [pathoName, setPathoName] = useState("");
   const [pathoDesignation, setPathoDesignation] = useState("");
+  const [ownPad, setOwnPad] = useState(false);
+
+  const businessId = business?.id ?? null;
+  const qc = useQueryClient();
+
+  // ---- Patient lookup (by patient ID or name, from printed prescriptions) ----
+  const [patientSearch, setPatientSearch] = useState("");
+  const patientLookup = useQuery({
+    queryKey: ["lab-patient-lookup", businessId, patientSearch.trim()],
+    enabled: !!businessId && patientSearch.trim().length >= 2,
+    queryFn: async () => {
+      const term = patientSearch.trim();
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select("patient_code, patient_name, patient_phone, patient_age, patient_gender, doctor_name, created_at")
+        .eq("business_id", businessId!)
+        .or(`patient_code.ilike.%${term}%,patient_name.ilike.%${term}%`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const rows: any[] = [];
+      for (const r of (data ?? []) as any[]) {
+        const key = `${r.patient_code ?? ""}|${r.patient_name ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push(r);
+        if (rows.length >= 10) break;
+      }
+      return rows;
+    },
+  });
+
+  function applyPatient(p: any) {
+    setPatientName(p.patient_name ?? "");
+    setPatientCode(p.patient_code ?? "");
+    setAge(p.patient_age ?? "");
+    setGender(p.patient_gender ?? "");
+    setPhoneNo(p.patient_phone ?? "");
+    if (p.doctor_name) setReferredBy(p.doctor_name);
+    setPatientSearch("");
+  }
+
+  // ---- Appointed lab signatories ----
+  const signatories = useQuery({
+    queryKey: ["lab-signatories", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_signatories")
+        .select("id, kind, name, designation, is_active")
+        .eq("business_id", businessId!)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; kind: string; name: string; designation: string | null }[];
+    },
+  });
+
+  const [newSig, setNewSig] = useState({ kind: "technologist", name: "", designation: "" });
+  const addSig = useMutation({
+    mutationFn: async () => {
+      if (!businessId) throw new Error("No business selected");
+      if (!newSig.name.trim()) throw new Error("Name is required");
+      const { error } = await supabase.from("lab_signatories").insert({
+        business_id: businessId,
+        kind: newSig.kind,
+        name: newSig.name.trim(),
+        designation: newSig.designation.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNewSig({ kind: newSig.kind, name: "", designation: "" });
+      qc.invalidateQueries({ queryKey: ["lab-signatories"] });
+      toast.success("Signatory added");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not add"),
+  });
+
+  const removeSig = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("lab_signatories").update({ is_active: false }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lab-signatories"] });
+      toast.success("Removed");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not remove"),
+  });
+
+  const techs = (signatories.data ?? []).filter((s) => s.kind === "technologist");
+  const pathos = (signatories.data ?? []).filter((s) => s.kind === "pathologist");
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -71,6 +171,7 @@ function LabReportsPage() {
     setTest(t);
     setResults({});
   }
+
 
   function doPrint(size: "A4" | "80mm" | "58mm") {
     if (!test) return;
@@ -96,6 +197,7 @@ function LabReportsPage() {
         techDesignation,
         pathologistName: pathoName,
         pathologistDesignation: pathoDesignation,
+        ownPad,
         rows: test.analytes.map((a) => ({
           name: a.name,
           result: results[a.name] ?? "",
@@ -177,15 +279,125 @@ function LabReportsPage() {
 
           <Card foldable>
             <CardHeader>
-              <CardTitle className="text-base">Signatures (optional)</CardTitle>
+              <CardTitle className="text-base">Signatures & pad</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
-              <Input placeholder="Lab Technologist name" value={techName} onChange={(e) => setTechName(e.target.value)} />
-              <Input placeholder="Technologist designation" value={techDesignation} onChange={(e) => setTechDesignation(e.target.value)} />
-              <Input placeholder="Consultant Pathologist name" value={pathoName} onChange={(e) => setPathoName(e.target.value)} />
-              <Input placeholder="Pathologist designation" value={pathoDesignation} onChange={(e) => setPathoDesignation(e.target.value)} />
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Lab Technologist</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-input px-2 text-sm"
+                    value={techName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTechName(v);
+                      const f = techs.find((s) => s.name === v);
+                      setTechDesignation(f?.designation ?? "");
+                    }}
+                  >
+                    <option value="">— select appointed technologist —</option>
+                    {techs.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                        {s.designation ? ` — ${s.designation}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    placeholder="Technologist designation"
+                    value={techDesignation}
+                    onChange={(e) => setTechDesignation(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Consultant Pathologist</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-input px-2 text-sm"
+                    value={pathoName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPathoName(v);
+                      const f = pathos.find((s) => s.name === v);
+                      setPathoDesignation(f?.designation ?? "");
+                    }}
+                  >
+                    <option value="">— select appointed pathologist —</option>
+                    {pathos.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                        {s.designation ? ` — ${s.designation}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    placeholder="Pathologist designation"
+                    value={pathoDesignation}
+                    onChange={(e) => setPathoDesignation(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-md border border-border/60 p-2">
+                <Switch id="lab-own-pad" checked={ownPad} onCheckedChange={setOwnPad} />
+                <Label htmlFor="lab-own-pad" className="text-sm">
+                  Own pad
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {ownPad ? "1.5 inch blank top space (A4), no clinic header" : "Print clinic header"}
+                  </span>
+                </Label>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-border/60 p-2">
+                <div className="text-xs font-medium">Appointed lab staff</div>
+                <div className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
+                  <select
+                    className="h-9 rounded-md border border-input bg-input px-2 text-sm"
+                    value={newSig.kind}
+                    onChange={(e) => setNewSig((p) => ({ ...p, kind: e.target.value }))}
+                  >
+                    <option value="technologist">Technologist</option>
+                    <option value="pathologist">Pathologist</option>
+                  </select>
+                  <Input
+                    placeholder="Name"
+                    value={newSig.name}
+                    onChange={(e) => setNewSig((p) => ({ ...p, name: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Designation (e.g. MBBS, BCS)"
+                    value={newSig.designation}
+                    onChange={(e) => setNewSig((p) => ({ ...p, designation: e.target.value }))}
+                  />
+                  <Button size="sm" onClick={() => addSig.mutate()} disabled={addSig.isPending}>
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {(signatories.data ?? []).map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded border border-border/50 px-2 py-1 text-sm"
+                    >
+                      <span>
+                        <span className="font-medium">{s.name}</span>
+                        {s.designation ? <span className="text-muted-foreground"> · {s.designation}</span> : null}
+                        <span className="ml-2 text-[11px] uppercase text-muted-foreground">{s.kind}</span>
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={() => removeSig.mutate(s.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(signatories.data ?? []).length === 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      No lab staff appointed yet — add technologists and pathologists above.
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
+
 
           {test ? (
             <Card foldable>
