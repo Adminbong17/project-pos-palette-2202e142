@@ -70,9 +70,10 @@ const sections = [
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic-sales" },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic", children: LAB_CHILDREN },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "prescriptions", anyMode: true, children: LAB_CHILDREN },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic-sales", children: LAB_CHILDREN },
+
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
