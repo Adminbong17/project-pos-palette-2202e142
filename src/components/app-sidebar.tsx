@@ -279,9 +279,31 @@ export function AppSidebar() {
                           </div>
                         )}
                       </SidebarMenuButton>
+                      {(item as any).children && active && (
+                        <div className="ml-6 mt-1 space-y-1 border-l border-border/60 pl-2">
+                          {(item as any).children.map((c: any) => {
+                            const cActive = c.exact ? pathname === c.to : pathname.startsWith(c.to);
+                            return (
+                              <Link
+                                key={c.to}
+                                to={c.to as any}
+                                className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
+                                  cActive
+                                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                                    : "text-muted-foreground hover:bg-sidebar-accent/50"
+                                }`}
+                              >
+                                <c.icon className="h-3.5 w-3.5" />
+                                <span className="truncate">{c.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}
+
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
