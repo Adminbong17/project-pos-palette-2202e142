@@ -54,6 +54,10 @@ function LabReportsPage() {
   const [collectedAt, setCollectedAt] = useState(() => nowLocal());
   const [reportedAt, setReportedAt] = useState(() => nowLocal());
   const [comment, setComment] = useState("");
+  const [techName, setTechName] = useState("");
+  const [techDesignation, setTechDesignation] = useState("");
+  const [pathoName, setPathoName] = useState("");
+  const [pathoDesignation, setPathoDesignation] = useState("");
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -88,6 +92,10 @@ function LabReportsPage() {
         collectedAt,
         reportedAt,
         comment,
+        techName,
+        techDesignation,
+        pathologistName: pathoName,
+        pathologistDesignation: pathoDesignation,
         rows: test.analytes.map((a) => ({
           name: a.name,
           result: results[a.name] ?? "",
@@ -164,6 +172,18 @@ function LabReportsPage() {
               <Input placeholder="Sample no" value={sampleNo} onChange={(e) => setSampleNo(e.target.value)} />
               <Input placeholder="Collection date/time" value={collectedAt} onChange={(e) => setCollectedAt(e.target.value)} />
               <Input placeholder="Report date/time" value={reportedAt} onChange={(e) => setReportedAt(e.target.value)} />
+            </CardContent>
+          </Card>
+
+          <Card foldable>
+            <CardHeader>
+              <CardTitle className="text-base">Signatures (optional)</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Lab Technologist name" value={techName} onChange={(e) => setTechName(e.target.value)} />
+              <Input placeholder="Technologist designation" value={techDesignation} onChange={(e) => setTechDesignation(e.target.value)} />
+              <Input placeholder="Consultant Pathologist name" value={pathoName} onChange={(e) => setPathoName(e.target.value)} />
+              <Input placeholder="Pathologist designation" value={pathoDesignation} onChange={(e) => setPathoDesignation(e.target.value)} />
             </CardContent>
           </Card>
 

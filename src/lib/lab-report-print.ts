@@ -32,13 +32,17 @@ export type LabReportData = {
   collectedAt?: string | null;
   reportedAt?: string | null;
   comment?: string | null;
+  techName?: string | null;
+  techDesignation?: string | null;
+  pathologistName?: string | null;
+  pathologistDesignation?: string | null;
   rows: LabReportRow[];
 };
 
 function geometry(size: PrintSize) {
-  if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px" };
-  if (size === "80mm") return { width: "76mm", pageSize: "80mm auto", pageMargin: "2mm", fontSize: "11px" };
-  return { width: "54mm", pageSize: "58mm auto", pageMargin: "2mm", fontSize: "10px" };
+  if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px", minHeight: "270mm" };
+  if (size === "80mm") return { width: "76mm", pageSize: "80mm auto", pageMargin: "2mm", fontSize: "11px", minHeight: "240mm" };
+  return { width: "54mm", pageSize: "58mm auto", pageMargin: "2mm", fontSize: "10px", minHeight: "240mm" };
 }
 
 function metaTable(rows: [string, any][]) {
@@ -121,12 +125,16 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
         : ""
     }
 
-    <div style="margin-top:${compact ? "12px" : "22px"};display:flex;justify-content:space-between;font-size:0.85em;">
-      <div style="text-align:center;">
-        <div style="border-top:1px solid #000;padding-top:2px;min-width:${compact ? "60px" : "120px"};">Lab Technologist</div>
+    <div style="position:absolute;left:6px;right:6px;bottom:22px;display:flex;justify-content:space-between;font-size:0.85em;">
+      <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
+        ${data.techName ? `<div style="font-weight:700;">${esc(data.techName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.techDesignation ? `<div style="font-size:0.85em;">${esc(data.techDesignation)}</div>` : ""}
+        <div style="border-top:1px solid #000;padding-top:2px;">Lab Technologist</div>
       </div>
-      <div style="text-align:center;">
-        <div style="border-top:1px solid #000;padding-top:2px;min-width:${compact ? "60px" : "120px"};">Consultant Pathologist</div>
+      <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
+        ${data.pathologistName ? `<div style="font-weight:700;">${esc(data.pathologistName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.pathologistDesignation ? `<div style="font-size:0.85em;">${esc(data.pathologistDesignation)}</div>` : ""}
+        <div style="border-top:1px solid #000;padding-top:2px;">Consultant Pathologist</div>
       </div>
     </div>
   `;
@@ -153,9 +161,9 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
   const page = document.createElement("div");
   page.id = pageId;
   page.className = "lab-doc";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px;`;
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
   page.innerHTML = `${inner}
-    <div style="margin-top:8px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
+    <div style="position:absolute;left:6px;right:6px;bottom:4px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
       QweekRx ${new Date().getFullYear()} · 01712472839 (Phone/WhatsApp)
     </div>`;
 
