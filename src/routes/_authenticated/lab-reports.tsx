@@ -279,15 +279,125 @@ function LabReportsPage() {
 
           <Card foldable>
             <CardHeader>
-              <CardTitle className="text-base">Signatures (optional)</CardTitle>
+              <CardTitle className="text-base">Signatures & pad</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
-              <Input placeholder="Lab Technologist name" value={techName} onChange={(e) => setTechName(e.target.value)} />
-              <Input placeholder="Technologist designation" value={techDesignation} onChange={(e) => setTechDesignation(e.target.value)} />
-              <Input placeholder="Consultant Pathologist name" value={pathoName} onChange={(e) => setPathoName(e.target.value)} />
-              <Input placeholder="Pathologist designation" value={pathoDesignation} onChange={(e) => setPathoDesignation(e.target.value)} />
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Lab Technologist</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-input px-2 text-sm"
+                    value={techName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTechName(v);
+                      const f = techs.find((s) => s.name === v);
+                      setTechDesignation(f?.designation ?? "");
+                    }}
+                  >
+                    <option value="">— select appointed technologist —</option>
+                    {techs.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                        {s.designation ? ` — ${s.designation}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    placeholder="Technologist designation"
+                    value={techDesignation}
+                    onChange={(e) => setTechDesignation(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Consultant Pathologist</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-input px-2 text-sm"
+                    value={pathoName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPathoName(v);
+                      const f = pathos.find((s) => s.name === v);
+                      setPathoDesignation(f?.designation ?? "");
+                    }}
+                  >
+                    <option value="">— select appointed pathologist —</option>
+                    {pathos.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                        {s.designation ? ` — ${s.designation}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    placeholder="Pathologist designation"
+                    value={pathoDesignation}
+                    onChange={(e) => setPathoDesignation(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-md border border-border/60 p-2">
+                <Switch id="lab-own-pad" checked={ownPad} onCheckedChange={setOwnPad} />
+                <Label htmlFor="lab-own-pad" className="text-sm">
+                  Own pad
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {ownPad ? "1.5 inch blank top space (A4), no clinic header" : "Print clinic header"}
+                  </span>
+                </Label>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-border/60 p-2">
+                <div className="text-xs font-medium">Appointed lab staff</div>
+                <div className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
+                  <select
+                    className="h-9 rounded-md border border-input bg-input px-2 text-sm"
+                    value={newSig.kind}
+                    onChange={(e) => setNewSig((p) => ({ ...p, kind: e.target.value }))}
+                  >
+                    <option value="technologist">Technologist</option>
+                    <option value="pathologist">Pathologist</option>
+                  </select>
+                  <Input
+                    placeholder="Name"
+                    value={newSig.name}
+                    onChange={(e) => setNewSig((p) => ({ ...p, name: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Designation (e.g. MBBS, BCS)"
+                    value={newSig.designation}
+                    onChange={(e) => setNewSig((p) => ({ ...p, designation: e.target.value }))}
+                  />
+                  <Button size="sm" onClick={() => addSig.mutate()} disabled={addSig.isPending}>
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {(signatories.data ?? []).map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded border border-border/50 px-2 py-1 text-sm"
+                    >
+                      <span>
+                        <span className="font-medium">{s.name}</span>
+                        {s.designation ? <span className="text-muted-foreground"> · {s.designation}</span> : null}
+                        <span className="ml-2 text-[11px] uppercase text-muted-foreground">{s.kind}</span>
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={() => removeSig.mutate(s.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(signatories.data ?? []).length === 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      No lab staff appointed yet — add technologists and pathologists above.
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
+
 
           {test ? (
             <Card foldable>
