@@ -66,6 +66,7 @@ import { Route as AuthenticatedSettingsCategoriesRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsBusinessRouteImport } from './routes/_authenticated/settings.business'
 import { Route as AuthenticatedSettingsBrandsRouteImport } from './routes/_authenticated/settings.brands'
 import { Route as AuthenticatedRxBillingBuyRouteImport } from './routes/_authenticated/rx-billing.buy'
+import { Route as AuthenticatedRxBillingBillsRouteImport } from './routes/_authenticated/rx-billing.bills'
 import { Route as AuthenticatedRestaurantTablesRouteImport } from './routes/_authenticated/restaurant.tables'
 import { Route as AuthenticatedRestaurantOrdersRouteImport } from './routes/_authenticated/restaurant.orders'
 import { Route as AuthenticatedReportsProfitRouteImport } from './routes/_authenticated/reports.profit'
@@ -413,6 +414,12 @@ const AuthenticatedRxBillingBuyRoute =
     path: '/buy',
     getParentRoute: () => AuthenticatedRxBillingRoute,
   } as any)
+const AuthenticatedRxBillingBillsRoute =
+  AuthenticatedRxBillingBillsRouteImport.update({
+    id: '/bills',
+    path: '/bills',
+    getParentRoute: () => AuthenticatedRxBillingRoute,
+  } as any)
 const AuthenticatedRestaurantTablesRoute =
   AuthenticatedRestaurantTablesRouteImport.update({
     id: '/tables',
@@ -691,6 +698,7 @@ export interface FileRoutesByFullPath {
   '/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
+  '/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
   '/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
@@ -776,6 +784,7 @@ export interface FileRoutesByTo {
   '/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
+  '/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
   '/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
@@ -872,6 +881,7 @@ export interface FileRoutesById {
   '/_authenticated/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/_authenticated/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/_authenticated/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
+  '/_authenticated/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
   '/_authenticated/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
   '/_authenticated/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/_authenticated/settings/business': typeof AuthenticatedSettingsBusinessRoute
@@ -968,6 +978,7 @@ export interface FileRouteTypes {
     | '/reports/profit'
     | '/restaurant/orders'
     | '/restaurant/tables'
+    | '/rx-billing/bills'
     | '/rx-billing/buy'
     | '/settings/brands'
     | '/settings/business'
@@ -1053,6 +1064,7 @@ export interface FileRouteTypes {
     | '/reports/profit'
     | '/restaurant/orders'
     | '/restaurant/tables'
+    | '/rx-billing/bills'
     | '/rx-billing/buy'
     | '/settings/brands'
     | '/settings/business'
@@ -1148,6 +1160,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/profit'
     | '/_authenticated/restaurant/orders'
     | '/_authenticated/restaurant/tables'
+    | '/_authenticated/rx-billing/bills'
     | '/_authenticated/rx-billing/buy'
     | '/_authenticated/settings/brands'
     | '/_authenticated/settings/business'
@@ -1584,6 +1597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRxBillingBuyRouteImport
       parentRoute: typeof AuthenticatedRxBillingRoute
     }
+    '/_authenticated/rx-billing/bills': {
+      id: '/_authenticated/rx-billing/bills'
+      path: '/bills'
+      fullPath: '/rx-billing/bills'
+      preLoaderRoute: typeof AuthenticatedRxBillingBillsRouteImport
+      parentRoute: typeof AuthenticatedRxBillingRoute
+    }
     '/_authenticated/restaurant/tables': {
       id: '/_authenticated/restaurant/tables'
       path: '/tables'
@@ -1995,12 +2015,14 @@ const AuthenticatedRestaurantRouteWithChildren =
   )
 
 interface AuthenticatedRxBillingRouteChildren {
+  AuthenticatedRxBillingBillsRoute: typeof AuthenticatedRxBillingBillsRoute
   AuthenticatedRxBillingBuyRoute: typeof AuthenticatedRxBillingBuyRoute
   AuthenticatedRxBillingIndexRoute: typeof AuthenticatedRxBillingIndexRoute
 }
 
 const AuthenticatedRxBillingRouteChildren: AuthenticatedRxBillingRouteChildren =
   {
+    AuthenticatedRxBillingBillsRoute: AuthenticatedRxBillingBillsRoute,
     AuthenticatedRxBillingBuyRoute: AuthenticatedRxBillingBuyRoute,
     AuthenticatedRxBillingIndexRoute: AuthenticatedRxBillingIndexRoute,
   }
