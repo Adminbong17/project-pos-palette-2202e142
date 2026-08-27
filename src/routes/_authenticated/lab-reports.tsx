@@ -57,8 +57,10 @@ function LabReportsPage() {
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
-    const list = s ? LAB_TESTS.filter((t) => t.name.toLowerCase().includes(s)) : LAB_TESTS;
-    return list.slice(0, 40);
+    const list = s
+      ? LAB_TESTS.filter((t) => t.name.toLowerCase().includes(s) || t.department.toLowerCase().includes(s))
+      : LAB_TESTS;
+    return list.slice(0, 60);
   }, [search]);
 
   function pick(t: LabTest) {
