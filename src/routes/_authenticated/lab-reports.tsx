@@ -54,6 +54,10 @@ function LabReportsPage() {
   const [collectedAt, setCollectedAt] = useState(() => nowLocal());
   const [reportedAt, setReportedAt] = useState(() => nowLocal());
   const [comment, setComment] = useState("");
+  const [techName, setTechName] = useState("");
+  const [techDesignation, setTechDesignation] = useState("");
+  const [pathoName, setPathoName] = useState("");
+  const [pathoDesignation, setPathoDesignation] = useState("");
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -88,6 +92,10 @@ function LabReportsPage() {
         collectedAt,
         reportedAt,
         comment,
+        techName,
+        techDesignation,
+        pathologistName: pathoName,
+        pathologistDesignation: pathoDesignation,
         rows: test.analytes.map((a) => ({
           name: a.name,
           result: results[a.name] ?? "",
