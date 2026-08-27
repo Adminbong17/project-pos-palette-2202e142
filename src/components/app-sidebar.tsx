@@ -18,13 +18,70 @@ import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 // Sub-pages of the Lab module, shown nested under the "Lab" menu button.
 const LAB_CHILDREN = [
-  { to: "/lab-reports", label: "New Report", icon: FileText, exact: true },
-  { to: "/lab-reports/staff", label: "Lab Staff", icon: Users },
-  { to: "/lab-reports/history", label: "Report History", icon: Stamp },
+  { to: "/lab-reports", label: "New Report", icon: FileText, exact: true, key: "clinic" },
+  { to: "/lab-reports/staff", label: "Lab Staff", icon: Users, key: "clinic" },
+  { to: "/lab-reports/history", label: "Report History", icon: Stamp, key: "clinic" },
 ];
 
+// Every menu button that owns more than one feature keeps its features on
+// separate pages, listed as children under the parent button.
+const INVENTORY_CHILDREN = [
+  { to: "/products", label: "Products", icon: Package, exact: true, key: "products" },
+  { to: "/purchases", label: "Purchases", icon: Truck, key: "purchases" },
+  { to: "/quick-box", label: "Quick Box Add", icon: PackagePlus, key: "quick-box" },
+  { to: "/stock-transfers", label: "Stock Transfers", icon: ClipboardList, key: "stock-transfers" },
+  { to: "/products/stock-adjustments", label: "Stock Adjustments", icon: Boxes, key: "products" },
+];
 
+const REPORT_CHILDREN = [
+  { to: "/reports", label: "All Reports", icon: BarChart3, exact: true, key: "reports" },
+  { to: "/reports/profit", label: "Profit Report", icon: Wallet, key: "__admin" },
+  { to: "/reports/inventory-movement", label: "Inventory Movement", icon: Boxes, key: "reports" },
+];
 
+const CLINIC_CHILDREN = [
+  { to: "/clinic-dashboard", label: "Overview", icon: LayoutDashboard, exact: true, key: "clinic" },
+  { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, key: "clinic" },
+  { to: "/clinic-services", label: "Products & Services", icon: Package, key: "clinic" },
+  { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, key: "clinic" },
+  { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, key: "clinic" },
+];
+
+const DOCTOR_CHILDREN = [
+  { to: "/rx-dashboard", label: "Overview", icon: LayoutDashboard, exact: true, key: "prescriptions" },
+  { to: "/prescriptions", label: "Prescriptions", icon: FileText, key: "prescriptions" },
+  { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, key: "rx-queue" },
+  { to: "/rx-staff", label: "My Staff", icon: Users, key: "prescriptions" },
+  { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, key: "prescriptions" },
+  { to: "/clinic-services", label: "Services & Fees", icon: Package, key: "prescriptions" },
+  { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, key: "prescriptions" },
+];
+
+const BILLING_CHILDREN = [
+  { to: "/rx-billing", label: "Bill Page", icon: Wallet, exact: true, key: "__any" },
+  { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, key: "__any" },
+];
+
+const ADMIN_CHILDREN = [
+  { to: "/admin", label: "Admin Hub", icon: Settings, exact: true, key: "__admin" },
+  { to: "/admin/prescriptions", label: "Admin Prescription", icon: ClipboardList, key: "__admin" },
+  { to: "/admin/doctors", label: "Doctors & Approvals", icon: UserCog, key: "__admin" },
+  { to: "/admin/businesses", label: "Businesses & Modules", icon: Building2, key: "__admin" },
+  { to: "/admin/users", label: "All Users & Logins", icon: UserCog, key: "__admin" },
+  { to: "/admin/rx-billing", label: "Bill Page (Admin)", icon: Wallet, key: "__admin" },
+  { to: "/admin/rx-credit-links", label: "Credit Links", icon: Wallet, key: "__admin" },
+  { to: "/admin/credit-purchases", label: "Credit Purchases", icon: Wallet, key: "__admin" },
+  { to: "/admin/bkash", label: "bKash Gateway", icon: Wallet, key: "__admin" },
+  { to: "/admin/sms", label: "SMS Gateway", icon: MessageSquare, key: "__admin" },
+  { to: "/admin/backups", label: "Backups & Restore", icon: FolderArchive, key: "__admin" },
+  { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, key: "__admin" },
+];
+
+const SETTINGS_CHILDREN = [
+  { to: "/settings/business", label: "Business Settings", icon: Settings, exact: true, key: "__any" },
+  { to: "/settings/locations", label: "Locations", icon: Building2, key: "settings" },
+  { to: "/settings/users", label: "Users & Roles", icon: UserCog, key: "settings" },
+];
 
 const sections = [
   {
@@ -38,12 +95,12 @@ const sections = [
     items: [
       { to: "/pos", label: "POS", icon: ShoppingCart, enabled: true, key: "pos" },
       { to: "/sales", label: "Sales", icon: Receipt, enabled: true, key: "sales" },
-      { to: "/purchases", label: "Purchases", icon: Truck, enabled: true, key: "purchases" },
-      { to: "/products", label: "Products", icon: Package, enabled: true, key: "products" },
-      { to: "/quick-box", label: "Quick Box Add", icon: PackagePlus, enabled: true, key: "quick-box" },
+      { to: "/products", label: "Inventory", icon: Package, enabled: true, key: "products", children: INVENTORY_CHILDREN },
+      { to: "/products", label: "Inventory", icon: Package, enabled: true, key: "purchases", children: INVENTORY_CHILDREN },
+      { to: "/products", label: "Inventory", icon: Package, enabled: true, key: "quick-box", children: INVENTORY_CHILDREN },
+      { to: "/products", label: "Inventory", icon: Package, enabled: true, key: "stock-transfers", children: INVENTORY_CHILDREN },
       { to: "/files", label: "Files", icon: FolderArchive, enabled: true, key: "files" },
       { to: "/contacts", label: "Contacts", icon: Users, enabled: true, key: "contacts" },
-      { to: "/stock-transfers", label: "Stock Transfers", icon: ClipboardList, enabled: true, key: "stock-transfers" },
     ],
   },
   {
@@ -56,9 +113,8 @@ const sections = [
   {
     label: "Reports",
     items: [
-      { to: "/reports", label: "All Reports", icon: BarChart3, enabled: true, key: "reports" },
-      { to: "/reports/profit", label: "Profit Report", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/reports/inventory-movement", label: "Inventory Movement", icon: Boxes, enabled: true, key: "reports" },
+      { to: "/reports", label: "Reports", icon: BarChart3, enabled: true, key: "reports", children: REPORT_CHILDREN },
+      { to: "/reports", label: "Reports", icon: BarChart3, enabled: true, key: "__admin", children: REPORT_CHILDREN },
     ],
   },
   {
@@ -74,64 +130,33 @@ const sections = [
   {
     label: "Clinic & Rx",
     items: [
-      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "clinic" },
-      { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic" },
-      { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
-      { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic", children: LAB_CHILDREN },
+      { to: "/clinic-dashboard", label: "Clinic", icon: Building2, enabled: true, key: "clinic", children: CLINIC_CHILDREN },
+      { to: "/rx-dashboard", label: "Doctor", icon: Stethoscope, enabled: true, key: "prescriptions", children: DOCTOR_CHILDREN, anyMode: true },
+      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue", anyMode: true },
+      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "clinic-services", anyMode: true },
+      { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales", anyMode: true },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans", anyMode: true },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic", children: LAB_CHILDREN, anyMode: true },
       { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "prescriptions", anyMode: true, children: LAB_CHILDREN },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic-sales", children: LAB_CHILDREN },
-
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
-      { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
-      { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
-      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "prescriptions" },
-      { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
-      { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
-
-      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
-      { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
-      { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
-      // Independent doctors (and their staff) manage their own service list and
-      // treatment plans, so these are not gated behind clinic mode.
-      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "rx-queue", anyMode: true },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "rx-queue", anyMode: true },
-      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "prescriptions" },
-      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "prescriptions" },
-      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "clinic" },
-      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "clinic" },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic-sales", anyMode: true, children: LAB_CHILDREN },
+      { to: "/rx-billing", label: "Billing", icon: Wallet, enabled: true, key: "prescriptions", children: BILLING_CHILDREN, anyMode: true },
+      { to: "/rx-billing", label: "Billing", icon: Wallet, enabled: true, key: "clinic", children: BILLING_CHILDREN, anyMode: true },
     ],
   },
   {
     label: "Super Admin Tools",
     items: [
-      { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },
-      { to: "/admin/prescriptions", superOnly: true, label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
-      { to: "/admin/doctors", superOnly: true, label: "Doctors & Approvals", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/rx-billing", superOnly: true, label: "Bill Page (Admin)", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/businesses", superOnly: true, label: "Businesses & Modules", icon: Building2, enabled: true, key: "__admin" },
-      { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
-      { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
-      { to: "/admin/sms", superOnly: true, label: "SMS Gateway", icon: MessageSquare, enabled: true, key: "__admin" },
-      { to: "/admin/rx-credit-links", superOnly: true, label: "Credit Links", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/credit-purchases", superOnly: true, label: "Credit Purchases", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/bkash", superOnly: true, label: "bKash Gateway", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin", superOnly: true, label: "Admin Hub", icon: Settings, enabled: true, key: "__admin" },
+      { to: "/admin", superOnly: true, label: "Admin", icon: Settings, enabled: true, key: "__admin", children: ADMIN_CHILDREN },
     ],
   },
 
   {
     label: "Configure",
     items: [
-      { to: "/settings/locations", label: "Locations", icon: Building2, enabled: true, key: "settings" },
-      { to: "/settings/users", label: "Users & Roles", icon: UserCog, enabled: true, key: "settings" },
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "settings" },
-      // Clinic users need Settings too (clinic name, address, SMS number).
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "clinic" },
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "prescriptions" },
+      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "settings", children: SETTINGS_CHILDREN },
+      // Clinic / doctor users need Settings too (clinic name, address, SMS number).
+      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "clinic", children: SETTINGS_CHILDREN },
+      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "prescriptions", children: SETTINGS_CHILDREN },
     ],
   },
 ];
@@ -148,6 +173,9 @@ const DOCTOR_PATHS = [
   "/clinic-services",
   "/clinic-plans",
   "/lab-reports",
+  "/lab-reports/staff",
+  "/lab-reports/history",
+  "/settings/business",
 ];
 
 
@@ -189,6 +217,13 @@ export function AppSidebar() {
   // Clinic doctors see their pool status (read-only), independent doctors buy credits.
   const doctorPaths = DOCTOR_PATHS;
 
+  // A child page is visible when its own module key is granted. `__any` marks a
+  // sub-page that belongs to whoever can see the parent.
+  const childAllowed = (c: any) =>
+    c.key === "__any" ||
+    c.key === "__admin" ||
+    allowed === null ||
+    (allowed as string[]).includes(c.key);
 
   // A business admin is NOT unrestricted: when the super admin picked a module
   // list for that account, only those modules may appear. `allowed === null`
@@ -200,7 +235,11 @@ export function AppSidebar() {
       : sections
           .map((sec) => ({
             ...sec,
-            items: sec.items.filter((it: any) => allowed.includes(it.key)),
+            items: sec.items.filter(
+              (it: any) =>
+                allowed.includes(it.key) ||
+                (it.children ?? []).some((c: any) => c.key !== "__any" && allowed.includes(c.key)),
+            ),
           }))
           .filter((sec) => sec.items.length > 0);
 
@@ -221,7 +260,20 @@ export function AppSidebar() {
         !it.anyMode
           ? clinicMode
           : true,
-      ),
+      )
+      // Sub-pages follow the same grants and role limits as top-level items.
+      .map((it: any) => {
+        if (!it.children) return it;
+        const children = it.children
+          .filter(childAllowed)
+          .filter((c: any) => (c.key === "__admin" ? isSuperAdmin || allowed === null : true))
+          .filter((c: any) => (isDoctor && !isAdmin ? doctorPaths.includes(c.to) : true))
+          .filter((c: any) => (rxMode || isDoctor ? RX_PATHS.includes(c.to) || c.to.startsWith("/lab-reports") : !RX_ONLY_PATHS.includes(c.to)))
+          .filter((c: any) =>
+            ["/clinic-doctors"].includes(c.to) ? clinicMode : true,
+          );
+        return { ...it, children };
+      }),
   }));
 
   const visibleSections = modeScoped
@@ -252,7 +304,11 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {sec.items.map((item) => {
+                  const children: any[] = (item as any).children ?? [];
                   const active = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to));
+                  // Keep the group open while any of its sub-pages is open.
+                  const expanded =
+                    active || children.some((c) => pathname === c.to || pathname.startsWith(c.to + "/"));
                   return (
                     <SidebarMenuItem key={item.label}>
                       <SidebarMenuButton
@@ -279,9 +335,9 @@ export function AppSidebar() {
                           </div>
                         )}
                       </SidebarMenuButton>
-                      {(item as any).children && active && (
+                      {children.length > 0 && expanded && (
                         <div className="ml-6 mt-1 space-y-1 border-l border-border/60 pl-2">
-                          {(item as any).children.map((c: any) => {
+                          {children.map((c: any) => {
                             const cActive = c.exact ? pathname === c.to : pathname.startsWith(c.to);
                             return (
                               <Link
