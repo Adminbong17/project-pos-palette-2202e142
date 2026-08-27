@@ -58,7 +58,10 @@ const DOCTOR_CHILDREN = [
 ];
 
 const BILLING_CHILDREN = [
-  { to: "/rx-billing", label: "Bill Page", icon: Wallet, exact: true, key: "__any" },
+  { to: "/rx-billing", label: "Overview", icon: Wallet, exact: true, key: "__any" },
+  { to: "/rx-billing/buy", label: "Buy Credits", icon: ShoppingCart, key: "__any" },
+  { to: "/rx-billing/bills", label: "Monthly Bills", icon: Receipt, key: "__any" },
+  { to: "/rx-billing/phone", label: "Bill SMS Number", icon: ShieldCheck, key: "__any" },
   { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, key: "__any" },
 ];
 
