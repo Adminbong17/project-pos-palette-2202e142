@@ -17,7 +17,7 @@ export type LabTest = {
   analytes: LabAnalyte[];
 };
 
-export const LAB_TESTS: LabTest[] = [
+export const TEMPLATE_TESTS: LabTest[] = [
   {
     id: "cbc",
     name: "Complete Blood Count (CBC) with ESR",
