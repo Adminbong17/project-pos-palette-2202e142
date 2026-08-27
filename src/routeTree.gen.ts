@@ -76,6 +76,7 @@ import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedProductsStockAdjustmentsRouteImport } from './routes/_authenticated/products.stock-adjustments'
 import { Route as AuthenticatedProductsNewRouteImport } from './routes/_authenticated/products.new'
 import { Route as AuthenticatedProductsIdRouteImport } from './routes/_authenticated/products.$id'
+import { Route as AuthenticatedLabReportsStaffRouteImport } from './routes/_authenticated/lab-reports.staff'
 import { Route as AuthenticatedHrmPayrollRouteImport } from './routes/_authenticated/hrm.payroll'
 import { Route as AuthenticatedHrmLeavesRouteImport } from './routes/_authenticated/hrm.leaves'
 import { Route as AuthenticatedHrmEmployeesRouteImport } from './routes/_authenticated/hrm.employees'
@@ -467,6 +468,12 @@ const AuthenticatedProductsIdRoute = AuthenticatedProductsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedProductsRoute,
 } as any)
+const AuthenticatedLabReportsStaffRoute =
+  AuthenticatedLabReportsStaffRouteImport.update({
+    id: '/staff',
+    path: '/staff',
+    getParentRoute: () => AuthenticatedLabReportsRoute,
+  } as any)
 const AuthenticatedHrmPayrollRoute = AuthenticatedHrmPayrollRouteImport.update({
   id: '/payroll',
   path: '/payroll',
@@ -649,6 +656,7 @@ export interface FileRoutesByFullPath {
   '/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -731,6 +739,7 @@ export interface FileRoutesByTo {
   '/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -823,6 +832,7 @@ export interface FileRoutesById {
   '/_authenticated/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/_authenticated/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/_authenticated/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/_authenticated/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/_authenticated/products/$id': typeof AuthenticatedProductsIdRoute
   '/_authenticated/products/new': typeof AuthenticatedProductsNewRoute
   '/_authenticated/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -915,6 +925,7 @@ export interface FileRouteTypes {
     | '/hrm/employees'
     | '/hrm/leaves'
     | '/hrm/payroll'
+    | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
     | '/products/stock-adjustments'
@@ -997,6 +1008,7 @@ export interface FileRouteTypes {
     | '/hrm/employees'
     | '/hrm/leaves'
     | '/hrm/payroll'
+    | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
     | '/products/stock-adjustments'
@@ -1088,6 +1100,7 @@ export interface FileRouteTypes {
     | '/_authenticated/hrm/employees'
     | '/_authenticated/hrm/leaves'
     | '/_authenticated/hrm/payroll'
+    | '/_authenticated/lab-reports/staff'
     | '/_authenticated/products/$id'
     | '/_authenticated/products/new'
     | '/_authenticated/products/stock-adjustments'
@@ -1604,6 +1617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductsIdRouteImport
       parentRoute: typeof AuthenticatedProductsRoute
     }
+    '/_authenticated/lab-reports/staff': {
+      id: '/_authenticated/lab-reports/staff'
+      path: '/staff'
+      fullPath: '/lab-reports/staff'
+      preLoaderRoute: typeof AuthenticatedLabReportsStaffRouteImport
+      parentRoute: typeof AuthenticatedLabReportsRoute
+    }
     '/_authenticated/hrm/payroll': {
       id: '/_authenticated/hrm/payroll'
       path: '/payroll'
@@ -1798,11 +1818,13 @@ const AuthenticatedHrmRouteWithChildren =
   AuthenticatedHrmRoute._addFileChildren(AuthenticatedHrmRouteChildren)
 
 interface AuthenticatedLabReportsRouteChildren {
+  AuthenticatedLabReportsStaffRoute: typeof AuthenticatedLabReportsStaffRoute
   AuthenticatedLabReportsIndexRoute: typeof AuthenticatedLabReportsIndexRoute
 }
 
 const AuthenticatedLabReportsRouteChildren: AuthenticatedLabReportsRouteChildren =
   {
+    AuthenticatedLabReportsStaffRoute: AuthenticatedLabReportsStaffRoute,
     AuthenticatedLabReportsIndexRoute: AuthenticatedLabReportsIndexRoute,
   }
 
