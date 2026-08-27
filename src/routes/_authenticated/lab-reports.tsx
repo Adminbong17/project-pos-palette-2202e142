@@ -443,54 +443,6 @@ function LabReportsPage() {
                 </Label>
               </div>
 
-              <div className="space-y-2 rounded-md border border-border/60 p-2">
-                <div className="text-xs font-medium">Appointed lab staff</div>
-                <div className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
-                  <select
-                    className="h-9 rounded-md border border-input bg-input px-2 text-sm"
-                    value={newSig.kind}
-                    onChange={(e) => setNewSig((p) => ({ ...p, kind: e.target.value }))}
-                  >
-                    <option value="technologist">Technologist</option>
-                    <option value="pathologist">Pathologist</option>
-                  </select>
-                  <Input
-                    placeholder="Name"
-                    value={newSig.name}
-                    onChange={(e) => setNewSig((p) => ({ ...p, name: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="Designation (e.g. MBBS, BCS)"
-                    value={newSig.designation}
-                    onChange={(e) => setNewSig((p) => ({ ...p, designation: e.target.value }))}
-                  />
-                  <Button size="sm" onClick={() => addSig.mutate()} disabled={addSig.isPending}>
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add
-                  </Button>
-                </div>
-                <div className="space-y-1">
-                  {(signatories.data ?? []).map((s) => (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between rounded border border-border/50 px-2 py-1 text-sm"
-                    >
-                      <span>
-                        <span className="font-medium">{s.name}</span>
-                        {s.designation ? <span className="text-muted-foreground"> · {s.designation}</span> : null}
-                        <span className="ml-2 text-[11px] uppercase text-muted-foreground">{s.kind}</span>
-                      </span>
-                      <Button variant="ghost" size="sm" onClick={() => removeSig.mutate(s.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                  {(signatories.data ?? []).length === 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      No lab staff appointed yet — add technologists and pathologists above.
-                    </div>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
 
