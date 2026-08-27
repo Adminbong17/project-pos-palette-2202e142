@@ -135,6 +135,7 @@ function LabReportsPage() {
                   <div className="font-medium">{t.name}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {t.department} · {t.analytes.length} parameter{t.analytes.length > 1 ? "s" : ""}
+                    {t.price ? ` · ৳${t.price.toLocaleString()}` : ""}
                   </div>
                 </button>
               ))}
