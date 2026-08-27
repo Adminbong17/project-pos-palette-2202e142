@@ -94,13 +94,19 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
     ["Sample Type", data.specimen],
   ]);
 
-  const inner = `
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:5px;">
+  const header = data.ownPad
+    ? `<div style="text-align:center;border-bottom:1px solid #000;padding-bottom:4px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.6px;">LABORATORY REPORT</div>
+    </div>`
+    : `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:5px;">
       <div style="font-size:${compact ? "15px" : "20px"};font-weight:800;">${esc(data.clinicName ?? "Diagnostic Centre")}</div>
       ${data.address ? `<div style="font-size:10px;">${esc(data.address)}</div>` : ""}
       ${data.phone ? `<div style="font-size:10px;">Phone: ${esc(data.phone)}</div>` : ""}
       <div style="margin-top:3px;font-size:11px;font-weight:700;letter-spacing:.6px;">LABORATORY REPORT</div>
-    </div>
+    </div>`;
+
+  const inner = `
+    ${header}
 
     <div style="margin-top:6px;${compact ? "" : "display:flex;gap:14px;"}">
       <div style="flex:1;">${patientLeft}</div>
