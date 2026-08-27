@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FoldTable } from "@/components/fold-table";
@@ -462,8 +463,20 @@ function DoctorIdentityCell({
   const dirty = n !== name || q !== qualification;
   return (
     <div className="flex flex-col gap-1.5 min-w-[200px]">
-      <Input className="h-8" value={n} onChange={(e) => setN(e.target.value)} placeholder="Dr. name" />
-      <Input className="h-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="MBBS, FCPS…" />
+      <Textarea
+        className="min-h-[44px] resize-none text-sm"
+        rows={2}
+        value={n}
+        onChange={(e) => setN(e.target.value)}
+        placeholder="Dr. name"
+      />
+      <Textarea
+        className="min-h-[44px] resize-none text-sm"
+        rows={2}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="MBBS, FCPS…"
+      />
       <Button
         size="sm"
         variant="outline"

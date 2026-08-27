@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin/doctors")({
   head: () => ({
@@ -728,7 +729,7 @@ function DoctorCard({
     <div className="rounded-lg border border-border/60 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold">
+          <div className="text-sm font-semibold whitespace-pre-wrap">
             {member.doctorName || member.name || "Unnamed doctor"}
           </div>
           <div className="text-xs text-muted-foreground">{member.email}</div>
@@ -781,15 +782,17 @@ function DoctorCard({
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <Input
-          className="h-9 text-sm"
+        <Textarea
+          className="min-h-[44px] resize-none text-sm"
+          rows={2}
           placeholder="Doctor name (on prescription)"
           value={n}
           onChange={(e) => setN(e.target.value)}
         />
         <div className="flex gap-2">
-          <Input
-            className="h-9 text-sm"
+          <Textarea
+            className="min-h-[44px] resize-none text-sm"
+            rows={2}
             placeholder="Qualification / designation"
             value={q}
             onChange={(e) => setQ(e.target.value)}
