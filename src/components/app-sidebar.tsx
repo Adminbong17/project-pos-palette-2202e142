@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
-  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History,
+  Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History, FlaskConical, Stamp,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -15,6 +15,15 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+
+// Sub-pages of the Lab module, shown nested under the "Lab" menu button.
+const LAB_CHILDREN = [
+  { to: "/lab-reports", label: "New Report", icon: FileText, exact: true },
+  { to: "/lab-reports/staff", label: "Lab Staff", icon: Users },
+  { to: "/lab-reports/signatures", label: "Signatures & Pad", icon: Stamp },
+];
+
+
 
 
 const sections = [
@@ -70,9 +79,10 @@ const sections = [
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic-sales" },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic", children: LAB_CHILDREN },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "prescriptions", anyMode: true, children: LAB_CHILDREN },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic-sales", children: LAB_CHILDREN },
+
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
@@ -269,9 +279,31 @@ export function AppSidebar() {
                           </div>
                         )}
                       </SidebarMenuButton>
+                      {(item as any).children && active && (
+                        <div className="ml-6 mt-1 space-y-1 border-l border-border/60 pl-2">
+                          {(item as any).children.map((c: any) => {
+                            const cActive = c.exact ? pathname === c.to : pathname.startsWith(c.to);
+                            return (
+                              <Link
+                                key={c.to}
+                                to={c.to as any}
+                                className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
+                                  cActive
+                                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                                    : "text-muted-foreground hover:bg-sidebar-accent/50"
+                                }`}
+                              >
+                                <c.icon className="h-3.5 w-3.5" />
+                                <span className="truncate">{c.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}
+
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

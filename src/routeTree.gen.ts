@@ -53,6 +53,7 @@ import { Route as AuthenticatedRestaurantIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedRepairIndexRouteImport } from './routes/_authenticated/repair.index'
 import { Route as AuthenticatedProductsIndexRouteImport } from './routes/_authenticated/products.index'
+import { Route as AuthenticatedLabReportsIndexRouteImport } from './routes/_authenticated/lab-reports.index'
 import { Route as AuthenticatedHrmIndexRouteImport } from './routes/_authenticated/hrm.index'
 import { Route as AuthenticatedCrmIndexRouteImport } from './routes/_authenticated/crm.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -75,6 +76,8 @@ import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedProductsStockAdjustmentsRouteImport } from './routes/_authenticated/products.stock-adjustments'
 import { Route as AuthenticatedProductsNewRouteImport } from './routes/_authenticated/products.new'
 import { Route as AuthenticatedProductsIdRouteImport } from './routes/_authenticated/products.$id'
+import { Route as AuthenticatedLabReportsStaffRouteImport } from './routes/_authenticated/lab-reports.staff'
+import { Route as AuthenticatedLabReportsSignaturesRouteImport } from './routes/_authenticated/lab-reports.signatures'
 import { Route as AuthenticatedHrmPayrollRouteImport } from './routes/_authenticated/hrm.payroll'
 import { Route as AuthenticatedHrmLeavesRouteImport } from './routes/_authenticated/hrm.leaves'
 import { Route as AuthenticatedHrmEmployeesRouteImport } from './routes/_authenticated/hrm.employees'
@@ -333,6 +336,12 @@ const AuthenticatedProductsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProductsRoute,
   } as any)
+const AuthenticatedLabReportsIndexRoute =
+  AuthenticatedLabReportsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedLabReportsRoute,
+  } as any)
 const AuthenticatedHrmIndexRoute = AuthenticatedHrmIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -460,6 +469,18 @@ const AuthenticatedProductsIdRoute = AuthenticatedProductsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedProductsRoute,
 } as any)
+const AuthenticatedLabReportsStaffRoute =
+  AuthenticatedLabReportsStaffRouteImport.update({
+    id: '/staff',
+    path: '/staff',
+    getParentRoute: () => AuthenticatedLabReportsRoute,
+  } as any)
+const AuthenticatedLabReportsSignaturesRoute =
+  AuthenticatedLabReportsSignaturesRouteImport.update({
+    id: '/signatures',
+    path: '/signatures',
+    getParentRoute: () => AuthenticatedLabReportsRoute,
+  } as any)
 const AuthenticatedHrmPayrollRoute = AuthenticatedHrmPayrollRouteImport.update({
   id: '/payroll',
   path: '/payroll',
@@ -601,7 +622,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
   '/hrm': typeof AuthenticatedHrmRouteWithChildren
-  '/lab-reports': typeof AuthenticatedLabReportsRoute
+  '/lab-reports': typeof AuthenticatedLabReportsRouteWithChildren
   '/manufacturing': typeof AuthenticatedManufacturingRoute
   '/pos': typeof AuthenticatedPosRoute
   '/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -642,6 +663,8 @@ export interface FileRoutesByFullPath {
   '/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/lab-reports/signatures': typeof AuthenticatedLabReportsSignaturesRoute
+  '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -664,6 +687,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/crm/': typeof AuthenticatedCrmIndexRoute
   '/hrm/': typeof AuthenticatedHrmIndexRoute
+  '/lab-reports/': typeof AuthenticatedLabReportsIndexRoute
   '/products/': typeof AuthenticatedProductsIndexRoute
   '/repair/': typeof AuthenticatedRepairIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
@@ -688,7 +712,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
-  '/lab-reports': typeof AuthenticatedLabReportsRoute
   '/manufacturing': typeof AuthenticatedManufacturingRoute
   '/pos': typeof AuthenticatedPosRoute
   '/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -724,6 +747,8 @@ export interface FileRoutesByTo {
   '/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/lab-reports/signatures': typeof AuthenticatedLabReportsSignaturesRoute
+  '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -746,6 +771,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/crm': typeof AuthenticatedCrmIndexRoute
   '/hrm': typeof AuthenticatedHrmIndexRoute
+  '/lab-reports': typeof AuthenticatedLabReportsIndexRoute
   '/products': typeof AuthenticatedProductsIndexRoute
   '/repair': typeof AuthenticatedRepairIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
@@ -774,7 +800,7 @@ export interface FileRoutesById {
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/files': typeof AuthenticatedFilesRoute
   '/_authenticated/hrm': typeof AuthenticatedHrmRouteWithChildren
-  '/_authenticated/lab-reports': typeof AuthenticatedLabReportsRoute
+  '/_authenticated/lab-reports': typeof AuthenticatedLabReportsRouteWithChildren
   '/_authenticated/manufacturing': typeof AuthenticatedManufacturingRoute
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -815,6 +841,8 @@ export interface FileRoutesById {
   '/_authenticated/hrm/employees': typeof AuthenticatedHrmEmployeesRoute
   '/_authenticated/hrm/leaves': typeof AuthenticatedHrmLeavesRoute
   '/_authenticated/hrm/payroll': typeof AuthenticatedHrmPayrollRoute
+  '/_authenticated/lab-reports/signatures': typeof AuthenticatedLabReportsSignaturesRoute
+  '/_authenticated/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/_authenticated/products/$id': typeof AuthenticatedProductsIdRoute
   '/_authenticated/products/new': typeof AuthenticatedProductsNewRoute
   '/_authenticated/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
@@ -837,6 +865,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/crm/': typeof AuthenticatedCrmIndexRoute
   '/_authenticated/hrm/': typeof AuthenticatedHrmIndexRoute
+  '/_authenticated/lab-reports/': typeof AuthenticatedLabReportsIndexRoute
   '/_authenticated/products/': typeof AuthenticatedProductsIndexRoute
   '/_authenticated/repair/': typeof AuthenticatedRepairIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
@@ -906,6 +935,8 @@ export interface FileRouteTypes {
     | '/hrm/employees'
     | '/hrm/leaves'
     | '/hrm/payroll'
+    | '/lab-reports/signatures'
+    | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
     | '/products/stock-adjustments'
@@ -928,6 +959,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/crm/'
     | '/hrm/'
+    | '/lab-reports/'
     | '/products/'
     | '/repair/'
     | '/reports/'
@@ -952,7 +984,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/files'
-    | '/lab-reports'
     | '/manufacturing'
     | '/pos'
     | '/prescriptions'
@@ -988,6 +1019,8 @@ export interface FileRouteTypes {
     | '/hrm/employees'
     | '/hrm/leaves'
     | '/hrm/payroll'
+    | '/lab-reports/signatures'
+    | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
     | '/products/stock-adjustments'
@@ -1010,6 +1043,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/crm'
     | '/hrm'
+    | '/lab-reports'
     | '/products'
     | '/repair'
     | '/reports'
@@ -1078,6 +1112,8 @@ export interface FileRouteTypes {
     | '/_authenticated/hrm/employees'
     | '/_authenticated/hrm/leaves'
     | '/_authenticated/hrm/payroll'
+    | '/_authenticated/lab-reports/signatures'
+    | '/_authenticated/lab-reports/staff'
     | '/_authenticated/products/$id'
     | '/_authenticated/products/new'
     | '/_authenticated/products/stock-adjustments'
@@ -1100,6 +1136,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/crm/'
     | '/_authenticated/hrm/'
+    | '/_authenticated/lab-reports/'
     | '/_authenticated/products/'
     | '/_authenticated/repair/'
     | '/_authenticated/reports/'
@@ -1432,6 +1469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductsIndexRouteImport
       parentRoute: typeof AuthenticatedProductsRoute
     }
+    '/_authenticated/lab-reports/': {
+      id: '/_authenticated/lab-reports/'
+      path: '/'
+      fullPath: '/lab-reports/'
+      preLoaderRoute: typeof AuthenticatedLabReportsIndexRouteImport
+      parentRoute: typeof AuthenticatedLabReportsRoute
+    }
     '/_authenticated/hrm/': {
       id: '/_authenticated/hrm/'
       path: '/'
@@ -1585,6 +1629,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/products/$id'
       preLoaderRoute: typeof AuthenticatedProductsIdRouteImport
       parentRoute: typeof AuthenticatedProductsRoute
+    }
+    '/_authenticated/lab-reports/staff': {
+      id: '/_authenticated/lab-reports/staff'
+      path: '/staff'
+      fullPath: '/lab-reports/staff'
+      preLoaderRoute: typeof AuthenticatedLabReportsStaffRouteImport
+      parentRoute: typeof AuthenticatedLabReportsRoute
+    }
+    '/_authenticated/lab-reports/signatures': {
+      id: '/_authenticated/lab-reports/signatures'
+      path: '/signatures'
+      fullPath: '/lab-reports/signatures'
+      preLoaderRoute: typeof AuthenticatedLabReportsSignaturesRouteImport
+      parentRoute: typeof AuthenticatedLabReportsRoute
     }
     '/_authenticated/hrm/payroll': {
       id: '/_authenticated/hrm/payroll'
@@ -1779,6 +1837,25 @@ const AuthenticatedHrmRouteChildren: AuthenticatedHrmRouteChildren = {
 const AuthenticatedHrmRouteWithChildren =
   AuthenticatedHrmRoute._addFileChildren(AuthenticatedHrmRouteChildren)
 
+interface AuthenticatedLabReportsRouteChildren {
+  AuthenticatedLabReportsSignaturesRoute: typeof AuthenticatedLabReportsSignaturesRoute
+  AuthenticatedLabReportsStaffRoute: typeof AuthenticatedLabReportsStaffRoute
+  AuthenticatedLabReportsIndexRoute: typeof AuthenticatedLabReportsIndexRoute
+}
+
+const AuthenticatedLabReportsRouteChildren: AuthenticatedLabReportsRouteChildren =
+  {
+    AuthenticatedLabReportsSignaturesRoute:
+      AuthenticatedLabReportsSignaturesRoute,
+    AuthenticatedLabReportsStaffRoute: AuthenticatedLabReportsStaffRoute,
+    AuthenticatedLabReportsIndexRoute: AuthenticatedLabReportsIndexRoute,
+  }
+
+const AuthenticatedLabReportsRouteWithChildren =
+  AuthenticatedLabReportsRoute._addFileChildren(
+    AuthenticatedLabReportsRouteChildren,
+  )
+
 interface AuthenticatedProductsRouteChildren {
   AuthenticatedProductsIdRoute: typeof AuthenticatedProductsIdRoute
   AuthenticatedProductsNewRoute: typeof AuthenticatedProductsNewRoute
@@ -1920,7 +1997,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
   AuthenticatedHrmRoute: typeof AuthenticatedHrmRouteWithChildren
-  AuthenticatedLabReportsRoute: typeof AuthenticatedLabReportsRoute
+  AuthenticatedLabReportsRoute: typeof AuthenticatedLabReportsRouteWithChildren
   AuthenticatedManufacturingRoute: typeof AuthenticatedManufacturingRoute
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedPrescriptionsRoute: typeof AuthenticatedPrescriptionsRoute
@@ -1969,7 +2046,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFilesRoute: AuthenticatedFilesRoute,
   AuthenticatedHrmRoute: AuthenticatedHrmRouteWithChildren,
-  AuthenticatedLabReportsRoute: AuthenticatedLabReportsRoute,
+  AuthenticatedLabReportsRoute: AuthenticatedLabReportsRouteWithChildren,
   AuthenticatedManufacturingRoute: AuthenticatedManufacturingRoute,
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedPrescriptionsRoute: AuthenticatedPrescriptionsRoute,
