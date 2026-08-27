@@ -64,6 +64,100 @@ function LabReportsPage() {
   const [techDesignation, setTechDesignation] = useState("");
   const [pathoName, setPathoName] = useState("");
   const [pathoDesignation, setPathoDesignation] = useState("");
+  const [ownPad, setOwnPad] = useState(false);
+
+  const businessId = business?.id ?? null;
+  const qc = useQueryClient();
+
+  // ---- Patient lookup (by patient ID or name, from printed prescriptions) ----
+  const [patientSearch, setPatientSearch] = useState("");
+  const patientLookup = useQuery({
+    queryKey: ["lab-patient-lookup", businessId, patientSearch.trim()],
+    enabled: !!businessId && patientSearch.trim().length >= 2,
+    queryFn: async () => {
+      const term = patientSearch.trim();
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select("patient_code, patient_name, patient_phone, patient_age, patient_gender, doctor_name, created_at")
+        .eq("business_id", businessId!)
+        .or(`patient_code.ilike.%${term}%,patient_name.ilike.%${term}%`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const seen = new Set<string>();
+      const rows: any[] = [];
+      for (const r of (data ?? []) as any[]) {
+        const key = `${r.patient_code ?? ""}|${r.patient_name ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push(r);
+        if (rows.length >= 10) break;
+      }
+      return rows;
+    },
+  });
+
+  function applyPatient(p: any) {
+    setPatientName(p.patient_name ?? "");
+    setPatientCode(p.patient_code ?? "");
+    setAge(p.patient_age ?? "");
+    setGender(p.patient_gender ?? "");
+    setPhoneNo(p.patient_phone ?? "");
+    if (p.doctor_name) setReferredBy(p.doctor_name);
+    setPatientSearch("");
+  }
+
+  // ---- Appointed lab signatories ----
+  const signatories = useQuery({
+    queryKey: ["lab-signatories", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_signatories")
+        .select("id, kind, name, designation, is_active")
+        .eq("business_id", businessId!)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; kind: string; name: string; designation: string | null }[];
+    },
+  });
+
+  const [newSig, setNewSig] = useState({ kind: "technologist", name: "", designation: "" });
+  const addSig = useMutation({
+    mutationFn: async () => {
+      if (!businessId) throw new Error("No business selected");
+      if (!newSig.name.trim()) throw new Error("Name is required");
+      const { error } = await supabase.from("lab_signatories").insert({
+        business_id: businessId,
+        kind: newSig.kind,
+        name: newSig.name.trim(),
+        designation: newSig.designation.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNewSig({ kind: newSig.kind, name: "", designation: "" });
+      qc.invalidateQueries({ queryKey: ["lab-signatories"] });
+      toast.success("Signatory added");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not add"),
+  });
+
+  const removeSig = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("lab_signatories").update({ is_active: false }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lab-signatories"] });
+      toast.success("Removed");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not remove"),
+  });
+
+  const techs = (signatories.data ?? []).filter((s) => s.kind === "technologist");
+  const pathos = (signatories.data ?? []).filter((s) => s.kind === "pathologist");
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -77,6 +171,7 @@ function LabReportsPage() {
     setTest(t);
     setResults({});
   }
+
 
   function doPrint(size: "A4" | "80mm" | "58mm") {
     if (!test) return;
