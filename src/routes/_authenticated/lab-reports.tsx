@@ -197,6 +197,7 @@ function LabReportsPage() {
         techDesignation,
         pathologistName: pathoName,
         pathologistDesignation: pathoDesignation,
+        ownPad,
         rows: test.analytes.map((a) => ({
           name: a.name,
           result: results[a.name] ?? "",
