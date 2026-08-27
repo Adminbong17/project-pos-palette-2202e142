@@ -40,9 +40,9 @@ export type LabReportData = {
 };
 
 function geometry(size: PrintSize) {
-  if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px" };
-  if (size === "80mm") return { width: "76mm", pageSize: "80mm auto", pageMargin: "2mm", fontSize: "11px" };
-  return { width: "54mm", pageSize: "58mm auto", pageMargin: "2mm", fontSize: "10px" };
+  if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px", minHeight: "270mm" };
+  if (size === "80mm") return { width: "76mm", pageSize: "80mm auto", pageMargin: "2mm", fontSize: "11px", minHeight: "240mm" };
+  return { width: "54mm", pageSize: "58mm auto", pageMargin: "2mm", fontSize: "10px", minHeight: "240mm" };
 }
 
 function metaTable(rows: [string, any][]) {
@@ -161,9 +161,9 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
   const page = document.createElement("div");
   page.id = pageId;
   page.className = "lab-doc";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px;`;
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px 6px 30px;position:relative;min-height:${g.minHeight};box-sizing:border-box;`;
   page.innerHTML = `${inner}
-    <div style="margin-top:8px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
+    <div style="position:absolute;left:6px;right:6px;bottom:4px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
       QweekRx ${new Date().getFullYear()} · 01712472839 (Phone/WhatsApp)
     </div>`;
 
