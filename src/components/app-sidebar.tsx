@@ -70,6 +70,9 @@ const sections = [
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
+      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic" },
+      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "prescriptions", anyMode: true },
+      { to: "/lab-reports", label: "Lab Reports", icon: FileText, enabled: true, key: "clinic-sales" },
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
@@ -134,6 +137,7 @@ const DOCTOR_PATHS = [
   "/rx-credit-history",
   "/clinic-services",
   "/clinic-plans",
+  "/lab-reports",
 ];
 
 
@@ -148,7 +152,7 @@ const NAV_HUE: Record<string, number> = {
   "/expenses": 25, "/accounts": 232,
   "/reports": 300, "/reports/profit": 150, "/reports/inventory-movement": 195,
   "/manufacturing": 55, "/restaurant": 25, "/repair": 250, "/crm": 300, "/hrm": 300,
-  "/clinic-doctors": 195, "/clinic-plans": 300,
+  "/clinic-doctors": 195, "/clinic-plans": 300, "/lab-reports": 195,
   "/prescriptions": 150, "/rx-appointments": 232, "/rx-staff": 300, "/rx-lists": 250,
   "/rx-billing": 55, "/rx-credit-history": 300,
   "/rx-options": 250, "/admin/prescriptions": 150, "/admin/doctors": 300,
