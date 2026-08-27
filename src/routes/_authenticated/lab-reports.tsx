@@ -175,6 +175,18 @@ function LabReportsPage() {
             </CardContent>
           </Card>
 
+          <Card foldable>
+            <CardHeader>
+              <CardTitle className="text-base">Signatures (optional)</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Lab Technologist name" value={techName} onChange={(e) => setTechName(e.target.value)} />
+              <Input placeholder="Technologist designation" value={techDesignation} onChange={(e) => setTechDesignation(e.target.value)} />
+              <Input placeholder="Consultant Pathologist name" value={pathoName} onChange={(e) => setPathoName(e.target.value)} />
+              <Input placeholder="Pathologist designation" value={pathoDesignation} onChange={(e) => setPathoDesignation(e.target.value)} />
+            </CardContent>
+          </Card>
+
           {test ? (
             <Card foldable>
               <CardHeader className="flex-row items-center justify-between gap-2">
