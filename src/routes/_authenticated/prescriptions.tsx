@@ -909,8 +909,8 @@ function PrescriptionsPage() {
     const headerHtml = `
       <div class="header center">
         ${clinicName ? `<div style="font-size:0.95em;letter-spacing:.4px;">${esc(clinicName)}</div>` : ""}
-        <h2>${rx.doctor_name ? `Dr. ${esc(rx.doctor_name)}` : "&nbsp;"}</h2>
-        ${rx.doctor_qualification ? `<div class="desig">${esc(rx.doctor_qualification)}</div>` : ""}
+        <h2>${rx.doctor_name ? `Dr. ${nl(rx.doctor_name)}` : "&nbsp;"}</h2>
+        ${rx.doctor_qualification ? `<div class="desig">${nl(rx.doctor_qualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
       </div>`;
@@ -996,7 +996,7 @@ function PrescriptionsPage() {
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
               ${ownPad
-    ? `<div class="sign-name">${rx.doctor_name ? `<strong>Dr. ${esc(rx.doctor_name)}</strong>` : ""}${rx.doctor_qualification ? `<div>${esc(rx.doctor_qualification)}</div>` : ""}</div>`
+    ? `<div class="sign-name">${rx.doctor_name ? `<strong>Dr. ${nl(rx.doctor_name)}</strong>` : ""}${rx.doctor_qualification ? `<div>${nl(rx.doctor_qualification)}</div>` : ""}</div>`
     : ""}
             </div>
           </div>
@@ -1225,19 +1225,21 @@ function PrescriptionsPage() {
             </div>
             <div>
               <Label>Doctor</Label>
-              <Input
+              <Textarea
                 value={form.doctor_name}
                 readOnly
-                className="bg-muted/50"
+                rows={2}
+                className="bg-muted/50 resize-none"
                 placeholder={me.isLoading ? "Loading…" : "Set by admin"}
               />
             </div>
             <div>
               <Label>Qualification</Label>
-              <Input
+              <Textarea
                 value={form.doctor_qualification}
                 readOnly
-                className="bg-muted/50"
+                rows={2}
+                className="bg-muted/50 resize-none"
                 placeholder={me.isLoading ? "Loading…" : "Set by admin"}
               />
             </div>

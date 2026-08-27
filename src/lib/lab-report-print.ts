@@ -6,6 +6,7 @@ import type { PrintSize } from "@/components/print-size-select";
 
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+const nl = (s: any) => esc(s).replace(/\n/g, "<br>");
 
 export type LabReportRow = {
   name: string;
@@ -136,13 +137,13 @@ export function printLabReport(data: LabReportData, size: PrintSize = "A4") {
 
     <div style="position:absolute;left:6px;right:6px;bottom:22px;display:flex;justify-content:space-between;font-size:0.85em;">
       <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
-        ${data.techName ? `<div style="font-weight:700;">${esc(data.techName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
-        ${data.techDesignation ? `<div style="font-size:0.85em;">${esc(data.techDesignation)}</div>` : ""}
+        ${data.techName ? `<div style="font-weight:700;">${nl(data.techName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.techDesignation ? `<div style="font-size:0.85em;">${nl(data.techDesignation)}</div>` : ""}
         <div style="border-top:1px solid #000;padding-top:2px;">Lab Technologist</div>
       </div>
       <div style="text-align:center;min-width:${compact ? "70px" : "140px"};">
-        ${data.pathologistName ? `<div style="font-weight:700;">${esc(data.pathologistName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
-        ${data.pathologistDesignation ? `<div style="font-size:0.85em;">${esc(data.pathologistDesignation)}</div>` : ""}
+        ${data.pathologistName ? `<div style="font-weight:700;">${nl(data.pathologistName)}</div>` : `<div style="height:1em;">&nbsp;</div>`}
+        ${data.pathologistDesignation ? `<div style="font-size:0.85em;">${nl(data.pathologistDesignation)}</div>` : ""}
         <div style="border-top:1px solid #000;padding-top:2px;">Consultant Pathologist</div>
       </div>
     </div>
