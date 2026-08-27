@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/lab-reports")({
 const tabs = [
   { to: "/lab-reports", label: "New Report", icon: FileText, exact: true },
   { to: "/lab-reports/staff", label: "Lab Staff", icon: Users },
-  { to: "/lab-reports/signatures", label: "Signatures & Pad", icon: Stamp },
+  { to: "/lab-reports/history", label: "Report History", icon: Stamp },
 ];
 
 function LabLayout() {
