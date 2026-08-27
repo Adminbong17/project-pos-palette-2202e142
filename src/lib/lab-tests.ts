@@ -251,6 +251,90 @@ export const TEMPLATE_TESTS: LabTest[] = [
   },
 ];
 
+// --- Full service catalogue (2668 tests/services) -----------------------------
+// Every entry from the branch price list becomes a printable report. Where a
+// standard analyte panel exists above, its rows are attached automatically;
+// imaging/procedure items get findings rows and services a remarks row.
+
+const TEMPLATE_MATCHERS: Array<[RegExp, string]> = [
+  [/\bcbc\b|complete blood count/i, "cbc"],
+  [/\besr\b|sedimentation/i, "esr"],
+  [/hba1c|glycated/i, "hba1c"],
+  [/lipid profile/i, "lipid"],
+  [/liver function|\blft\b/i, "lft"],
+  [/renal function|\brft\b/i, "rft"],
+  [/electrolyte/i, "electrolytes"],
+  [/thyroid function|tsh.*ft|\btft\b/i, "tft"],
+  [/c-?reactive|\bcrp\b/i, "crp"],
+  [/hbs\s?ag/i, "hbsag"],
+  [/anti[- ]?hcv/i, "antihcv"],
+  [/widal/i, "widal"],
+  [/dengue/i, "dengue"],
+  [/urine\s*(r\/?m\/?e|routine)/i, "urine-re"],
+  [/stool\s*(r\/?m\/?e|routine)/i, "stool-re"],
+  [/calcium/i, "calcium"],
+  [/uric acid/i, "uric-acid"],
+  [/vitamin d|25[- ]?oh/i, "vitd"],
+  [/pregnancy|hcg \(urine\)/i, "pregnancy"],
+  [/glucose|\brbs\b|\bfbs\b/i, "rbs"],
+];
+
+function analytesFor(entry: CatalogEntry): LabAnalyte[] {
+  for (const [re, id] of TEMPLATE_MATCHERS) {
+    if (re.test(entry.name)) {
+      const tpl = TEMPLATE_TESTS.find((t) => t.id === id);
+      if (tpl) return tpl.analytes;
+    }
+  }
+  if (entry.department === "Radiology & Imaging") {
+    return [
+      { name: "Technique", unit: "", ref: "-", method: "" },
+      { name: "Findings", unit: "", ref: "-", method: "" },
+      { name: "Impression", unit: "", ref: "-", method: "" },
+    ];
+  }
+  if (entry.department === "Endoscopy & Procedure" || entry.department === "Cardiology & Neurophysiology") {
+    return [
+      { name: "Procedure / Findings", unit: "", ref: "-", method: "" },
+      { name: "Comment", unit: "", ref: "-", method: "" },
+    ];
+  }
+  if (entry.department === "Histopathology & Cytology") {
+    return [
+      { name: "Gross Description", unit: "", ref: "-", method: "" },
+      { name: "Microscopic Examination", unit: "", ref: "-", method: "" },
+      { name: "Diagnosis", unit: "", ref: "-", method: "" },
+    ];
+  }
+  if (entry.department === "Microbiology") {
+    return [
+      { name: "Specimen", unit: "", ref: "-", method: "" },
+      { name: "Growth / Organism", unit: "", ref: "No growth", method: "Culture" },
+      { name: "Sensitivity", unit: "", ref: "-", method: "Disc diffusion" },
+    ];
+  }
+  if (entry.department === "Service") {
+    return [{ name: "Remarks", unit: "", ref: "-", method: "" }];
+  }
+  return [{ name: entry.name, unit: "", ref: "-", method: "" }];
+}
+
+function specimenFor(department: string): string | undefined {
+  if (department === "Haematology") return "Whole blood (EDTA)";
+  if (department === "Biochemistry" || department === "Immunology & Hormone") return "Serum";
+  if (department === "Clinical Pathology") return "As collected";
+  return undefined;
+}
+
+export const LAB_TESTS: LabTest[] = CATALOG_ENTRIES.map((e) => ({
+  id: e.id,
+  name: e.name,
+  department: e.department,
+  specimen: specimenFor(e.department),
+  price: e.price,
+  analytes: analytesFor(e),
+}));
+
 export function findLabTest(id: string) {
   return LAB_TESTS.find((t) => t.id === id) ?? null;
 }
