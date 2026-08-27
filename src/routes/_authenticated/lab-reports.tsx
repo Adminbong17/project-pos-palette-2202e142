@@ -1,14 +1,20 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FlaskConical, Search, Eraser } from "lucide-react";
+import { FlaskConical, Search, Eraser, Plus, Trash2, UserSearch } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintSizeButton } from "@/components/print-size-select";
 import { LAB_TESTS, type LabTest } from "@/lib/lab-tests";
 import { printLabReport } from "@/lib/lab-report-print";
+
 
 export const Route = createFileRoute("/_authenticated/lab-reports")({
   head: () => ({
