@@ -2,6 +2,8 @@
 // (parameter, unit, reference range, method). Only the patient result is blank,
 // so a report is ready as soon as results are typed in.
 
+import { CATALOG_ENTRIES, type CatalogEntry } from "./lab-tests-catalog";
+
 export type LabAnalyte = {
   name: string;
   unit?: string;
