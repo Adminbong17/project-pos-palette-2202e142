@@ -36,8 +36,11 @@ export type LabReportData = {
   techDesignation?: string | null;
   pathologistName?: string | null;
   pathologistDesignation?: string | null;
+  /** When true, leaves 1.5 inch blank space on top (A4) and hides the clinic header. */
+  ownPad?: boolean;
   rows: LabReportRow[];
 };
+
 
 function geometry(size: PrintSize) {
   if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "12px", minHeight: "270mm" };
