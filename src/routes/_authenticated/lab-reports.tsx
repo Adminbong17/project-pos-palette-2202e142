@@ -119,10 +119,13 @@ function LabReportsPage() {
               <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Search test name…"
+                placeholder="Search test / department…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {LAB_TESTS.length.toLocaleString()} tests & services · showing {matches.length}
             </div>
             <div className="max-h-[420px] space-y-1 overflow-auto">
               {matches.map((t) => (
