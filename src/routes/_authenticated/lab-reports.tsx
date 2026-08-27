@@ -308,7 +308,9 @@ function LabReportsPage() {
               <Input placeholder="Sample no" value={sampleNo} onChange={(e) => setSampleNo(e.target.value)} />
               <Input placeholder="Collection date/time" value={collectedAt} onChange={(e) => setCollectedAt(e.target.value)} />
               <Input placeholder="Report date/time" value={reportedAt} onChange={(e) => setReportedAt(e.target.value)} />
+              </div>
             </CardContent>
+
           </Card>
 
           <Card foldable>
