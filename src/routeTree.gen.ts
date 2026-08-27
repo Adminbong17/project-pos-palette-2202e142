@@ -35,6 +35,7 @@ import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPrescriptionsRouteImport } from './routes/_authenticated/prescriptions'
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
 import { Route as AuthenticatedManufacturingRouteImport } from './routes/_authenticated/manufacturing'
+import { Route as AuthenticatedLabReportsRouteImport } from './routes/_authenticated/lab-reports'
 import { Route as AuthenticatedHrmRouteImport } from './routes/_authenticated/hrm'
 import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/files'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
@@ -232,6 +233,11 @@ const AuthenticatedManufacturingRoute =
     path: '/manufacturing',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLabReportsRoute = AuthenticatedLabReportsRouteImport.update({
+  id: '/lab-reports',
+  path: '/lab-reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHrmRoute = AuthenticatedHrmRouteImport.update({
   id: '/hrm',
   path: '/hrm',
@@ -595,6 +601,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
   '/hrm': typeof AuthenticatedHrmRouteWithChildren
+  '/lab-reports': typeof AuthenticatedLabReportsRoute
   '/manufacturing': typeof AuthenticatedManufacturingRoute
   '/pos': typeof AuthenticatedPosRoute
   '/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -681,6 +688,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
+  '/lab-reports': typeof AuthenticatedLabReportsRoute
   '/manufacturing': typeof AuthenticatedManufacturingRoute
   '/pos': typeof AuthenticatedPosRoute
   '/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -766,6 +774,7 @@ export interface FileRoutesById {
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/files': typeof AuthenticatedFilesRoute
   '/_authenticated/hrm': typeof AuthenticatedHrmRouteWithChildren
+  '/_authenticated/lab-reports': typeof AuthenticatedLabReportsRoute
   '/_authenticated/manufacturing': typeof AuthenticatedManufacturingRoute
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/prescriptions': typeof AuthenticatedPrescriptionsRoute
@@ -856,6 +865,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/files'
     | '/hrm'
+    | '/lab-reports'
     | '/manufacturing'
     | '/pos'
     | '/prescriptions'
@@ -942,6 +952,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/files'
+    | '/lab-reports'
     | '/manufacturing'
     | '/pos'
     | '/prescriptions'
@@ -1026,6 +1037,7 @@ export interface FileRouteTypes {
     | '/_authenticated/expenses'
     | '/_authenticated/files'
     | '/_authenticated/hrm'
+    | '/_authenticated/lab-reports'
     | '/_authenticated/manufacturing'
     | '/_authenticated/pos'
     | '/_authenticated/prescriptions'
@@ -1292,6 +1304,13 @@ declare module '@tanstack/react-router' {
       path: '/manufacturing'
       fullPath: '/manufacturing'
       preLoaderRoute: typeof AuthenticatedManufacturingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/lab-reports': {
+      id: '/_authenticated/lab-reports'
+      path: '/lab-reports'
+      fullPath: '/lab-reports'
+      preLoaderRoute: typeof AuthenticatedLabReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/hrm': {
@@ -1901,6 +1920,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
   AuthenticatedHrmRoute: typeof AuthenticatedHrmRouteWithChildren
+  AuthenticatedLabReportsRoute: typeof AuthenticatedLabReportsRoute
   AuthenticatedManufacturingRoute: typeof AuthenticatedManufacturingRoute
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedPrescriptionsRoute: typeof AuthenticatedPrescriptionsRoute
@@ -1949,6 +1969,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFilesRoute: AuthenticatedFilesRoute,
   AuthenticatedHrmRoute: AuthenticatedHrmRouteWithChildren,
+  AuthenticatedLabReportsRoute: AuthenticatedLabReportsRoute,
   AuthenticatedManufacturingRoute: AuthenticatedManufacturingRoute,
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedPrescriptionsRoute: AuthenticatedPrescriptionsRoute,
