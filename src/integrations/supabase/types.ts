@@ -1981,6 +1981,98 @@ export type Database = {
         }
         Relationships: []
       }
+      lab_reports: {
+        Row: {
+          age: string | null
+          business_id: string
+          collected_at_text: string | null
+          comment: string | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          gender: string | null
+          id: string
+          own_pad: boolean
+          pathologist_designation: string | null
+          pathologist_name: string | null
+          patient_code: string | null
+          patient_name: string | null
+          phone_no: string | null
+          referred_by: string | null
+          reported_at_text: string | null
+          rows: Json
+          sample_no: string | null
+          specimen: string | null
+          tech_designation: string | null
+          tech_name: string | null
+          test_id: string | null
+          test_name: string
+          updated_at: string
+        }
+        Insert: {
+          age?: string | null
+          business_id: string
+          collected_at_text?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          gender?: string | null
+          id?: string
+          own_pad?: boolean
+          pathologist_designation?: string | null
+          pathologist_name?: string | null
+          patient_code?: string | null
+          patient_name?: string | null
+          phone_no?: string | null
+          referred_by?: string | null
+          reported_at_text?: string | null
+          rows?: Json
+          sample_no?: string | null
+          specimen?: string | null
+          tech_designation?: string | null
+          tech_name?: string | null
+          test_id?: string | null
+          test_name: string
+          updated_at?: string
+        }
+        Update: {
+          age?: string | null
+          business_id?: string
+          collected_at_text?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          gender?: string | null
+          id?: string
+          own_pad?: boolean
+          pathologist_designation?: string | null
+          pathologist_name?: string | null
+          patient_code?: string | null
+          patient_name?: string | null
+          phone_no?: string | null
+          referred_by?: string | null
+          reported_at_text?: string | null
+          rows?: Json
+          sample_no?: string | null
+          specimen?: string | null
+          tech_designation?: string | null
+          tech_name?: string | null
+          test_id?: string | null
+          test_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_signatories: {
         Row: {
           business_id: string
