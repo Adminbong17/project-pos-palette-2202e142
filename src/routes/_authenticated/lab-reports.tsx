@@ -264,7 +264,41 @@ function LabReportsPage() {
             <CardHeader>
               <CardTitle className="text-base">Patient & sample</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="space-y-2">
+              <div className="relative">
+                <UserSearch className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  placeholder="Search patient by ID or name — select to auto-fill everything"
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
+                />
+                {patientSearch.trim().length >= 2 && (
+                  <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-popover shadow-md">
+                    {(patientLookup.data ?? []).map((p: any, i: number) => (
+                      <button
+                        key={`${p.patient_code}-${i}`}
+                        type="button"
+                        onClick={() => applyPatient(p)}
+                        className="block w-full px-2 py-1.5 text-left text-sm hover:bg-muted"
+                      >
+                        <span className="font-medium">{p.patient_name}</span>
+                        <span className="text-muted-foreground">
+                          {p.patient_code ? ` · ${p.patient_code}` : ""}
+                          {p.patient_age ? ` · ${p.patient_age}` : ""}
+                          {p.patient_gender ? ` · ${p.patient_gender}` : ""}
+                          {p.patient_phone ? ` · ${p.patient_phone}` : ""}
+                        </span>
+                      </button>
+                    ))}
+                    {!patientLookup.isLoading && (patientLookup.data ?? []).length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No patient matched.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+
               <Input placeholder="Patient name" value={patientName} onChange={(e) => setPatientName(e.target.value)} />
               <Input placeholder="Patient ID" value={patientCode} onChange={(e) => setPatientCode(e.target.value)} />
               <Input placeholder="Age" value={age} onChange={(e) => setAge(e.target.value)} />
