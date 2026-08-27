@@ -49,7 +49,6 @@ import { Route as AuthenticatedClinicDoctorsRouteImport } from './routes/_authen
 import { Route as AuthenticatedClinicDashboardRouteImport } from './routes/_authenticated/clinic-dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
-import { Route as AuthenticatedRxBillingIndexRouteImport } from './routes/_authenticated/rx-billing.index'
 import { Route as AuthenticatedRestaurantIndexRouteImport } from './routes/_authenticated/restaurant.index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedRepairIndexRouteImport } from './routes/_authenticated/repair.index'
@@ -65,9 +64,6 @@ import { Route as AuthenticatedSettingsLocationsRouteImport } from './routes/_au
 import { Route as AuthenticatedSettingsCategoriesRouteImport } from './routes/_authenticated/settings.categories'
 import { Route as AuthenticatedSettingsBusinessRouteImport } from './routes/_authenticated/settings.business'
 import { Route as AuthenticatedSettingsBrandsRouteImport } from './routes/_authenticated/settings.brands'
-import { Route as AuthenticatedRxBillingPhoneRouteImport } from './routes/_authenticated/rx-billing.phone'
-import { Route as AuthenticatedRxBillingBuyRouteImport } from './routes/_authenticated/rx-billing.buy'
-import { Route as AuthenticatedRxBillingBillsRouteImport } from './routes/_authenticated/rx-billing.bills'
 import { Route as AuthenticatedRestaurantTablesRouteImport } from './routes/_authenticated/restaurant.tables'
 import { Route as AuthenticatedRestaurantOrdersRouteImport } from './routes/_authenticated/restaurant.orders'
 import { Route as AuthenticatedReportsProfitRouteImport } from './routes/_authenticated/reports.profit'
@@ -316,12 +312,6 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
-const AuthenticatedRxBillingIndexRoute =
-  AuthenticatedRxBillingIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedRxBillingRoute,
-  } as any)
 const AuthenticatedRestaurantIndexRoute =
   AuthenticatedRestaurantIndexRouteImport.update({
     id: '/',
@@ -408,24 +398,6 @@ const AuthenticatedSettingsBrandsRoute =
     id: '/brands',
     path: '/brands',
     getParentRoute: () => AuthenticatedSettingsRoute,
-  } as any)
-const AuthenticatedRxBillingPhoneRoute =
-  AuthenticatedRxBillingPhoneRouteImport.update({
-    id: '/phone',
-    path: '/phone',
-    getParentRoute: () => AuthenticatedRxBillingRoute,
-  } as any)
-const AuthenticatedRxBillingBuyRoute =
-  AuthenticatedRxBillingBuyRouteImport.update({
-    id: '/buy',
-    path: '/buy',
-    getParentRoute: () => AuthenticatedRxBillingRoute,
-  } as any)
-const AuthenticatedRxBillingBillsRoute =
-  AuthenticatedRxBillingBillsRouteImport.update({
-    id: '/bills',
-    path: '/bills',
-    getParentRoute: () => AuthenticatedRxBillingRoute,
   } as any)
 const AuthenticatedRestaurantTablesRoute =
   AuthenticatedRestaurantTablesRouteImport.update({
@@ -661,7 +633,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
-  '/rx-billing': typeof AuthenticatedRxBillingRouteWithChildren
+  '/rx-billing': typeof AuthenticatedRxBillingRoute
   '/rx-credit-history': typeof AuthenticatedRxCreditHistoryRoute
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
@@ -705,9 +677,6 @@ export interface FileRoutesByFullPath {
   '/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
-  '/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
-  '/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
-  '/rx-billing/phone': typeof AuthenticatedRxBillingPhoneRoute
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
@@ -723,7 +692,6 @@ export interface FileRoutesByFullPath {
   '/repair/': typeof AuthenticatedRepairIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/restaurant/': typeof AuthenticatedRestaurantIndexRoute
-  '/rx-billing/': typeof AuthenticatedRxBillingIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
@@ -750,6 +718,7 @@ export interface FileRoutesByTo {
   '/purchases': typeof AuthenticatedPurchasesRouteWithChildren
   '/quick-box': typeof AuthenticatedQuickBoxRoute
   '/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
+  '/rx-billing': typeof AuthenticatedRxBillingRoute
   '/rx-credit-history': typeof AuthenticatedRxCreditHistoryRoute
   '/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/rx-lists': typeof AuthenticatedRxListsRoute
@@ -792,9 +761,6 @@ export interface FileRoutesByTo {
   '/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
-  '/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
-  '/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
-  '/rx-billing/phone': typeof AuthenticatedRxBillingPhoneRoute
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
@@ -810,7 +776,6 @@ export interface FileRoutesByTo {
   '/repair': typeof AuthenticatedRepairIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/restaurant': typeof AuthenticatedRestaurantIndexRoute
-  '/rx-billing': typeof AuthenticatedRxBillingIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/sales/$id/edit': typeof AuthenticatedSalesIdEditRoute
@@ -846,7 +811,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/restaurant': typeof AuthenticatedRestaurantRouteWithChildren
   '/_authenticated/rx-appointments': typeof AuthenticatedRxAppointmentsRoute
-  '/_authenticated/rx-billing': typeof AuthenticatedRxBillingRouteWithChildren
+  '/_authenticated/rx-billing': typeof AuthenticatedRxBillingRoute
   '/_authenticated/rx-credit-history': typeof AuthenticatedRxCreditHistoryRoute
   '/_authenticated/rx-dashboard': typeof AuthenticatedRxDashboardRoute
   '/_authenticated/rx-lists': typeof AuthenticatedRxListsRoute
@@ -890,9 +855,6 @@ export interface FileRoutesById {
   '/_authenticated/reports/profit': typeof AuthenticatedReportsProfitRoute
   '/_authenticated/restaurant/orders': typeof AuthenticatedRestaurantOrdersRoute
   '/_authenticated/restaurant/tables': typeof AuthenticatedRestaurantTablesRoute
-  '/_authenticated/rx-billing/bills': typeof AuthenticatedRxBillingBillsRoute
-  '/_authenticated/rx-billing/buy': typeof AuthenticatedRxBillingBuyRoute
-  '/_authenticated/rx-billing/phone': typeof AuthenticatedRxBillingPhoneRoute
   '/_authenticated/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/_authenticated/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/_authenticated/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
@@ -908,7 +870,6 @@ export interface FileRoutesById {
   '/_authenticated/repair/': typeof AuthenticatedRepairIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/restaurant/': typeof AuthenticatedRestaurantIndexRoute
-  '/_authenticated/rx-billing/': typeof AuthenticatedRxBillingIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/purchases/$id/edit': typeof AuthenticatedPurchasesIdEditRoute
   '/_authenticated/sales_/$id/edit': typeof AuthenticatedSalesIdEditRoute
@@ -988,9 +949,6 @@ export interface FileRouteTypes {
     | '/reports/profit'
     | '/restaurant/orders'
     | '/restaurant/tables'
-    | '/rx-billing/bills'
-    | '/rx-billing/buy'
-    | '/rx-billing/phone'
     | '/settings/brands'
     | '/settings/business'
     | '/settings/categories'
@@ -1006,7 +964,6 @@ export interface FileRouteTypes {
     | '/repair/'
     | '/reports/'
     | '/restaurant/'
-    | '/rx-billing/'
     | '/settings/'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
@@ -1033,6 +990,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/quick-box'
     | '/rx-appointments'
+    | '/rx-billing'
     | '/rx-credit-history'
     | '/rx-dashboard'
     | '/rx-lists'
@@ -1075,9 +1033,6 @@ export interface FileRouteTypes {
     | '/reports/profit'
     | '/restaurant/orders'
     | '/restaurant/tables'
-    | '/rx-billing/bills'
-    | '/rx-billing/buy'
-    | '/rx-billing/phone'
     | '/settings/brands'
     | '/settings/business'
     | '/settings/categories'
@@ -1093,7 +1048,6 @@ export interface FileRouteTypes {
     | '/repair'
     | '/reports'
     | '/restaurant'
-    | '/rx-billing'
     | '/settings'
     | '/purchases/$id/edit'
     | '/sales/$id/edit'
@@ -1172,9 +1126,6 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/profit'
     | '/_authenticated/restaurant/orders'
     | '/_authenticated/restaurant/tables'
-    | '/_authenticated/rx-billing/bills'
-    | '/_authenticated/rx-billing/buy'
-    | '/_authenticated/rx-billing/phone'
     | '/_authenticated/settings/brands'
     | '/_authenticated/settings/business'
     | '/_authenticated/settings/categories'
@@ -1190,7 +1141,6 @@ export interface FileRouteTypes {
     | '/_authenticated/repair/'
     | '/_authenticated/reports/'
     | '/_authenticated/restaurant/'
-    | '/_authenticated/rx-billing/'
     | '/_authenticated/settings/'
     | '/_authenticated/purchases/$id/edit'
     | '/_authenticated/sales_/$id/edit'
@@ -1491,13 +1441,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
-    '/_authenticated/rx-billing/': {
-      id: '/_authenticated/rx-billing/'
-      path: '/'
-      fullPath: '/rx-billing/'
-      preLoaderRoute: typeof AuthenticatedRxBillingIndexRouteImport
-      parentRoute: typeof AuthenticatedRxBillingRoute
-    }
     '/_authenticated/restaurant/': {
       id: '/_authenticated/restaurant/'
       path: '/'
@@ -1602,27 +1545,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/brands'
       preLoaderRoute: typeof AuthenticatedSettingsBrandsRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
-    }
-    '/_authenticated/rx-billing/phone': {
-      id: '/_authenticated/rx-billing/phone'
-      path: '/phone'
-      fullPath: '/rx-billing/phone'
-      preLoaderRoute: typeof AuthenticatedRxBillingPhoneRouteImport
-      parentRoute: typeof AuthenticatedRxBillingRoute
-    }
-    '/_authenticated/rx-billing/buy': {
-      id: '/_authenticated/rx-billing/buy'
-      path: '/buy'
-      fullPath: '/rx-billing/buy'
-      preLoaderRoute: typeof AuthenticatedRxBillingBuyRouteImport
-      parentRoute: typeof AuthenticatedRxBillingRoute
-    }
-    '/_authenticated/rx-billing/bills': {
-      id: '/_authenticated/rx-billing/bills'
-      path: '/bills'
-      fullPath: '/rx-billing/bills'
-      preLoaderRoute: typeof AuthenticatedRxBillingBillsRouteImport
-      parentRoute: typeof AuthenticatedRxBillingRoute
     }
     '/_authenticated/restaurant/tables': {
       id: '/_authenticated/restaurant/tables'
@@ -2034,26 +1956,6 @@ const AuthenticatedRestaurantRouteWithChildren =
     AuthenticatedRestaurantRouteChildren,
   )
 
-interface AuthenticatedRxBillingRouteChildren {
-  AuthenticatedRxBillingBillsRoute: typeof AuthenticatedRxBillingBillsRoute
-  AuthenticatedRxBillingBuyRoute: typeof AuthenticatedRxBillingBuyRoute
-  AuthenticatedRxBillingPhoneRoute: typeof AuthenticatedRxBillingPhoneRoute
-  AuthenticatedRxBillingIndexRoute: typeof AuthenticatedRxBillingIndexRoute
-}
-
-const AuthenticatedRxBillingRouteChildren: AuthenticatedRxBillingRouteChildren =
-  {
-    AuthenticatedRxBillingBillsRoute: AuthenticatedRxBillingBillsRoute,
-    AuthenticatedRxBillingBuyRoute: AuthenticatedRxBillingBuyRoute,
-    AuthenticatedRxBillingPhoneRoute: AuthenticatedRxBillingPhoneRoute,
-    AuthenticatedRxBillingIndexRoute: AuthenticatedRxBillingIndexRoute,
-  }
-
-const AuthenticatedRxBillingRouteWithChildren =
-  AuthenticatedRxBillingRoute._addFileChildren(
-    AuthenticatedRxBillingRouteChildren,
-  )
-
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsBrandsRoute: typeof AuthenticatedSettingsBrandsRoute
   AuthenticatedSettingsBusinessRoute: typeof AuthenticatedSettingsBusinessRoute
@@ -2105,7 +2007,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedRestaurantRoute: typeof AuthenticatedRestaurantRouteWithChildren
   AuthenticatedRxAppointmentsRoute: typeof AuthenticatedRxAppointmentsRoute
-  AuthenticatedRxBillingRoute: typeof AuthenticatedRxBillingRouteWithChildren
+  AuthenticatedRxBillingRoute: typeof AuthenticatedRxBillingRoute
   AuthenticatedRxCreditHistoryRoute: typeof AuthenticatedRxCreditHistoryRoute
   AuthenticatedRxDashboardRoute: typeof AuthenticatedRxDashboardRoute
   AuthenticatedRxListsRoute: typeof AuthenticatedRxListsRoute
@@ -2154,7 +2056,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedRestaurantRoute: AuthenticatedRestaurantRouteWithChildren,
   AuthenticatedRxAppointmentsRoute: AuthenticatedRxAppointmentsRoute,
-  AuthenticatedRxBillingRoute: AuthenticatedRxBillingRouteWithChildren,
+  AuthenticatedRxBillingRoute: AuthenticatedRxBillingRoute,
   AuthenticatedRxCreditHistoryRoute: AuthenticatedRxCreditHistoryRoute,
   AuthenticatedRxDashboardRoute: AuthenticatedRxDashboardRoute,
   AuthenticatedRxListsRoute: AuthenticatedRxListsRoute,
