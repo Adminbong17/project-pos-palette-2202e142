@@ -57,8 +57,10 @@ function LabReportsPage() {
 
   const matches = useMemo(() => {
     const s = search.trim().toLowerCase();
-    const list = s ? LAB_TESTS.filter((t) => t.name.toLowerCase().includes(s)) : LAB_TESTS;
-    return list.slice(0, 40);
+    const list = s
+      ? LAB_TESTS.filter((t) => t.name.toLowerCase().includes(s) || t.department.toLowerCase().includes(s))
+      : LAB_TESTS;
+    return list.slice(0, 60);
   }, [search]);
 
   function pick(t: LabTest) {
@@ -117,10 +119,13 @@ function LabReportsPage() {
               <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Search test name…"
+                placeholder="Search test / department…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {LAB_TESTS.length.toLocaleString()} tests & services · showing {matches.length}
             </div>
             <div className="max-h-[420px] space-y-1 overflow-auto">
               {matches.map((t) => (
@@ -135,6 +140,7 @@ function LabReportsPage() {
                   <div className="font-medium">{t.name}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {t.department} · {t.analytes.length} parameter{t.analytes.length > 1 ? "s" : ""}
+                    {t.price ? ` · ৳${t.price.toLocaleString()}` : ""}
                   </div>
                 </button>
               ))}
