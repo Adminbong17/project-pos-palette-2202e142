@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -46,7 +47,7 @@ type AccountTx = {
 };
 
 const money = (n: number) => Number(n || 0).toFixed(2);
-const fmtDate = (d: string) => new Date(d).toLocaleString();
+const fmtDate = fmtDateTime;
 
 const TX_SIGN: Record<string, 1 | -1> = {
   deposit: 1, transfer_in: 1, sale_payment: 1,

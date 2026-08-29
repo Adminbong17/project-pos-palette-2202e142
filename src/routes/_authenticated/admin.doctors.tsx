@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { fmtDateTime } from "@/lib/format-date";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -541,7 +542,7 @@ function PendingCard({
             {req.phone && <span>📞 {req.phone}</span>}
             {req.qualification && <span>{req.qualification}</span>}
             <span>Requested: {req.requested_role}</span>
-            <span>{new Date(req.created_at).toLocaleString()}</span>
+            <span>{fmtDateTime(req.created_at)}</span>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

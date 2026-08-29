@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { FoldableList } from "@/components/foldable-list";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -176,7 +177,7 @@ function Page() {
                     <td className="p-2 text-xs align-top"><FoldableList items={u.roles} collapsedCount={2} /></td>
 
                     <td className="p-2 text-xs text-muted-foreground">
-                      {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "never"}
+                      {u.last_sign_in_at ? fmtDateTime(u.last_sign_in_at) : "never"}
                     </td>
                     <td className="p-2">
                       <div className="flex flex-wrap items-center gap-2">

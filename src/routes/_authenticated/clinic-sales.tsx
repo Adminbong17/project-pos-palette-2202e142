@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { fmtDateTime } from "@/lib/format-date";
 import { FoldableList } from "@/components/foldable-list";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -413,7 +414,7 @@ function ClinicSalesPage() {
                     {r.patient_name || "Walk-in"} {r.invoice_no ? `· ${r.invoice_no}` : ""}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(r.sale_date).toLocaleString()} {r.patient_phone ? `· ${r.patient_phone}` : ""}
+                    {fmtDateTime(r.sale_date)} {r.patient_phone ? `· ${r.patient_phone}` : ""}
                   </div>
                 </div>
                 <div className="text-right">
