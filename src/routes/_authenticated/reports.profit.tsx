@@ -47,7 +47,7 @@ function ProfitReportPage() {
           .eq("business_id", businessId!).eq("type", "sell")
           .order("transaction_date", { ascending: false });
         if (fromDate) q = q.gte("transaction_date", fromDate.toISOString());
-        if (toDate) q = q.lte("transaction_date", toDate.toISOString());
+        if (toDate) q = q.lt("transaction_date", toDate.toISOString());
         return q;
       }),
   });
