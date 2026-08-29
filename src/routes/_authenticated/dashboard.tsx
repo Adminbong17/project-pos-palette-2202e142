@@ -67,6 +67,13 @@ function Dashboard() {
     },
   });
 
+  const monthRange = dhakaMonthRange(0);
+  const { data: topSelling = [] } = useQuery({
+    queryKey: ["dashboard-most-selling", businessId, monthRange.fromISO],
+    enabled: !!businessId,
+    queryFn: () => fetchMostSelling(businessId!, monthRange.fromISO, monthRange.toISO, 20),
+  });
+
   if (isLoading || !business) {
     return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
   }
