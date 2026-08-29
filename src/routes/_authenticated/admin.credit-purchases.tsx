@@ -35,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/admin/credit-purchases")({
 
 const money = (n: number) => `৳${Number(n || 0).toLocaleString("en-BD", { maximumFractionDigits: 2 })}`;
 const when = (v?: string | null) =>
-  v ? new Date(v).toLocaleString("en-GB", { timeZone: "Asia/Dhaka", dateStyle: "medium", timeStyle: "short" }) : "—";
+  fmtDateTime(v);
 
 function AdminCreditPurchasesPage() {
   const { isSuperAdmin, isLoading } = useIsSuperAdmin();
