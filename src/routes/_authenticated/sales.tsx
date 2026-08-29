@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { fetchAllIn } from "@/lib/fetch-all";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { FoldTable } from "@/components/fold-table";
+import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({ meta: [{ title: "Sales — QweekPOS" }] }),
@@ -41,7 +42,7 @@ function SalesPage() {
   const qc = useQueryClient();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
-  const [range, setRange] = useState<RangeKey>("30d");
+  const [range, setRange] = useState<RangeKey>("thisMonth");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
   const [search, setSearch] = useState("");
