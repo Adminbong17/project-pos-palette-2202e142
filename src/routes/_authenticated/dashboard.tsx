@@ -109,6 +109,45 @@ function Dashboard() {
       <div className="rounded-2xl border border-border/60 bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Most selling items — {monthRange.label}</h2>
+          </div>
+          <Link to="/most-selling" className="text-xs underline text-muted-foreground hover:text-foreground">Show more →</Link>
+        </div>
+        {topSelling.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No sales recorded this month yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <FoldTable className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="text-left p-2">#</th>
+                  <th className="text-left p-2">Product</th>
+                  <th className="text-right p-2">Qty sold</th>
+                  <th className="text-right p-2">Revenue (BDT)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topSelling.map((i, idx) => (
+                  <tr key={i.productId} className="border-t">
+                    <td className="p-2 text-muted-foreground">{idx + 1}</td>
+                    <td className="p-2 font-medium">{i.name}</td>
+                    <td className="p-2 text-right font-semibold">{i.qty.toLocaleString()}</td>
+                    <td className="p-2 text-right">{i.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </FoldTable>
+            <div className="mt-3 flex justify-center">
+              <Link to="/most-selling" className="rounded-lg border border-border bg-background px-4 py-2 text-sm hover:bg-accent">Show more</Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <h2 className="font-semibold">Batches expiring soon</h2>
           </div>
