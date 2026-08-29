@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
-import { fetchMostSelling, dhakaMonthRange, dhakaDayRange } from "@/lib/most-selling";
+import { fetchMostSelling } from "@/lib/most-selling";
+import { DATE_PRESETS, dhakaToday, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 import { TrendingUp, ArrowLeft } from "lucide-react";
 import { FoldTable } from "@/components/fold-table";
 
@@ -18,12 +19,7 @@ export const Route = createFileRoute("/_authenticated/most-selling")({
   component: MostSellingPage,
 });
 
-type Preset = "today" | "yesterday" | "thisMonth" | "lastMonth" | "custom";
-
-function todayDhaka(offsetDays = 0): string {
-  const shifted = new Date(Date.now() + (6 * 3600 + offsetDays * 86400) * 1000);
-  return shifted.toISOString().slice(0, 10);
-}
+type Preset = DatePresetKey;
 
 function MostSellingPage() {
   const { data: business, isLoading: bizLoading } = useCurrentBusiness();
