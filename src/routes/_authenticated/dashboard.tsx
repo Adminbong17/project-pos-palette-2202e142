@@ -4,8 +4,9 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
-import { Building2, Users, Package, ShoppingCart, BarChart3, AlertTriangle } from "lucide-react";
+import { Building2, Users, Package, ShoppingCart, BarChart3, AlertTriangle, TrendingUp } from "lucide-react";
 import { FoldTable } from "@/components/fold-table";
+import { fetchMostSelling, dhakaMonthRange } from "@/lib/most-selling";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — QweekPOS" }] }),
