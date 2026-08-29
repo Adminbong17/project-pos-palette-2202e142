@@ -9,6 +9,7 @@ import { Wallet, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
+import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 
 export const Route = createFileRoute("/_authenticated/reports/profit")({
   head: () => ({ meta: [{ title: "Profit Report — QweekPOS" }] }),
@@ -18,28 +19,22 @@ export const Route = createFileRoute("/_authenticated/reports/profit")({
 function fmt(n: number) {
   return (n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
-function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 
 function ProfitReportPage() {
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isLoading: roleLoading } = useCurrentRole();
   const businessId = business?.id;
-  const [range, setRange] = useState<"today" | "7d" | "30d" | "all" | "custom">("30d");
+  const [range, setRange] = useState<DatePresetKey>("thisMonth");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
   const [search, setSearch] = useState("");
 
   const { fromDate, toDate } = useMemo(() => {
-    const now = new Date();
-    if (range === "today") return { fromDate: startOfDay(now) as Date | null, toDate: null as Date | null };
-    if (range === "7d") { const d = startOfDay(now); d.setDate(d.getDate() - 6); return { fromDate: d as Date | null, toDate: null as Date | null }; }
-    if (range === "30d") { const d = startOfDay(now); d.setDate(d.getDate() - 29); return { fromDate: d as Date | null, toDate: null as Date | null }; }
-    if (range === "custom") {
-      const f = customFrom ? startOfDay(new Date(customFrom)) : null;
-      const t = customTo ? (() => { const x = new Date(customTo); x.setHours(23, 59, 59, 999); return x; })() : null;
-      return { fromDate: f as Date | null, toDate: t as Date | null };
-    }
-    return { fromDate: null as Date | null, toDate: null as Date | null };
+    const r = resolvePresetRange(range, customFrom, customTo);
+    return {
+      fromDate: r.fromISO ? new Date(r.fromISO) : null,
+      toDate: r.toISO ? new Date(r.toISO) : null,
+    };
   }, [range, customFrom, customTo]);
 
   const { data: sales = [] } = useQuery({
@@ -52,7 +47,7 @@ function ProfitReportPage() {
           .eq("business_id", businessId!).eq("type", "sell")
           .order("transaction_date", { ascending: false });
         if (fromDate) q = q.gte("transaction_date", fromDate.toISOString());
-        if (toDate) q = q.lte("transaction_date", toDate.toISOString());
+        if (toDate) q = q.lt("transaction_date", toDate.toISOString());
         return q;
       }),
   });
@@ -198,12 +193,12 @@ function ProfitReportPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
-            {(["today", "7d", "30d", "all", "custom"] as const).map((r) => (
-              <button key={r} onClick={() => setRange(r)}
+            {DATE_PRESETS.map(({ key, label }) => (
+              <button key={key} onClick={() => setRange(key)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}>
-                {r === "today" ? "Today" : r === "7d" ? "7 days" : r === "30d" ? "30 days" : r === "all" ? "All" : "Custom"}
+                {label}
               </button>
             ))}
           </div>

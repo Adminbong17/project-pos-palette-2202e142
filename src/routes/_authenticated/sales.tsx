@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { fetchAllIn } from "@/lib/fetch-all";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { FoldTable } from "@/components/fold-table";
+import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 
 export const Route = createFileRoute("/_authenticated/sales")({
   head: () => ({ meta: [{ title: "Sales — QweekPOS" }] }),
@@ -33,7 +34,7 @@ type SaleRow = {
   location: { name: string | null } | null;
 };
 
-type RangeKey = "today" | "7d" | "30d" | "all" | "custom";
+type RangeKey = DatePresetKey;
 
 function SalesPage() {
   const { data: business } = useCurrentBusiness();
@@ -41,7 +42,7 @@ function SalesPage() {
   const qc = useQueryClient();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
-  const [range, setRange] = useState<RangeKey>("30d");
+  const [range, setRange] = useState<RangeKey>("thisMonth");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -112,18 +113,8 @@ function SalesPage() {
 
 
   const { fromISO, toISO } = useMemo(() => {
-    const now = new Date();
-    const end = new Date(now); end.setHours(23, 59, 59, 999);
-    const start = new Date(now); start.setHours(0, 0, 0, 0);
-    if (range === "today") return { fromISO: start.toISOString(), toISO: end.toISOString() };
-    if (range === "7d") { const s = new Date(start); s.setDate(s.getDate() - 6); return { fromISO: s.toISOString(), toISO: end.toISOString() }; }
-    if (range === "30d") { const s = new Date(start); s.setDate(s.getDate() - 29); return { fromISO: s.toISOString(), toISO: end.toISOString() }; }
-    if (range === "custom" && customFrom && customTo) {
-      const s = new Date(customFrom); s.setHours(0, 0, 0, 0);
-      const e = new Date(customTo); e.setHours(23, 59, 59, 999);
-      return { fromISO: s.toISOString(), toISO: e.toISOString() };
-    }
-    return { fromISO: null as string | null, toISO: null as string | null };
+    const r = resolvePresetRange(range, customFrom, customTo);
+    return { fromISO: r.fromISO, toISO: r.toISO };
   }, [range, customFrom, customTo]);
 
 
@@ -189,7 +180,7 @@ function SalesPage() {
         .eq("business_id", business!.id)
         .eq("type", "sell");
       // When searching, look across all time so old invoices are findable.
-      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
+      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lt("transaction_date", toISO);
       const { data, error } = await q.order("transaction_date", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as SaleRow[];
@@ -284,13 +275,7 @@ function SalesPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {([
-          ["today", "Today"],
-          ["7d", "7 days"],
-          ["30d", "30 days"],
-          ["all", "All time"],
-          ["custom", "Custom"],
-        ] as [RangeKey, string][]).map(([k, label]) => (
+        {DATE_PRESETS.map(({ key: k, label }) => (
           <Button key={k} size="sm" variant={range === k ? "default" : "outline"} onClick={() => setRange(k)}>
             {label}
           </Button>

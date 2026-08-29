@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll } from "@/lib/fetch-all";
+import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 import {
   BarChart3, TrendingUp, Package, Users, Receipt, Wallet, Boxes, AlertTriangle,
 } from "lucide-react";
@@ -21,29 +22,23 @@ function fmt(n: number, currency = "") {
   return `${currency}${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+
 
 function ReportsPage() {
   const { data: business } = useCurrentBusiness();
   const businessId = business?.id;
   const { isAdmin } = useCurrentRole();
 
-  const [range, setRange] = useState<"today" | "7d" | "30d" | "all" | "custom">("30d");
+  const [range, setRange] = useState<DatePresetKey>("thisMonth");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
 
   const { fromDate, toDate } = useMemo(() => {
-    const now = new Date();
-    if (range === "today") return { fromDate: startOfDay(now), toDate: null as Date | null };
-    if (range === "7d") { const d = startOfDay(now); d.setDate(d.getDate() - 6); return { fromDate: d, toDate: null as Date | null }; }
-    if (range === "30d") { const d = startOfDay(now); d.setDate(d.getDate() - 29); return { fromDate: d, toDate: null as Date | null }; }
-    if (range === "custom") {
-      const f = customFrom ? startOfDay(new Date(customFrom)) : null;
-      let t: Date | null = null;
-      if (customTo) { t = new Date(customTo); t.setHours(23, 59, 59, 999); }
-      return { fromDate: f, toDate: t };
-    }
-    return { fromDate: null as Date | null, toDate: null as Date | null };
+    const r = resolvePresetRange(range, customFrom, customTo);
+    return {
+      fromDate: r.fromISO ? new Date(r.fromISO) : null,
+      toDate: r.toISO ? new Date(r.toISO) : null,
+    };
   }, [range, customFrom, customTo]);
 
   // Sales (transactions type=sell)
@@ -58,7 +53,7 @@ function ReportsPage() {
         .eq("type", "sell")
         .order("transaction_date", { ascending: false });
       if (fromDate) q = q.gte("transaction_date", fromDate.toISOString());
-      if (toDate) q = q.lte("transaction_date", toDate.toISOString());
+      if (toDate) q = q.lt("transaction_date", toDate.toISOString());
       const { data } = await q;
       return data ?? [];
     },
@@ -157,15 +152,15 @@ function ReportsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
-            {(["today", "7d", "30d", "all", "custom"] as const).map((r) => (
+            {DATE_PRESETS.map(({ key, label }) => (
               <button
-                key={r}
-                onClick={() => setRange(r)}
+                key={key}
+                onClick={() => setRange(key)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {r === "today" ? "Today" : r === "7d" ? "7 days" : r === "30d" ? "30 days" : r === "all" ? "All" : "Custom"}
+                {label}
               </button>
             ))}
           </div>
