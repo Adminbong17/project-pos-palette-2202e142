@@ -31,9 +31,15 @@ export function FloatingSearch({ children, results, spacer = 60, className = "" 
 
     const measure = () => {
       const rect = el.getBoundingClientRect();
-      setBox({ left: rect.left, width: rect.width });
-      setFloating(rect.top < HEADER_OFFSET);
+      setBox((prev) =>
+        prev && Math.abs(prev.left - rect.left) < 0.5 && Math.abs(prev.width - rect.width) < 0.5
+          ? prev
+          : { left: rect.left, width: rect.width },
+      );
+      const next = rect.top < HEADER_OFFSET;
+      setFloating((prev) => (prev === next ? prev : next));
     };
+
 
     measure();
     const ro = new ResizeObserver(measure);
