@@ -26,33 +26,25 @@ function MostSellingPage() {
   const businessId = business?.id;
 
   const [preset, setPreset] = useState<Preset>("thisMonth");
-  const [fromDate, setFromDate] = useState(todayDhaka());
-  const [toDate, setToDate] = useState(todayDhaka());
+  const [fromDate, setFromDate] = useState(dhakaToday());
+  const [toDate, setToDate] = useState(dhakaToday());
   const [search, setSearch] = useState("");
 
-  const range = useMemo(() => {
-    switch (preset) {
-      case "today":
-        return { ...dhakaDayRange(todayDhaka()), label: "Today" };
-      case "yesterday":
-        return { ...dhakaDayRange(todayDhaka(-1)), label: "Yesterday" };
-      case "thisMonth":
-        return dhakaMonthRange(0);
-      case "lastMonth":
-        return dhakaMonthRange(-1);
-      case "custom":
-        return {
-          fromISO: dhakaDayRange(fromDate).fromISO,
-          toISO: dhakaDayRange(toDate).toISO,
-          label: `${fromDate} → ${toDate}`,
-        };
-    }
-  }, [preset, fromDate, toDate]);
+  const range = useMemo(
+    () => resolvePresetRange(preset, fromDate, toDate),
+    [preset, fromDate, toDate],
+  );
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["most-selling", businessId, range.fromISO, range.toISO],
     enabled: !!businessId,
-    queryFn: () => fetchMostSelling(businessId!, range.fromISO, range.toISO, 1000),
+    queryFn: () =>
+      fetchMostSelling(
+        businessId!,
+        range.fromISO ?? "1970-01-01T00:00:00.000+06:00",
+        range.toISO ?? "2999-12-31T00:00:00.000+06:00",
+        1000,
+      ),
   });
 
   const filtered = useMemo(() => {
@@ -69,13 +61,7 @@ function MostSellingPage() {
     return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
   }
 
-  const presets: { key: Preset; label: string }[] = [
-    { key: "today", label: "Today" },
-    { key: "yesterday", label: "Yesterday" },
-    { key: "thisMonth", label: "This Month" },
-    { key: "lastMonth", label: "Last Month" },
-    { key: "custom", label: "Custom Range" },
-  ];
+  const presets = DATE_PRESETS;
 
   return (
     <div className="space-y-5 p-6">
