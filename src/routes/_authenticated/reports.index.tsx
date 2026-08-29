@@ -22,7 +22,7 @@ function fmt(n: number, currency = "") {
   return `${currency}${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+
 
 function ReportsPage() {
   const { data: business } = useCurrentBusiness();

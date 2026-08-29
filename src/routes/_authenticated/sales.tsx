@@ -180,7 +180,7 @@ function SalesPage() {
         .eq("business_id", business!.id)
         .eq("type", "sell");
       // When searching, look across all time so old invoices are findable.
-      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lte("transaction_date", toISO);
+      if (!searching && fromISO && toISO) q = q.gte("transaction_date", fromISO).lt("transaction_date", toISO);
       const { data, error } = await q.order("transaction_date", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as SaleRow[];
