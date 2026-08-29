@@ -446,6 +446,87 @@
   .nav-box:hover .nav-box-icon { transform: scale(1.08) rotate(-4deg); }
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Search boxes — pill shape, tinted gradient surface, animated
+   focus glow + gradient ring. Applies app-wide to any input whose
+   placeholder mentions search / খুঁজ.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  input[placeholder*="search" i]:not([cmdk-input]):not([type="checkbox"]):not([type="radio"]),
+  input[placeholder*="খুঁজ"],
+  input[type="search"] {
+    --search-hue: 200;
+    border-radius: 9999px;
+    border-color: oklch(var(--panel-border-l) 0.06 var(--search-hue));
+    background-image: linear-gradient(
+      120deg,
+      oklch(var(--panel-l1) 0.045 var(--search-hue)),
+      oklch(var(--panel-l2) 0.01 152) 60%,
+      oklch(var(--panel-l1) 0.04 310)
+    );
+    background-size: 180% 100%;
+    background-position: 0% 0%;
+    box-shadow:
+      inset 0 1px 2px oklch(0.3 0.05 250 / 0.06),
+      0 4px 12px -8px oklch(0.45 0.1 var(--search-hue) / 0.5);
+    transition:
+      background-position 600ms ease,
+      border-color 220ms ease,
+      box-shadow 260ms ease,
+      transform 180ms ease;
+    animation: fade-in 0.3s ease-out;
+  }
+
+  input[placeholder*="search" i]:not([cmdk-input]):hover,
+  input[placeholder*="খুঁজ"]:hover,
+  input[type="search"]:hover {
+    background-position: 55% 0%;
+    border-color: oklch(var(--panel-accent-l) 0.13 var(--search-hue));
+    box-shadow:
+      inset 0 1px 2px oklch(0.3 0.05 250 / 0.06),
+      0 8px 18px -10px oklch(0.45 0.12 var(--search-hue) / 0.65);
+  }
+
+  input[placeholder*="search" i]:not([cmdk-input]):focus,
+  input[placeholder*="search" i]:not([cmdk-input]):focus-visible,
+  input[placeholder*="খুঁজ"]:focus,
+  input[placeholder*="খুঁজ"]:focus-visible,
+  input[type="search"]:focus,
+  input[type="search"]:focus-visible {
+    outline: none;
+    transform: translateY(-1px) scale(1.005);
+    background-position: 100% 0%;
+    border-color: var(--ring);
+    animation: search-glow 2.4s ease-in-out infinite;
+  }
+
+  input[placeholder*="search" i]::placeholder,
+  input[placeholder*="খুঁজ"]::placeholder,
+  input[type="search"]::placeholder {
+    color: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+    transition: color 200ms ease;
+  }
+  input[placeholder*="search" i]:focus::placeholder,
+  input[type="search"]:focus::placeholder {
+    color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+  }
+}
+
+@keyframes search-glow {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 2px oklch(0.3 0.05 250 / 0.06),
+      0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent),
+      0 10px 24px -12px color-mix(in oklab, var(--ring) 55%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 2px oklch(0.3 0.05 250 / 0.06),
+      0 0 0 4px color-mix(in oklab, var(--ring) 32%, transparent),
+      0 14px 30px -12px color-mix(in oklab, var(--ring) 70%, transparent);
+  }
+}
+
 @media print {
   [class*="bg-card"] {
     background-image: none !important;
