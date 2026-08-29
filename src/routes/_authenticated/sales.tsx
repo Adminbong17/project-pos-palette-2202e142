@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/utils";
+import { fmtDateTime } from "@/lib/format-date";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,7 +151,7 @@ function SalesPage() {
         change: paid - total,
         payment_method: "cash",
         customer_name: tx.contact?.name ?? null,
-        date: new Date(tx.transaction_date).toLocaleString(),
+        date: fmtDateTime(tx.transaction_date),
       };
       printReceiptInWhitePage(sale, printWidth, {
         businessName: bizRes.data?.name ?? "",

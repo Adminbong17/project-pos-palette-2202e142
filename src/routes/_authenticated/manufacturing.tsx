@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDate } from "@/lib/format-date";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -621,7 +622,7 @@ function OrdersTab({ businessId }: { businessId: string }) {
               filteredOrders.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">{o.ref_no ?? "—"}</TableCell>
-                  <TableCell>{new Date(o.order_date).toLocaleDateString()}</TableCell>
+                  <TableCell>{fmtDate(o.order_date)}</TableCell>
                   <TableCell>
                     {o.finished_variation?.product?.name} · {o.finished_variation?.name}
                   </TableCell>

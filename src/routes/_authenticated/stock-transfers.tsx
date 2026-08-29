@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -478,7 +479,7 @@ async function printTransfer(id: string, size: PrintSize, businessName: string, 
       </tr>`;
     }).join("");
 
-    const fmtDT = (d: string) => new Date(d).toLocaleString();
+    const fmtDT = fmtDateTime;
     const bodyHtml = `
       <h1>${escapeHtml(businessName)}</h1>
       <h2 style="font-size:16px;margin:12px 0 0">Stock Transfer — ${statusLabel}</h2>

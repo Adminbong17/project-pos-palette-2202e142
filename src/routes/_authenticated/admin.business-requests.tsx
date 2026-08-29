@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -110,7 +111,7 @@ function Page() {
                 <div>
                   <div className="font-medium">{r.name}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Location: {r.location_name} · SKU: {r.sku_prefix ?? "—"} · Requested: {new Date(r.created_at).toLocaleString()}
+                    Location: {r.location_name} · SKU: {r.sku_prefix ?? "—"} · Requested: {fmtDateTime(r.created_at)}
                   </div>
                   <div className="text-xs text-muted-foreground">User: {r.user_id}</div>
                 </div>

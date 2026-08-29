@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, Wallet } from "lucide-react";
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/admin/credit-purchases")({
 
 const money = (n: number) => `৳${Number(n || 0).toLocaleString("en-BD", { maximumFractionDigits: 2 })}`;
 const when = (v?: string | null) =>
-  v ? new Date(v).toLocaleString("en-GB", { timeZone: "Asia/Dhaka", dateStyle: "medium", timeStyle: "short" }) : "—";
+  fmtDateTime(v);
 
 function AdminCreditPurchasesPage() {
   const { isSuperAdmin, isLoading } = useIsSuperAdmin();

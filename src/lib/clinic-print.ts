@@ -1,5 +1,6 @@
 // Clinic sale invoice + treatment plan printing in A4 / 80mm / 58mm.
 import { showPrintPreview } from "@/lib/print-preview";
+import { fmtDateTime } from "@/lib/format-date";
 import type { PrintSize } from "@/components/print-size-select";
 
 const esc = (s: any) =>
@@ -133,7 +134,7 @@ export type ClinicSalePrintData = {
 export function printClinicSale(sale: ClinicSalePrintData, header: ClinicPrintHeader, size: PrintSize = "80mm") {
   const compact = size !== "A4";
   const due = Math.max(Number(sale.total || 0) - Number(sale.paid || 0), 0);
-  const when = sale.sale_date ? new Date(sale.sale_date).toLocaleString() : "";
+  const when = sale.sale_date ? fmtDateTime(sale.sale_date) : "";
 
   const rows = sale.lines.map((l, i) =>
     compact

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fmtDateTime } from "@/lib/format-date";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -212,7 +213,7 @@ function BkashSettingsPage() {
 
         {q.data?.updated_at ? (
           <p className="text-xs text-muted-foreground">
-            Last updated: {new Date(q.data.updated_at).toLocaleString()}
+            Last updated: {fmtDateTime(q.data.updated_at)}
           </p>
         ) : null}
       </form>
