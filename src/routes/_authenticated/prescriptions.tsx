@@ -11,7 +11,7 @@ import { fetchMasterOptions, mergeByName } from "@/hooks/use-rx-master-options";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useRxBillingState } from "@/hooks/use-rx-billing";
 import { RxBillingBanner } from "@/components/rx-billing-banner";
-import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
+import { fetchAll } from "@/lib/fetch-all";
 import { useRxPresets } from "@/hooks/use-rx-presets";
 import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
 import { RxPresetCombo } from "@/components/rx-preset-combo";
