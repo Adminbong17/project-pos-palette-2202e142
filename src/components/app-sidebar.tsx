@@ -201,12 +201,14 @@ export function AppSidebar() {
       // A doctor sees only their own clinical pages — no clinic admin pages,
       // no business settings, even inside a clinic business.
       .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
+      // Clinic-admin pages now have their own permission key each, so a page
+      // only shows when it was explicitly granted (or clinic mode is on).
       .filter((it: any) =>
-        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to) &&
-        !it.anyMode
-          ? clinicMode
+        ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
+          ? clinicMode || allowed !== null
           : true,
       ),
+
   }));
 
   const visibleSections = modeScoped
