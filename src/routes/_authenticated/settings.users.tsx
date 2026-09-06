@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { toast } from "sonner";
 import { ShieldCheck, ShoppingCart, UserPlus, Search } from "lucide-react";
-import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
+import { ALL_SECTIONS, expandSections } from "@/hooks/use-allowed-sections";
 import { createBusinessUser } from "@/lib/admin-users.functions";
 import {
   Dialog,
@@ -152,7 +152,7 @@ function UsersAndRoles() {
     if (!businessId) return;
     const { error } = await supabase
       .from("user_roles")
-      .update({ allowed_sections: ["prescriptions"] })
+      .update({ allowed_sections: expandSections(["prescriptions"]) })
       .eq("user_id", userId)
       .eq("business_id", businessId);
     if (error) toast.error(error.message);
@@ -305,7 +305,7 @@ function UsersAndRoles() {
               const isSalesman = !!m.roleName && m.roleName !== "Admin";
               const roleDefaults =
                 m.roleName === "Doctor" ? ["prescriptions"] : salesmanSections;
-              const effective = m.allowedSections ?? (isSalesman ? roleDefaults : []);
+              const effective = expandSections(m.allowedSections) ?? (expandSections(isSalesman ? roleDefaults : []) ?? []);
 
               return (
                 <tr key={m.id} className="border-t border-border/60 align-top">

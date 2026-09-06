@@ -74,35 +74,20 @@ const sections = [
   {
     label: "Clinic & Rx",
     items: [
-      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "clinic" },
-      { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic" },
-      { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic" },
-      { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic" },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic" },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic", children: LAB_CHILDREN },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "prescriptions", anyMode: true, children: LAB_CHILDREN },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "clinic-sales", children: LAB_CHILDREN },
-
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
+      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "clinic-dashboard" },
+      { to: "/clinic-doctors", label: "Clinic Doctors", icon: Stethoscope, enabled: true, key: "clinic-doctors" },
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
-      { to: "/clinic-dashboard", label: "Clinic Dashboard", icon: Building2, enabled: true, key: "prescriptions" },
-      { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "prescriptions" },
-      { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "prescriptions" },
+      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
+      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "lab-reports", children: LAB_CHILDREN },
+      { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "rx-dashboard" },
+      { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "rx-write" },
+      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-appointments" },
+      { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "rx-staff" },
+      { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "rx-lists" },
+      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "rx-billing" },
+      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "rx-credit-history" },
 
-      { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-queue" },
-      { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "prescriptions" },
-      { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "prescriptions" },
-      // Independent doctors (and their staff) manage their own service list and
-      // treatment plans, so these are not gated behind clinic mode.
-      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "prescriptions", anyMode: true },
-      { to: "/clinic-services", label: "Services & Fees", icon: Package, enabled: true, key: "rx-queue", anyMode: true },
-      { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "rx-queue", anyMode: true },
-      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "prescriptions" },
-      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "prescriptions" },
-      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "clinic" },
-      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "clinic" },
     ],
   },
   {
@@ -130,8 +115,8 @@ const sections = [
       { to: "/settings/users", label: "Users & Roles", icon: UserCog, enabled: true, key: "settings" },
       { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "settings" },
       // Clinic users need Settings too (clinic name, address, SMS number).
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "clinic" },
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "prescriptions" },
+      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "biz-settings" },
+
     ],
   },
 ];
@@ -216,12 +201,14 @@ export function AppSidebar() {
       // A doctor sees only their own clinical pages — no clinic admin pages,
       // no business settings, even inside a clinic business.
       .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
+      // Clinic-admin pages now have their own permission key each, so a page
+      // only shows when it was explicitly granted (or clinic mode is on).
       .filter((it: any) =>
-        ["/clinic-dashboard", "/clinic-doctors", "/clinic-services", "/clinic-sales", "/clinic-plans"].includes(it.to) &&
-        !it.anyMode
-          ? clinicMode
+        ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
+          ? clinicMode || allowed !== null
           : true,
       ),
+
   }));
 
   const visibleSections = modeScoped
