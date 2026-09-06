@@ -630,36 +630,17 @@ function PrescriptionsPage() {
 
 
 
+  // Medicines now come only from the shared national medicine list
+  // (name + form + strength, e.g. "Tab. Napa 500 mg") — no longer from any
+  // shop's product catalog.
   const products = useQuery({
-    queryKey: ["rx-products", businessId],
-    enabled: !!businessId && open,
+    queryKey: ["rx-medicine-library"],
+    enabled: open,
+    staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const rows = await fetchAll<any>(() =>
-        supabase.from("products")
-          .select("id, name")
-          .eq("business_id", businessId!)
-          .eq("is_inactive", false)
-          .order("name"),
-      );
-      const variationRows = rows.length
-        ? await fetchAllIn<any>(
-          (ids) => supabase.from("variations").select("id, product_id").in("product_id", ids).order("created_at"),
-          rows.map((p) => p.id),
-        )
-        : [];
-      const firstVariationByProduct = new Map<string, string>();
-      for (const v of variationRows) {
-        if (!firstVariationByProduct.has(v.product_id)) firstVariationByProduct.set(v.product_id, v.id);
-      }
+      const master = await fetchMasterOptions("medicine", 20000);
       const opts: ProductOpt[] = [];
       const seen = new Set<string>();
-      for (const p of rows) {
-        seen.add(`${p.name}`.trim().toLowerCase());
-        opts.push({ id: p.id, name: p.name, variation_id: firstVariationByProduct.get(p.id) ?? null });
-      }
-      // Shared medicine library curated by the super admin — available to every
-      // doctor even when their own business has no products yet.
-      const master = await fetchMasterOptions("medicine", 20000);
       for (const m of master) {
         const k = m.name.trim().toLowerCase();
         if (!k || seen.has(k)) continue;
