@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "./use-current-business";
 import { useCurrentRole } from "./use-current-role";
 
+/**
+ * One entry per page — every key is unique, so an admin can hand out a single
+ * page without dragging a whole group along. Older grouped keys stored in the
+ * database are expanded through LEGACY_GROUPS below.
+ */
 export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "dashboard", label: "Dashboard", path: "/dashboard" },
   { key: "pos", label: "POS", path: "/pos" },
@@ -15,46 +20,72 @@ export const ALL_SECTIONS: { key: string; label: string; path: string }[] = [
   { key: "expenses", label: "Expenses", path: "/expenses" },
   { key: "accounts", label: "Accounts", path: "/accounts" },
   { key: "reports", label: "Reports", path: "/reports" },
-  { key: "settings", label: "Settings", path: "/settings" },
+  { key: "settings", label: "Settings (full)", path: "/settings" },
   { key: "quick-box", label: "Quick Box Add", path: "/quick-box" },
   { key: "manufacturing", label: "Manufacturing", path: "/manufacturing" },
   { key: "restaurant", label: "Restaurant", path: "/restaurant" },
   { key: "repair", label: "Repair", path: "/repair" },
   { key: "crm", label: "CRM", path: "/crm" },
   { key: "hrm", label: "HRM", path: "/hrm" },
-  { key: "prescriptions", label: "Doctor Dashboard", path: "/rx-dashboard" },
-  { key: "clinic", label: "Clinic Dashboard", path: "/clinic-dashboard" },
-  { key: "clinic", label: "Clinic Doctors", path: "/clinic-doctors" },
-  { key: "clinic", label: "Products & Services", path: "/clinic-services" },
-  { key: "clinic", label: "Clinic Sales", path: "/clinic-sales" },
-  { key: "clinic", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
-  { key: "clinic", label: "Lab Reports", path: "/lab-reports" },
-  { key: "clinic-sales", label: "Lab Reports", path: "/lab-reports" },
-  { key: "prescriptions", label: "Lab Reports", path: "/lab-reports" },
-  { key: "clinic-plans", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
+  // Clinical pages — one key per page.
+  { key: "rx-dashboard", label: "Doctor Dashboard", path: "/rx-dashboard" },
+  { key: "rx-write", label: "Prescriptions", path: "/prescriptions" },
+  { key: "rx-lists", label: "My Rx Lists", path: "/rx-lists" },
+  { key: "rx-staff", label: "My Staff", path: "/rx-staff" },
+  { key: "rx-appointments", label: "Patient Queue", path: "/rx-appointments" },
+  { key: "clinic-dashboard", label: "Clinic Dashboard", path: "/clinic-dashboard" },
+  { key: "clinic-doctors", label: "Clinic Doctors", path: "/clinic-doctors" },
   { key: "clinic-services", label: "Products & Services", path: "/clinic-services" },
   { key: "clinic-sales", label: "Clinic Sales", path: "/clinic-sales" },
-  { key: "prescriptions", label: "Clinic Dashboard", path: "/clinic-dashboard" },
-  { key: "prescriptions", label: "Prescriptions", path: "/prescriptions" },
-  { key: "prescriptions", label: "My Rx Lists", path: "/rx-lists" },
-  { key: "prescriptions", label: "My Staff", path: "/rx-staff" },
-  // Independent doctors and their staff run their own services + treatment plans.
-  { key: "prescriptions", label: "Services & Fees", path: "/clinic-services" },
-  { key: "prescriptions", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
-  { key: "rx-queue", label: "Patient Queue", path: "/rx-appointments" },
-  { key: "rx-queue", label: "Services & Fees", path: "/clinic-services" },
-  { key: "rx-queue", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
-  { key: "prescriptions", label: "Rx Billing", path: "/rx-billing" },
-  { key: "prescriptions", label: "Credit & Payment History", path: "/rx-credit-history" },
-  { key: "clinic", label: "Rx Billing", path: "/rx-billing" },
-  { key: "clinic", label: "Credit & Payment History", path: "/rx-credit-history" },
-  // Clinic / doctor accounts manage their own name, address and SMS number.
-  { key: "clinic", label: "Settings", path: "/settings/business" },
-  { key: "prescriptions", label: "Settings", path: "/settings/business" },
-
-
+  { key: "clinic-plans", label: "Treatment Plans (EMI)", path: "/clinic-plans" },
+  { key: "lab-reports", label: "Lab Reports", path: "/lab-reports" },
+  { key: "rx-billing", label: "Rx Billing", path: "/rx-billing" },
+  { key: "rx-credit-history", label: "Credit & Payment History", path: "/rx-credit-history" },
+  { key: "biz-settings", label: "Business Settings", path: "/settings/business" },
 ];
 
+/** Old grouped keys → the individual pages they used to unlock. */
+export const LEGACY_GROUPS: Record<string, string[]> = {
+  prescriptions: [
+    "rx-dashboard",
+    "rx-write",
+    "rx-lists",
+    "rx-staff",
+    "clinic-dashboard",
+    "clinic-services",
+    "clinic-plans",
+    "lab-reports",
+    "rx-billing",
+    "rx-credit-history",
+    "biz-settings",
+  ],
+  clinic: [
+    "clinic-dashboard",
+    "clinic-doctors",
+    "clinic-services",
+    "clinic-sales",
+    "clinic-plans",
+    "lab-reports",
+    "rx-billing",
+    "rx-credit-history",
+    "biz-settings",
+  ],
+  "rx-queue": ["rx-appointments", "clinic-services", "clinic-plans"],
+};
+
+const VALID_KEYS = new Set(ALL_SECTIONS.map((s) => s.key));
+
+/** Turn any stored list (old grouped keys or new page keys) into page keys. */
+export function expandSections(list: string[] | null | undefined): string[] | null {
+  if (!list) return list === null ? null : null;
+  const out = new Set<string>();
+  for (const key of list) {
+    const group = LEGACY_GROUPS[key];
+    if (group) group.forEach((k) => out.add(k));
+    else if (VALID_KEYS.has(key)) out.add(key);
+  }
+  return Array.from(out);
+}
 
 const DEFAULT_SALESMAN = ["pos", "purchases", "quick-box"];
 
@@ -63,26 +94,37 @@ const ALWAYS_ALLOWED = ["quick-box"];
 
 // Clinical-only keys: users limited to these never get POS/inventory extras.
 const CLINICAL_KEYS = [
-  "prescriptions",
-  "rx-queue",
-  "clinic",
+  "rx-dashboard",
+  "rx-write",
+  "rx-lists",
+  "rx-staff",
+  "rx-appointments",
+  "clinic-dashboard",
+  "clinic-doctors",
   "clinic-services",
   "clinic-sales",
   "clinic-plans",
+  "lab-reports",
+  "rx-billing",
+  "rx-credit-history",
+  "biz-settings",
 ];
 
 // A clinic admin only manages doctors, assistants and the serial queue.
-const DEFAULT_CLINIC = ["clinic", "rx-queue"];
+const DEFAULT_CLINIC = expandSections(["clinic", "rx-queue"])!;
+const DEFAULT_DOCTOR = expandSections(["prescriptions", "rx-queue"])!;
 
 // A "doctor" only needs the prescription module — no POS/inventory extras.
 export function isPrescriptionOnly(list: string[] | null) {
-  if (!list) return false;
-  return list.length > 0 && list.every((k) => CLINICAL_KEYS.includes(k));
+  const expanded = expandSections(list);
+  if (!expanded) return false;
+  return expanded.length > 0 && expanded.every((k) => CLINICAL_KEYS.includes(k));
 }
 
 function withAlways(list: string[]) {
-  if (isPrescriptionOnly(list)) return list;
-  return Array.from(new Set([...list, ...ALWAYS_ALLOWED]));
+  const expanded = expandSections(list) ?? [];
+  if (isPrescriptionOnly(expanded)) return expanded;
+  return Array.from(new Set([...expanded, ...ALWAYS_ALLOWED]));
 }
 
 export function useAllowedSections() {
@@ -128,10 +170,8 @@ export function useAllowedSections() {
   const hasExplicitGrant = Array.isArray(q.data) && q.data.length > 0;
   const sections =
     raw && clinicalOnlyRole && !hasExplicitGrant
-      ? (isClinicAdmin ? DEFAULT_CLINIC : ["prescriptions", "rx-queue"])
+      ? (isClinicAdmin ? DEFAULT_CLINIC : DEFAULT_DOCTOR)
       : raw;
-
-
 
   return {
     isAdmin,
@@ -140,25 +180,26 @@ export function useAllowedSections() {
   };
 }
 
-
 export function isPathAllowed(pathname: string, sections: string[] | null) {
   if (sections === null) return true;
+  const expanded = expandSections(sections) ?? [];
   return ALL_SECTIONS.some(
-    (s) => sections.includes(s.key) && (pathname === s.path || pathname.startsWith(s.path + "/")),
+    (s) => expanded.includes(s.key) && (pathname === s.path || pathname.startsWith(s.path + "/")),
   );
 }
 
 // First landing path for a set of allowed sections (Assistant → Patient Queue).
 export function sectionHomePath(sections: string[] | null) {
-  if (!sections || sections.length === 0) return "/dashboard";
-  if (sections.includes("clinic")) return "/clinic-dashboard";
-  if (sections.includes("rx-queue") && !sections.includes("prescriptions"))
-    return "/rx-appointments";
-  if (sections.includes("clinic-sales")) return "/clinic-sales";
-  if (sections.includes("clinic-plans")) return "/clinic-plans";
-  if (sections.includes("clinic-services")) return "/clinic-services";
-  if (sections.includes("prescriptions")) return "/rx-dashboard";
-  if (sections.includes("dashboard")) return "/dashboard";
-  const match = ALL_SECTIONS.find((s) => sections.includes(s.key));
+  const list = expandSections(sections) ?? [];
+  if (list.length === 0) return "/dashboard";
+  if (list.includes("dashboard")) return "/dashboard";
+  if (list.includes("clinic-dashboard")) return "/clinic-dashboard";
+  if (list.includes("rx-dashboard")) return "/rx-dashboard";
+  if (list.includes("rx-appointments")) return "/rx-appointments";
+  if (list.includes("rx-write")) return "/prescriptions";
+  if (list.includes("clinic-sales")) return "/clinic-sales";
+  if (list.includes("clinic-plans")) return "/clinic-plans";
+  if (list.includes("clinic-services")) return "/clinic-services";
+  const match = ALL_SECTIONS.find((s) => list.includes(s.key));
   return match?.path ?? "/pos";
 }
