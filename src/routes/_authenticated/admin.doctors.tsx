@@ -10,7 +10,7 @@ import { moveDoctorToOwnBusiness } from "@/lib/admin-businesses.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
+import { ALL_SECTIONS, expandSections } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import {
@@ -518,7 +518,7 @@ function PendingCard({
   );
   const [clinicType, setClinicType] = useState<"general" | "dental">("general");
   const [sections, setSections] = useState<string[]>(
-    wantsClinic ? CLINIC_DEFAULT_SECTIONS : wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"],
+    expandSections(wantsClinic ? CLINIC_DEFAULT_SECTIONS : wantsPos ? POS_DEFAULT_SECTIONS : ["prescriptions"])!,
   );
   const ownBusiness = mode === "own";
   const clinic = mode === "clinic";
@@ -711,7 +711,7 @@ function DoctorCard({
   const [n, setN] = useState(member.doctorName);
   const [q, setQ] = useState(member.doctorQualification);
   const dirty = n !== member.doctorName || q !== member.doctorQualification;
-  const effective = member.allowedSections ?? ["prescriptions"];
+  const effective = expandSections(member.allowedSections) ?? expandSections(["prescriptions"])!;
 
   function toggleSection(key: string, on: boolean) {
     const next = on
@@ -830,7 +830,7 @@ function DoctorCard({
           })}
           <button
             type="button"
-            onClick={() => onSaveSections(["prescriptions"])}
+            onClick={() => onSaveSections(expandSections(["prescriptions"])!)}
             className="rounded-md border border-dashed border-primary/50 px-2 py-1 text-xs text-primary"
           >
             Prescriptions only

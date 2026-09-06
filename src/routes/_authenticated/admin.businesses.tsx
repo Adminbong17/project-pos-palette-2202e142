@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Building2, Search, Save, ArrowRightLeft, Users, Trash2 } from "lucide-react";
 
-import { ALL_SECTIONS } from "@/hooks/use-allowed-sections";
+import { ALL_SECTIONS, expandSections } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import {
   listBusinessesWithMembers,
@@ -301,9 +301,9 @@ function MemberRow({
   onSave: (sections: string[] | null) => void;
   onMove: () => void;
 }) {
-  const [picked, setPicked] = useState<string[]>(member.sections ?? []);
+  const [picked, setPicked] = useState<string[]>(expandSections(member.sections) ?? []);
   const full = member.sections === null;
-  const dirty = JSON.stringify(picked) !== JSON.stringify(member.sections ?? []);
+  const dirty = JSON.stringify(picked) !== JSON.stringify(expandSections(member.sections) ?? []);
 
   return (
     <div className="rounded-lg border border-border/60 p-3">
