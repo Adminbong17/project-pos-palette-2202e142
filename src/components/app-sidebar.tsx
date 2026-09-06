@@ -115,8 +115,8 @@ const sections = [
       { to: "/settings/users", label: "Users & Roles", icon: UserCog, enabled: true, key: "settings" },
       { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "settings" },
       // Clinic users need Settings too (clinic name, address, SMS number).
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "clinic" },
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "prescriptions" },
+      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "biz-settings" },
+
     ],
   },
 ];
