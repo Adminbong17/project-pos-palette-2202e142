@@ -3574,6 +3574,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rx_medicines: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          dosage_form: string | null
+          generic_name: string | null
+          id: string
+          is_active: boolean
+          manufacturer: string | null
+          name: string
+          strength: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          dosage_form?: string | null
+          generic_name?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          name: string
+          strength?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          dosage_form?: string | null
+          generic_name?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          name?: string
+          strength?: string | null
+        }
+        Relationships: []
+      }
       rx_option_settings: {
         Row: {
           business_id: string
