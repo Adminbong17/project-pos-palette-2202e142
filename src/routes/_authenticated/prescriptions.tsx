@@ -1596,10 +1596,11 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
                 <CommandGroup>
                   {filtered.map((p) => (
                     <CommandItem key={p.id} value={p.id} onSelect={() => {
-                      const own = p.id.startsWith("my:");
+                      // Library/personal picks are names only — nothing is tied
+                      // to a shop's product record.
                       onChange({
-                        product_id: own ? null : p.id,
-                        variation_id: own ? null : p.variation_id,
+                        product_id: null,
+                        variation_id: null,
                         medicine_name: p.name,
                       });
                       setPSearch("");
