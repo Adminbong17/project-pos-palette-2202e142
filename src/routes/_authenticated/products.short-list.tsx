@@ -36,6 +36,7 @@ function ShortListPage() {
   const qtyRefs = useRef(new Map<string, HTMLInputElement>());
   const unitRefs = useRef(new Map<string, HTMLButtonElement>());
   const [focusQtyId, setFocusQtyId] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState(0);
 
   useEffect(() => {
     if (!focusQtyId) return;
@@ -45,6 +46,7 @@ function ShortListPage() {
 
   const onSearch = (v: string) => {
     setSearch(v);
+    setHighlight(0);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setDebounced(v.trim()), 250);
   };
@@ -79,6 +81,7 @@ function ShortListPage() {
     ]);
     setSearch("");
     setDebounced("");
+    setHighlight(0);
     setFocusQtyId(p.id);
   }
 
