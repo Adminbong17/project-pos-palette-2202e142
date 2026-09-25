@@ -43,6 +43,17 @@ function ShortListPage() {
   const [savedSearch, setSavedSearch] = useState("");
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const DEFAULT_FONT: Record<PrintSize, number> = { a4: 12, "80mm": 9, "58mm": 8 };
+  const [fontPx, setFontPx] = useState<number>(DEFAULT_FONT.a4);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(`short-list-font-${size}`));
+    setFontPx(saved >= 6 && saved <= 14 ? saved : DEFAULT_FONT[size]);
+  }, [size]);
+  const changeSize = (s: PrintSize) => setSize(s);
+  const changeFont = (n: number) => {
+    setFontPx(n);
+    localStorage.setItem(`short-list-font-${size}`, String(n));
+  };
 
   useEffect(() => {
     if (!focusQtyId) return;
@@ -195,7 +206,8 @@ function ShortListPage() {
       size,
       business?.name ?? "",
       title.trim() || "Short Product List",
-      date
+      date,
+      fontPx
     );
   }
 
@@ -211,16 +223,30 @@ function ShortListPage() {
           </Button>
           <h2 className="font-display text-lg font-semibold">Short Product List</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={size}
-            onChange={(e) => setSize(e.target.value as PrintSize)}
+            onChange={(e) => changeSize(e.target.value as PrintSize)}
             className="h-9 rounded-md border border-border bg-input px-2 text-sm"
           >
             <option value="a4">A4</option>
             <option value="80mm">POS 80mm</option>
             <option value="58mm">POS 58mm</option>
           </select>
+          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+            Font
+            <select
+              value={fontPx}
+              onChange={(e) => changeFont(Number(e.target.value))}
+              className="h-9 rounded-md border border-border bg-input px-2 text-sm text-foreground"
+            >
+              {[6, 7, 8, 9, 10, 11, 12, 13, 14].map((n) => (
+                <option key={n} value={n}>
+                  {n}px
+                </option>
+              ))}
+            </select>
+          </label>
           <Button size="sm" variant="outline" onClick={() => setSavedOpen((v) => !v)}>
             <FolderOpen className="h-4 w-4 mr-1" />
             Saved Lists
@@ -493,13 +519,14 @@ function printShortList(
   size: PrintSize,
   businessName: string,
   title: string,
-  date: string
+  date: string,
+  fontPx: number
 ) {
   const printId = "short-list-print-page";
   const styleId = "short-list-print-style";
   const pageSize = size === "a4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const margin = size === "a4" ? "12mm" : "3mm 2mm";
-  const fontSize = size === "a4" ? "12px" : size === "80mm" ? "11px" : "10px";
+  const margin = size === "a4" ? "12mm" : "2mm 1.5mm";
+  const fontSize = `${fontPx}px`;
 
   document.getElementById(printId)?.remove();
   document.getElementById(styleId)?.remove();
@@ -520,9 +547,9 @@ function printShortList(
       #${printId} .center { text-align: center !important; }
       #${printId} .bold { font-weight: 700 !important; }
       #${printId} .muted { font-size: 0.9em !important; }
-      #${printId} .sep { border-top: 1px dashed #000 !important; margin: 5px 0 !important; }
+      #${printId} .sep { border-top: 1px dashed #000 !important; margin: ${size === "a4" ? "5px" : "2px"} 0 !important; }
       #${printId} table { width: 100% !important; border-collapse: collapse !important; }
-      #${printId} th, #${printId} td { padding: 3px 2px !important; border-bottom: 1px solid #000 !important; vertical-align: top !important; }
+      #${printId} th, #${printId} td { padding: ${size === "a4" ? "3px 2px" : "1px 1px"} !important; border-bottom: ${size === "a4" ? "1px solid" : "1px dotted"} #000 !important; vertical-align: top !important; }
       #${printId} th { font-weight: 700 !important; text-align: left !important; }
       #${printId} .right { text-align: right !important; }
       #${printId} tr { page-break-inside: avoid !important; }
@@ -551,7 +578,7 @@ function printShortList(
     <div class="center muted">${esc(formatDate(date))}</div>
     <div class="sep"></div>
     <table>
-      <thead><tr><th style="width:24px">#</th><th>Product</th><th class="right">Qty</th></tr></thead>
+      <thead><tr><th style="width:${size === "a4" ? "24px" : "14px"}">#</th><th>Product</th><th class="right">Qty</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="sep"></div>
@@ -559,7 +586,7 @@ function printShortList(
   `;
   printPage.style.cssText = `position:fixed;left:0;top:0;z-index:-1;opacity:0;pointer-events:none;width:${
     size === "a4" ? "210mm" : size === "80mm" ? "80mm" : "58mm"
-  };background:#fff;color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${fontSize};line-height:1.35;`;
+  };background:#fff;color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${fontSize};line-height:${size === "a4" ? "1.35" : "1.15"};`;
 
   document.head.appendChild(style);
   document.body.appendChild(printPage);
