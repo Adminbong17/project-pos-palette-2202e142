@@ -350,6 +350,11 @@ function ShortListPage() {
                 <button
                   key={p.id}
                   type="button"
+                  ref={(el) => {
+                    if (idx === highlight && el) {
+                      el.scrollIntoView({ block: "nearest" });
+                    }
+                  }}
                   onMouseEnter={() => setHighlight(idx)}
                   onClick={() => addProduct(p)}
                   className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
