@@ -235,14 +235,32 @@ function ShortListPage() {
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <select
-                      value={it.unit}
-                      onChange={(e) => update(it.id, { unit: e.target.value as "pcs" | "box" })}
-                      className="h-8 rounded-md border border-border bg-input px-2 text-sm"
-                    >
-                      <option value="pcs">pcs</option>
-                      {it.packSize && <option value="box">box ({it.packSize} pcs)</option>}
-                    </select>
+                    <div className="inline-flex overflow-hidden rounded-md border border-border">
+                      <button
+                        type="button"
+                        onClick={() => update(it.id, { unit: "pcs" })}
+                        className={`h-8 px-3 text-xs font-medium transition-colors ${
+                          it.unit === "pcs"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-input text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        pcs
+                      </button>
+                      {it.packSize ? (
+                        <button
+                          type="button"
+                          onClick={() => update(it.id, { unit: "box" })}
+                          className={`h-8 px-3 text-xs font-medium transition-colors ${
+                            it.unit === "box"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-input text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          box ({it.packSize} pcs)
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-2 py-2.5">
                     <button
