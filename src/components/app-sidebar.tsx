@@ -41,6 +41,7 @@ const sections = [
       { to: "/purchases", label: "Purchases", icon: Truck, enabled: true, key: "purchases" },
       { to: "/products", label: "Products", icon: Package, enabled: true, key: "products" },
       { to: "/quick-box", label: "Quick Box Add", icon: PackagePlus, enabled: true, key: "quick-box" },
+      { to: "/products/short-list", label: "Short List", icon: ClipboardList, enabled: true, key: "products" },
       { to: "/files", label: "Files", icon: FolderArchive, enabled: true, key: "files" },
       { to: "/contacts", label: "Contacts", icon: Users, enabled: true, key: "contacts" },
       { to: "/stock-transfers", label: "Stock Transfers", icon: ClipboardList, enabled: true, key: "stock-transfers" },
