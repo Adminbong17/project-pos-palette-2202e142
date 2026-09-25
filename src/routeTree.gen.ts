@@ -75,6 +75,7 @@ import { Route as AuthenticatedRepairJobsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPurchasesNewRouteImport } from './routes/_authenticated/purchases.new'
 import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenticated/purchases.$id'
 import { Route as AuthenticatedProductsStockAdjustmentsRouteImport } from './routes/_authenticated/products.stock-adjustments'
+import { Route as AuthenticatedProductsShortListRouteImport } from './routes/_authenticated/products.short-list'
 import { Route as AuthenticatedProductsNewRouteImport } from './routes/_authenticated/products.new'
 import { Route as AuthenticatedProductsIdRouteImport } from './routes/_authenticated/products.$id'
 import { Route as AuthenticatedLabReportsStaffRouteImport } from './routes/_authenticated/lab-reports.staff'
@@ -465,6 +466,12 @@ const AuthenticatedProductsStockAdjustmentsRoute =
     path: '/stock-adjustments',
     getParentRoute: () => AuthenticatedProductsRoute,
   } as any)
+const AuthenticatedProductsShortListRoute =
+  AuthenticatedProductsShortListRouteImport.update({
+    id: '/short-list',
+    path: '/short-list',
+    getParentRoute: () => AuthenticatedProductsRoute,
+  } as any)
 const AuthenticatedProductsNewRoute =
   AuthenticatedProductsNewRouteImport.update({
     id: '/new',
@@ -675,6 +682,7 @@ export interface FileRoutesByFullPath {
   '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
+  '/products/short-list': typeof AuthenticatedProductsShortListRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRouteWithChildren
   '/purchases/new': typeof AuthenticatedPurchasesNewRoute
@@ -760,6 +768,7 @@ export interface FileRoutesByTo {
   '/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/products/$id': typeof AuthenticatedProductsIdRoute
   '/products/new': typeof AuthenticatedProductsNewRoute
+  '/products/short-list': typeof AuthenticatedProductsShortListRoute
   '/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRouteWithChildren
   '/purchases/new': typeof AuthenticatedPurchasesNewRoute
@@ -855,6 +864,7 @@ export interface FileRoutesById {
   '/_authenticated/lab-reports/staff': typeof AuthenticatedLabReportsStaffRoute
   '/_authenticated/products/$id': typeof AuthenticatedProductsIdRoute
   '/_authenticated/products/new': typeof AuthenticatedProductsNewRoute
+  '/_authenticated/products/short-list': typeof AuthenticatedProductsShortListRoute
   '/_authenticated/products/stock-adjustments': typeof AuthenticatedProductsStockAdjustmentsRoute
   '/_authenticated/purchases/$id': typeof AuthenticatedPurchasesIdRouteWithChildren
   '/_authenticated/purchases/new': typeof AuthenticatedPurchasesNewRoute
@@ -950,6 +960,7 @@ export interface FileRouteTypes {
     | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
+    | '/products/short-list'
     | '/products/stock-adjustments'
     | '/purchases/$id'
     | '/purchases/new'
@@ -1035,6 +1046,7 @@ export interface FileRouteTypes {
     | '/lab-reports/staff'
     | '/products/$id'
     | '/products/new'
+    | '/products/short-list'
     | '/products/stock-adjustments'
     | '/purchases/$id'
     | '/purchases/new'
@@ -1129,6 +1141,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lab-reports/staff'
     | '/_authenticated/products/$id'
     | '/_authenticated/products/new'
+    | '/_authenticated/products/short-list'
     | '/_authenticated/products/stock-adjustments'
     | '/_authenticated/purchases/$id'
     | '/_authenticated/purchases/new'
@@ -1636,6 +1649,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductsStockAdjustmentsRouteImport
       parentRoute: typeof AuthenticatedProductsRoute
     }
+    '/_authenticated/products/short-list': {
+      id: '/_authenticated/products/short-list'
+      path: '/short-list'
+      fullPath: '/products/short-list'
+      preLoaderRoute: typeof AuthenticatedProductsShortListRouteImport
+      parentRoute: typeof AuthenticatedProductsRoute
+    }
     '/_authenticated/products/new': {
       id: '/_authenticated/products/new'
       path: '/new'
@@ -1878,6 +1898,7 @@ const AuthenticatedLabReportsRouteWithChildren =
 interface AuthenticatedProductsRouteChildren {
   AuthenticatedProductsIdRoute: typeof AuthenticatedProductsIdRoute
   AuthenticatedProductsNewRoute: typeof AuthenticatedProductsNewRoute
+  AuthenticatedProductsShortListRoute: typeof AuthenticatedProductsShortListRoute
   AuthenticatedProductsStockAdjustmentsRoute: typeof AuthenticatedProductsStockAdjustmentsRoute
   AuthenticatedProductsIndexRoute: typeof AuthenticatedProductsIndexRoute
 }
@@ -1885,6 +1906,7 @@ interface AuthenticatedProductsRouteChildren {
 const AuthenticatedProductsRouteChildren: AuthenticatedProductsRouteChildren = {
   AuthenticatedProductsIdRoute: AuthenticatedProductsIdRoute,
   AuthenticatedProductsNewRoute: AuthenticatedProductsNewRoute,
+  AuthenticatedProductsShortListRoute: AuthenticatedProductsShortListRoute,
   AuthenticatedProductsStockAdjustmentsRoute:
     AuthenticatedProductsStockAdjustmentsRoute,
   AuthenticatedProductsIndexRoute: AuthenticatedProductsIndexRoute,
