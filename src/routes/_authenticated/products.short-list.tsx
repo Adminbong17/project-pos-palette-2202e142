@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Search, X, ListPlus } from "lucide-react";
+import { ArrowLeft, Printer, Search, X, ListPlus, Save, FolderOpen, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/products/short-list")({
@@ -37,6 +38,11 @@ function ShortListPage() {
   const unitRefs = useRef(new Map<string, HTMLButtonElement>());
   const [focusQtyId, setFocusQtyId] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(0);
+  const queryClient = useQueryClient();
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [savedSearch, setSavedSearch] = useState("");
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!focusQtyId) return;
@@ -100,6 +106,89 @@ function ShortListPage() {
     return `${q} ${i.unit}`;
   }
 
+  const { data: savedLists } = useQuery({
+    queryKey: ["short-lists", business?.id],
+    enabled: !!business && savedOpen,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("short_lists")
+        .select("id, title, list_date, items, created_at")
+        .eq("business_id", business!.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const filteredSaved = useMemo(() => {
+    const q = savedSearch.trim().toLowerCase();
+    const rows = savedLists ?? [];
+    if (!q) return rows;
+    return rows.filter((r: any) => {
+      if ((r.title ?? "").toLowerCase().includes(q)) return true;
+      if ((r.list_date ?? "").includes(q)) return true;
+      return (r.items ?? []).some((i: any) => (i.name ?? "").toLowerCase().includes(q));
+    });
+  }, [savedLists, savedSearch]);
+
+  async function saveList() {
+    if (!business) return;
+    const rows = items.filter((i) => i.qty.trim());
+    if (!rows.length) {
+      toast.error("অন্তত একটি প্রোডাক্টে পরিমাণ লিখুন");
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      business_id: business.id,
+      title: title.trim() || "Short Product List",
+      list_date: date,
+      items: rows.map((i) => ({ id: i.id, name: i.name, packSize: i.packSize, qty: i.qty, unit: i.unit })),
+    };
+    const res = currentId
+      ? await supabase.from("short_lists").update(payload).eq("id", currentId).select("id").single()
+      : await supabase.from("short_lists").insert(payload).select("id").single();
+    setSaving(false);
+    if (res.error) {
+      toast.error(res.error.message);
+      return;
+    }
+    setCurrentId(res.data.id);
+    queryClient.invalidateQueries({ queryKey: ["short-lists"] });
+    toast.success(currentId ? "লিস্ট আপডেট হয়েছে" : "লিস্ট সেভ হয়েছে");
+  }
+
+  function loadList(row: any) {
+    setCurrentId(row.id);
+    setTitle(row.title ?? "Short Product List");
+    setDate(row.list_date ?? date);
+    setItems(
+      (row.items ?? []).map((i: any) => ({
+        id: i.id,
+        name: i.name,
+        packSize: i.packSize ?? null,
+        qty: String(i.qty ?? ""),
+        unit: i.unit === "box" ? "box" : "pcs",
+      }))
+    );
+    setSavedOpen(false);
+  }
+
+  async function deleteList(id: string) {
+    const { error } = await supabase.from("short_lists").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    if (currentId === id) setCurrentId(null);
+    queryClient.invalidateQueries({ queryKey: ["short-lists"] });
+    toast.success("মুছে ফেলা হয়েছে");
+  }
+
+  function newList() {
+    setCurrentId(null);
+    setItems([]);
+    setTitle("Short Product List");
+  }
+
   function doPrint() {
     printShortList(
       items.filter((i) => i.qty.trim()).map((i) => ({ name: i.name, qty: qtyLabel(i) })),
@@ -132,12 +221,65 @@ function ShortListPage() {
             <option value="80mm">POS 80mm</option>
             <option value="58mm">POS 58mm</option>
           </select>
+          <Button size="sm" variant="outline" onClick={() => setSavedOpen((v) => !v)}>
+            <FolderOpen className="h-4 w-4 mr-1" />
+            Saved Lists
+          </Button>
+          <Button size="sm" variant="outline" onClick={newList}>
+            New
+          </Button>
+          <Button size="sm" variant="secondary" onClick={saveList} disabled={saving}>
+            <Save className="h-4 w-4 mr-1" />
+            {currentId ? "Update" : "Save"}
+          </Button>
           <Button size="sm" onClick={doPrint} disabled={!items.some((i) => i.qty.trim())}>
             <Printer className="h-4 w-4 mr-1" />
             Print
           </Button>
         </div>
       </div>
+
+      {savedOpen && (
+        <div className="rounded-2xl border border-border/60 bg-card p-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              value={savedSearch}
+              onChange={(e) => setSavedSearch(e.target.value)}
+              placeholder="সেভ করা লিস্ট খুঁজুন (নাম / তারিখ / প্রোডাক্ট)…"
+              className="w-full h-9 rounded-full border border-border bg-input pl-9 pr-3 text-sm"
+            />
+          </div>
+          <div className="max-h-72 overflow-auto divide-y divide-border/60">
+            {filteredSaved.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground text-center">কোনো সেভ করা লিস্ট নেই।</div>
+            ) : (
+              filteredSaved.map((r: any) => (
+                <div key={r.id} className="flex items-center gap-2 py-2">
+                  <button
+                    type="button"
+                    onClick={() => loadList(r)}
+                    className="flex-1 text-left min-w-0"
+                  >
+                    <div className="text-sm font-medium truncate">{r.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(r.list_date)} • {(r.items ?? []).length} items
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteList(r.id)}
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Slip title + date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
