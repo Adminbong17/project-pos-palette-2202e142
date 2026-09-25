@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,16 @@ function ShortListPage() {
   const [title, setTitle] = useState("Short Product List");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const qtyRefs = useRef(new Map<string, HTMLInputElement>());
+  const unitRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [focusQtyId, setFocusQtyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusQtyId) return;
+    qtyRefs.current.get(focusQtyId)?.focus();
+    setFocusQtyId(null);
+  }, [focusQtyId, items]);
 
   const onSearch = (v: string) => {
     setSearch(v);
@@ -69,6 +79,7 @@ function ShortListPage() {
     ]);
     setSearch("");
     setDebounced("");
+    setFocusQtyId(p.id);
   }
 
   function update(id: string, patch: Partial<Item>) {
@@ -153,8 +164,16 @@ function ShortListPage() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
+            ref={searchRef}
             value={search}
             onChange={(e) => onSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const first = suggestions[0];
+                if (first) addProduct(first);
+              }
+            }}
             placeholder={
               items.length >= MAX_ITEMS
                 ? `Maximum ${MAX_ITEMS} items added — remove one to add more`
@@ -226,17 +245,42 @@ function ShortListPage() {
                   <td className="px-4 py-2.5 font-medium">{it.name}</td>
                   <td className="px-4 py-2.5 text-right">
                     <input
+                      ref={(el) => {
+                        if (el) qtyRefs.current.set(it.id, el);
+                        else qtyRefs.current.delete(it.id);
+                      }}
                       type="number"
                       min={0}
                       value={it.qty}
                       onChange={(e) => update(it.id, { qty: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          unitRefs.current.get(it.id)?.focus();
+                        }
+                      }}
                       placeholder="0"
                       className="h-8 w-24 rounded-md border border-border bg-input px-2 text-right text-sm tabular-nums"
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <div className="inline-flex overflow-hidden rounded-md border border-border">
+                    <div
+                      className="inline-flex overflow-hidden rounded-md border border-border"
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                          e.preventDefault();
+                          update(it.id, { unit: it.unit === "pcs" ? "box" : "pcs" });
+                        } else if (e.key === "Enter") {
+                          e.preventDefault();
+                          searchRef.current?.focus();
+                        }
+                      }}
+                    >
                       <button
+                        ref={(el) => {
+                          if (el) unitRefs.current.set(it.id, el);
+                          else unitRefs.current.delete(it.id);
+                        }}
                         type="button"
                         onClick={() => update(it.id, { unit: "pcs" })}
                         className={`h-8 px-3 text-xs font-medium transition-colors ${
