@@ -1,6 +1,6 @@
 import { FloatingSearch } from "@/components/floating-search";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -367,6 +367,9 @@ function PosScreen() {
         <div className="p-4 border-b border-border/60 space-y-3">
           <div className="flex items-center gap-3">
             <h1 className="font-display text-lg font-semibold">Point of Sale</h1>
+            <Link to="/products/short-list" className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium hover:bg-muted">
+              Short List
+            </Link>
             <select className="ml-auto h-9 rounded-lg border border-border bg-input px-3 text-sm" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
               <option value="">— Location —</option>
               {locations.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
