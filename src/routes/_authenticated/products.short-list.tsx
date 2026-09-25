@@ -247,19 +247,17 @@ function ShortListPage() {
                       >
                         pcs
                       </button>
-                      {it.packSize ? (
-                        <button
-                          type="button"
-                          onClick={() => update(it.id, { unit: "box" })}
-                          className={`h-8 px-3 text-xs font-medium transition-colors ${
-                            it.unit === "box"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-input text-muted-foreground hover:bg-muted"
-                          }`}
-                        >
-                          box ({it.packSize} pcs)
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => update(it.id, { unit: "box" })}
+                        className={`h-8 px-3 text-xs font-medium transition-colors ${
+                          it.unit === "box"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-input text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        box{it.packSize ? ` (${it.packSize} pcs)` : ""}
+                      </button>
                     </div>
                   </td>
                   <td className="px-2 py-2.5">
