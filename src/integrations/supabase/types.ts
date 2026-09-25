@@ -3847,6 +3847,50 @@ export type Database = {
           },
         ]
       }
+      short_lists: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          items: Json
+          list_date: string
+          note: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: Json
+          list_date?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: Json
+          list_date?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "short_lists_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_settings: {
         Row: {
           api_key: string | null
