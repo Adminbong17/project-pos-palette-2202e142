@@ -36,6 +36,7 @@ function ShortListPage() {
   const qtyRefs = useRef(new Map<string, HTMLInputElement>());
   const unitRefs = useRef(new Map<string, HTMLButtonElement>());
   const [focusQtyId, setFocusQtyId] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState(0);
 
   useEffect(() => {
     if (!focusQtyId) return;
@@ -45,6 +46,7 @@ function ShortListPage() {
 
   const onSearch = (v: string) => {
     setSearch(v);
+    setHighlight(0);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setDebounced(v.trim()), 250);
   };
@@ -79,6 +81,7 @@ function ShortListPage() {
     ]);
     setSearch("");
     setDebounced("");
+    setHighlight(0);
     setFocusQtyId(p.id);
   }
 
@@ -168,10 +171,21 @@ function ShortListPage() {
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "ArrowDown") {
                 e.preventDefault();
-                const first = suggestions[0];
-                if (first) addProduct(first);
+                setHighlight((h) => (suggestions.length ? (h + 1) % suggestions.length : 0));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlight((h) =>
+                  suggestions.length ? (h - 1 + suggestions.length) % suggestions.length : 0
+                );
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                const pick = suggestions[highlight] ?? suggestions[0];
+                if (pick) addProduct(pick);
+              } else if (e.key === "Escape") {
+                setSearch("");
+                setDebounced("");
               }
             }}
             placeholder={
@@ -190,12 +204,15 @@ function ShortListPage() {
             ) : suggestions.length === 0 ? (
               <div className="p-3 text-sm text-muted-foreground">No product found</div>
             ) : (
-              suggestions.map((p: any) => (
+              suggestions.map((p: any, idx: number) => (
                 <button
                   key={p.id}
                   type="button"
+                  onMouseEnter={() => setHighlight(idx)}
                   onClick={() => addProduct(p)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center gap-2"
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
+                    idx === highlight ? "bg-primary/15" : "hover:bg-muted/50"
+                  }`}
                 >
                   <ListPlus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.name}</span>
