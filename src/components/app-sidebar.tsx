@@ -144,7 +144,7 @@ const NAV_HUE: Record<string, number> = {
   "/dashboard": 232, "/rx-dashboard": 232, "/clinic-dashboard": 232,
   "/pos": 150, "/sales": 150, "/clinic-sales": 150,
   "/purchases": 55, "/quick-box": 55, "/stock-transfers": 55,
-  "/products": 195, "/clinic-services": 195, "/files": 250, "/contacts": 300,
+  "/products": 195, "/products/short-list": 55, "/clinic-services": 195, "/files": 250, "/contacts": 300,
   "/expenses": 25, "/accounts": 232,
   "/reports": 300, "/reports/profit": 150, "/reports/inventory-movement": 195,
   "/manufacturing": 55, "/restaurant": 25, "/repair": 250, "/crm": 300, "/hrm": 300,
