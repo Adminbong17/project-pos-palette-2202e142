@@ -168,10 +168,21 @@ function ShortListPage() {
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "ArrowDown") {
                 e.preventDefault();
-                const first = suggestions[0];
-                if (first) addProduct(first);
+                setHighlight((h) => (suggestions.length ? (h + 1) % suggestions.length : 0));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlight((h) =>
+                  suggestions.length ? (h - 1 + suggestions.length) % suggestions.length : 0
+                );
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                const pick = suggestions[highlight] ?? suggestions[0];
+                if (pick) addProduct(pick);
+              } else if (e.key === "Escape") {
+                setSearch("");
+                setDebounced("");
               }
             }}
             placeholder={
