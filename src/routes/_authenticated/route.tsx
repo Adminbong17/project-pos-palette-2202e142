@@ -59,6 +59,7 @@ function AuthedLayout() {
 
 
   async function signOut() {
+    if (!window.confirm("আপনি কি নিশ্চিত যে লগআউট করতে চান?")) return;
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
