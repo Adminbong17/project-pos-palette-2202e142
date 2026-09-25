@@ -201,12 +201,15 @@ function ShortListPage() {
             ) : suggestions.length === 0 ? (
               <div className="p-3 text-sm text-muted-foreground">No product found</div>
             ) : (
-              suggestions.map((p: any) => (
+              suggestions.map((p: any, idx: number) => (
                 <button
                   key={p.id}
                   type="button"
+                  onMouseEnter={() => setHighlight(idx)}
                   onClick={() => addProduct(p)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center gap-2"
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
+                    idx === highlight ? "bg-primary/15" : "hover:bg-muted/50"
+                  }`}
                 >
                   <ListPlus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.name}</span>
