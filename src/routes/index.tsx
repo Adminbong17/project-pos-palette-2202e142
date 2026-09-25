@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { isRxMode } from "@/lib/rx-mode";
+import { isRxMode, isPatientHost } from "@/lib/rx-mode";
 import { supabase } from "@/integrations/supabase/client";
 
 import {
@@ -37,6 +37,10 @@ export const Route = createFileRoute("/")({
 function LandingPage() {
   const navigate = useNavigate();
   useEffect(() => {
+    if (isPatientHost()) {
+      navigate({ to: "/patient", replace: true });
+      return;
+    }
     if (!isRxMode()) return;
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {

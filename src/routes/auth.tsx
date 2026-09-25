@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { isRxMode } from "@/lib/rx-mode";
+import { isRxMode, isPatientHost } from "@/lib/rx-mode";
 import { loginIdentifierToEmail } from "@/lib/rx-staff";
 
 import { useState } from "react";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
+    // On the patient domain (pt.…) the only login is the patient portal.
+    if (isPatientHost()) throw redirect({ to: "/patient" });
     // getSession() reads the local session (no network round-trip) so the
     // auth page paints instantly instead of waiting on the auth server.
     const { data } = await supabase.auth.getSession();

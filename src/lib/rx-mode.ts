@@ -91,3 +91,9 @@ export function isRxMode() {
 export function isRxPathAllowed(pathname: string) {
   return RX_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
+
+/** Patient portal hosts, e.g. pt.sheikhpharma.shop → opens the patient login. */
+export function isPatientHost(hostname?: string | null) {
+  const h = (hostname ?? (typeof window !== "undefined" ? window.location.hostname : "")).toLowerCase();
+  return /^(pt|patient|patients)\./.test(h);
+}
