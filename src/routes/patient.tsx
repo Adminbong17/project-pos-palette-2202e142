@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { CalendarDays, FileText, FlaskConical, LogOut, Receipt, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LogoutConfirm } from "@/components/logout-confirm";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -115,7 +116,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
           <h1 className="text-xl font-semibold">{d.name || "আমার ড্যাশবোর্ড"}</h1>
           <p className="text-sm text-muted-foreground">{d.phone}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { if (window.confirm("আপনি কি নিশ্চিত যে লগআউট করতে চান?")) onLogout(); }}><LogOut className="mr-1 h-4 w-4" />লগআউট</Button>
+        <LogoutConfirm onConfirm={onLogout}><Button variant="outline" size="sm"><LogOut className="mr-1 h-4 w-4" />লগআউট</Button></LogoutConfirm>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

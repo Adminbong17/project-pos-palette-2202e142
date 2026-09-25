@@ -9,6 +9,7 @@ import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
+import { LogoutConfirm } from "@/components/logout-confirm";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -59,7 +60,6 @@ function AuthedLayout() {
 
 
   async function signOut() {
-    if (!window.confirm("আপনি কি নিশ্চিত যে লগআউট করতে চান?")) return;
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
@@ -114,13 +114,14 @@ function AuthedLayout() {
                 POS
               </button>
             )}
+            <LogoutConfirm onConfirm={signOut}>
             <button
-              onClick={signOut}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground shadow-sm transition-colors"
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </button>
+            </LogoutConfirm>
           </header>
           <main className="flex-1"><Outlet /></main>
         </div>
