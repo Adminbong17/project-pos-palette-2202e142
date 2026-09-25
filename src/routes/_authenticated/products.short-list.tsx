@@ -148,24 +148,24 @@ function ShortListPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-input px-3 h-10">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+      {/* Floating search bar */}
+      <div className="sticky top-2 z-30 relative">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder={
               items.length >= MAX_ITEMS
-                ? `Maximum ${MAX_ITEMS} items added`
+                ? `Maximum ${MAX_ITEMS} items added — remove one to add more`
                 : "Search product name to add…"
             }
             disabled={items.length >= MAX_ITEMS}
-            className="w-full bg-transparent text-sm focus:outline-none"
+            className="w-full h-11 rounded-full border border-border bg-input pl-11 pr-4 text-sm shadow-lg focus:outline-none disabled:opacity-60"
           />
         </div>
         {debounced.length >= 2 && items.length < MAX_ITEMS && (
-          <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-64 overflow-auto">
+          <div className="absolute z-20 mt-1 w-full rounded-2xl border border-border bg-popover shadow-xl max-h-64 overflow-auto">
             {isFetching ? (
               <div className="p-3 text-sm text-muted-foreground">Searching…</div>
             ) : suggestions.length === 0 ? (
@@ -191,7 +191,12 @@ function ShortListPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        সার্চ করে প্রোডাক্ট যোগ করুন (সর্বোচ্চ {MAX_ITEMS}টি)। প্রতিটিতে কত লাগবে লিখুন এবং box/pcs বেছে নিন।
+        সার্চ করে প্রোডাক্ট যোগ করুন — {items.length}/{MAX_ITEMS} যোগ হয়েছে। প্রতিটিতে কত লাগবে লিখুন এবং box/pcs বেছে নিন।
+        {items.length >= MAX_ITEMS && (
+          <span className="block mt-1 text-destructive font-medium">
+            সর্বোচ্চ {MAX_ITEMS}টি যোগ হয়ে গেছে — নতুন যোগ করতে হলে কোনো একটা মুছে ফেলুন।
+          </span>
+        )}
       </p>
 
       {/* Items */}
@@ -230,14 +235,32 @@ function ShortListPage() {
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <select
-                      value={it.unit}
-                      onChange={(e) => update(it.id, { unit: e.target.value as "pcs" | "box" })}
-                      className="h-8 rounded-md border border-border bg-input px-2 text-sm"
-                    >
-                      <option value="pcs">pcs</option>
-                      {it.packSize && <option value="box">box ({it.packSize} pcs)</option>}
-                    </select>
+                    <div className="inline-flex rounded-full border border-border/60 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => update(it.id, { unit: "pcs" })}
+                        className={`px-3 h-8 text-xs font-medium transition-colors ${
+                          it.unit === "pcs"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-input hover:bg-muted"
+                        }`}
+                      >
+                        pcs
+                      </button>
+                      {it.packSize && (
+                        <button
+                          type="button"
+                          onClick={() => update(it.id, { unit: "box" })}
+                          className={`px-3 h-8 text-xs font-medium transition-colors border-l border-border/60 ${
+                            it.unit === "box"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-input hover:bg-muted"
+                          }`}
+                        >
+                          box ({it.packSize})
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-2 py-2.5">
                     <button
