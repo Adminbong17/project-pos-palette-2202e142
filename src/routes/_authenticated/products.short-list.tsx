@@ -20,7 +20,6 @@ type ShortRow = {
   sku: string | null;
   stock: number;
   alert: number;
-  packSize: number;
   neededPcs: number; // editable
 };
 
@@ -59,9 +58,8 @@ function ShortListPage() {
       const alert = Number(p.alert_quantity ?? 0);
       const isShort = stock <= 0 || (alert > 0 && stock <= alert);
       if (!isShort) continue;
-      const packSize = Math.max(1, Math.floor(Number(variations.find((v: any) => Number(v.pack_size) > 1)?.pack_size ?? 1)));
-      const defaultNeeded = Math.max(alert > 0 ? alert * 2 - stock : packSize, packSize);
-      out.push({ id: p.id, name: p.name, sku: p.sku, stock, alert, packSize, neededPcs: Math.ceil(defaultNeeded) });
+      const defaultNeeded = Math.max(alert > 0 ? alert * 2 - stock : 1, 1);
+      out.push({ id: p.id, name: p.name, sku: p.sku, stock, alert, neededPcs: Math.ceil(defaultNeeded) });
     }
     return out;
   }, [data]);
@@ -69,13 +67,7 @@ function ShortListPage() {
   const effective = rows.map((r) => ({ ...r, neededPcs: edits[r.id] ?? r.neededPcs }));
 
   function label(r: ShortRow) {
-    const pcs = Math.max(0, Math.round(r.neededPcs));
-    if (r.packSize > 1) {
-      const boxes = pcs / r.packSize;
-      const boxTxt = Number.isInteger(boxes) ? String(boxes) : boxes.toFixed(1);
-      return `${boxTxt} box (${pcs} pcs)`;
-    }
-    return `${pcs} pcs`;
+    return `${Math.max(0, Math.round(r.neededPcs))} pcs`;
   }
 
   function doPrint() {
