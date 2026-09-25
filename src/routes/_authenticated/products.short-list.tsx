@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, PackageOpen } from "lucide-react";
-import { fetchAllIn } from "@/lib/fetch-all";
+import { fetchAll } from "@/lib/fetch-all";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/products/short-list")({
@@ -33,7 +33,7 @@ function ShortListPage() {
     queryKey: ["short-list", business?.id],
     enabled: !!business,
     queryFn: async () => {
-      const products = await fetchAllIn<any>((from, to) =>
+      return fetchAll<any>(() =>
         supabase
           .from("products")
           .select(
@@ -43,9 +43,7 @@ function ShortListPage() {
           .eq("enable_stock", true)
           .eq("is_inactive", false)
           .order("name", { ascending: true })
-          .range(from, to)
       );
-      return products;
     },
   });
 
