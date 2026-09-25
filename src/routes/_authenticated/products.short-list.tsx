@@ -264,8 +264,23 @@ function ShortListPage() {
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <div className="inline-flex overflow-hidden rounded-md border border-border">
+                    <div
+                      className="inline-flex overflow-hidden rounded-md border border-border"
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                          e.preventDefault();
+                          update(it.id, { unit: it.unit === "pcs" ? "box" : "pcs" });
+                        } else if (e.key === "Enter") {
+                          e.preventDefault();
+                          searchRef.current?.focus();
+                        }
+                      }}
+                    >
                       <button
+                        ref={(el) => {
+                          if (el) unitRefs.current.set(it.id, el);
+                          else unitRefs.current.delete(it.id);
+                        }}
                         type="button"
                         onClick={() => update(it.id, { unit: "pcs" })}
                         className={`h-8 px-3 text-xs font-medium transition-colors ${
