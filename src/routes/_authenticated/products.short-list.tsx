@@ -43,6 +43,17 @@ function ShortListPage() {
   const [savedSearch, setSavedSearch] = useState("");
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const DEFAULT_FONT: Record<PrintSize, number> = { a4: 12, "80mm": 9, "58mm": 8 };
+  const [fontPx, setFontPx] = useState<number>(DEFAULT_FONT.a4);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(`short-list-font-${size}`));
+    setFontPx(saved >= 6 && saved <= 14 ? saved : DEFAULT_FONT[size]);
+  }, [size]);
+  const changeSize = (s: PrintSize) => setSize(s);
+  const changeFont = (n: number) => {
+    setFontPx(n);
+    localStorage.setItem(`short-list-font-${size}`, String(n));
+  };
 
   useEffect(() => {
     if (!focusQtyId) return;
