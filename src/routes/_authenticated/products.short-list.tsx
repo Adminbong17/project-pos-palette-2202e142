@@ -191,7 +191,12 @@ function ShortListPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        সার্চ করে প্রোডাক্ট যোগ করুন (সর্বোচ্চ {MAX_ITEMS}টি)। প্রতিটিতে কত লাগবে লিখুন এবং box/pcs বেছে নিন।
+        সার্চ করে প্রোডাক্ট যোগ করুন — {items.length}/{MAX_ITEMS} যোগ হয়েছে। প্রতিটিতে কত লাগবে লিখুন এবং box/pcs বেছে নিন।
+        {items.length >= MAX_ITEMS && (
+          <span className="block mt-1 text-destructive font-medium">
+            সর্বোচ্চ {MAX_ITEMS}টি যোগ হয়ে গেছে — নতুন যোগ করতে হলে কোনো একটা মুছে ফেলুন।
+          </span>
+        )}
       </p>
 
       {/* Items */}
