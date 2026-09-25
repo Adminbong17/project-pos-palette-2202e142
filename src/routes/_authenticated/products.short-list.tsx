@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, PackageOpen } from "lucide-react";
-import { fetchAll } from "@/lib/fetch-all";
+import { ArrowLeft, Printer, Search, X, ListPlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/products/short-list")({
@@ -14,67 +13,86 @@ export const Route = createFileRoute("/_authenticated/products/short-list")({
 
 type PrintSize = "a4" | "80mm" | "58mm";
 
-type ShortRow = {
+type Item = {
   id: string;
   name: string;
-  sku: string | null;
-  stock: number;
-  alert: number;
-  neededPcs: number; // editable
+  packSize: number | null;
+  qty: string; // blank until filled
+  unit: "pcs" | "box";
 };
+
+const MAX_ITEMS = 20;
 
 function ShortListPage() {
   const { data: business } = useCurrentBusiness();
   const [size, setSize] = useState<PrintSize>("a4");
-  const [edits, setEdits] = useState<Record<string, number>>({});
+  const [items, setItems] = useState<Item[]>([]);
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [title, setTitle] = useState("Short Product List");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["short-list", business?.id],
-    enabled: !!business,
+  const onSearch = (v: string) => {
+    setSearch(v);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDebounced(v.trim()), 250);
+  };
+
+  const { data: results, isFetching } = useQuery({
+    queryKey: ["short-list-search", business?.id, debounced],
+    enabled: !!business && debounced.length >= 2,
     queryFn: async () => {
-      return fetchAll<any>(() =>
-        supabase
-          .from("products")
-          .select(
-            "id, name, sku, alert_quantity, unit:units(short_name), variations(name, pack_size, variation_location_details(qty_available))"
-          )
-          .eq("business_id", business!.id)
-          .eq("enable_stock", true)
-          .eq("is_inactive", false)
-          .order("name", { ascending: true })
-      );
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, sku, variations(pack_size)")
+        .eq("business_id", business!.id)
+        .eq("is_inactive", false)
+        .ilike("name", `%${debounced}%`)
+        .order("name", { ascending: true })
+        .limit(15);
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
-  const rows: ShortRow[] = useMemo(() => {
-    const out: ShortRow[] = [];
-    for (const p of data ?? []) {
-      const variations = p.variations ?? [];
-      const stock = variations.reduce(
-        (s: number, v: any) =>
-          s + (v.variation_location_details ?? []).reduce((ss: number, d: any) => ss + Number(d.qty_available ?? 0), 0),
-        0
-      );
-      const alert = Number(p.alert_quantity ?? 0);
-      const isShort = stock <= 0 || (alert > 0 && stock <= alert);
-      if (!isShort) continue;
-      const defaultNeeded = Math.max(alert > 0 ? alert * 2 - stock : 1, 1);
-      out.push({ id: p.id, name: p.name, sku: p.sku, stock, alert, neededPcs: Math.ceil(defaultNeeded) });
-    }
-    return out;
-  }, [data]);
+  const picked = useMemo(() => new Set(items.map((i) => i.id)), [items]);
+  const suggestions = (results ?? []).filter((p: any) => !picked.has(p.id));
 
-  const effective = rows.map((r) => ({ ...r, neededPcs: edits[r.id] ?? r.neededPcs }));
+  function addProduct(p: any) {
+    if (items.length >= MAX_ITEMS) return;
+    const pack = p.variations?.[0]?.pack_size;
+    const packSize = pack && Number(pack) > 1 ? Number(pack) : null;
+    setItems((s) => [
+      ...s,
+      { id: p.id, name: p.name, packSize, qty: "", unit: packSize ? "box" : "pcs" },
+    ]);
+    setSearch("");
+    setDebounced("");
+  }
 
-  function label(r: ShortRow) {
-    return `${Math.max(0, Math.round(r.neededPcs))} pcs`;
+  function update(id: string, patch: Partial<Item>) {
+    setItems((s) => s.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  }
+
+  function remove(id: string) {
+    setItems((s) => s.filter((i) => i.id !== id));
+  }
+
+  function qtyLabel(i: Item) {
+    const q = i.qty.trim();
+    if (!q) return "";
+    if (i.unit === "box" && i.packSize) return `${q} box (${Number(q) * i.packSize} pcs)`;
+    return `${q} ${i.unit}`;
   }
 
   function doPrint() {
     printShortList(
-      effective.map((r) => ({ name: r.name, stock: r.stock, qty: label(r) })),
+      items.filter((i) => i.qty.trim()).map((i) => ({ name: i.name, qty: qtyLabel(i) })),
       size,
-      business?.name ?? ""
+      business?.name ?? "",
+      title.trim() || "Short Product List",
+      date
     );
   }
 
@@ -100,65 +118,137 @@ function ShortListPage() {
             <option value="80mm">POS 80mm</option>
             <option value="58mm">POS 58mm</option>
           </select>
-          <Button size="sm" onClick={doPrint} disabled={effective.length === 0}>
+          <Button size="sm" onClick={doPrint} disabled={!items.some((i) => i.qty.trim())}>
             <Printer className="h-4 w-4 mr-1" />
             Print
           </Button>
         </div>
       </div>
 
+      {/* Slip title + date */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-muted-foreground">Slip Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={80}
+            className="mt-1 h-9 w-full rounded-md border border-border bg-input px-3 text-sm"
+            placeholder="Short Product List"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="mt-1 h-9 w-full rounded-md border border-border bg-input px-3 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-input px-3 h-10">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder={
+              items.length >= MAX_ITEMS
+                ? `Maximum ${MAX_ITEMS} items added`
+                : "Search product name to add…"
+            }
+            disabled={items.length >= MAX_ITEMS}
+            className="w-full bg-transparent text-sm focus:outline-none"
+          />
+        </div>
+        {debounced.length >= 2 && items.length < MAX_ITEMS && (
+          <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-64 overflow-auto">
+            {isFetching ? (
+              <div className="p-3 text-sm text-muted-foreground">Searching…</div>
+            ) : suggestions.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">No product found</div>
+            ) : (
+              suggestions.map((p: any) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => addProduct(p)}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center gap-2"
+                >
+                  <ListPlus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{p.name}</span>
+                  {p.sku && (
+                    <span className="ml-auto text-xs text-muted-foreground font-mono">{p.sku}</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       <p className="text-xs text-muted-foreground">
-        Products that are out of stock or at/below their alert quantity. Edit the needed quantity (pieces) before printing.
+        সার্চ করে প্রোডাক্ট যোগ করুন (সর্বোচ্চ {MAX_ITEMS}টি)। প্রতিটিতে কত লাগবে লিখুন এবং box/pcs বেছে নিন।
       </p>
 
+      {/* Items */}
       <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
         <table className="w-full text-sm min-w-[560px]">
           <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left px-4 py-3 font-medium w-10">#</th>
               <th className="text-left px-4 py-3 font-medium">Product</th>
-              <th className="text-right px-4 py-3 font-medium">In Stock</th>
-              <th className="text-right px-4 py-3 font-medium">Needed (pcs)</th>
-              <th className="text-left px-4 py-3 font-medium">Order</th>
+              <th className="text-right px-4 py-3 font-medium">Demand</th>
+              <th className="text-left px-4 py-3 font-medium w-28">Unit</th>
+              <th className="w-10"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
-            {isLoading ? (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                  Loading…
-                </td>
-              </tr>
-            ) : effective.length === 0 ? (
+            {items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="p-12 text-center text-muted-foreground">
-                  <PackageOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  No short products — everything is in stock.
+                  <ListPlus className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  উপরের সার্চ বার থেকে প্রোডাক্ট যোগ করুন।
                 </td>
               </tr>
             ) : (
-              effective.map((r, i) => (
-                <tr key={r.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-2.5 text-muted-foreground">{i + 1}</td>
-                  <td className="px-4 py-2.5 font-medium">
-                    {r.name}
-                    {r.sku && <div className="text-xs text-muted-foreground font-mono">SKU: {r.sku}</div>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
-                    <span className={r.stock <= 0 ? "text-destructive font-semibold" : ""}>{r.stock}</span>
-                  </td>
+              items.map((it, idx) => (
+                <tr key={it.id} className="hover:bg-muted/20">
+                  <td className="px-4 py-2.5 text-muted-foreground">{idx + 1}</td>
+                  <td className="px-4 py-2.5 font-medium">{it.name}</td>
                   <td className="px-4 py-2.5 text-right">
                     <input
                       type="number"
                       min={0}
-                      value={r.neededPcs}
-                      onChange={(e) =>
-                        setEdits((s) => ({ ...s, [r.id]: Math.max(0, Number(e.target.value) || 0) }))
-                      }
+                      value={it.qty}
+                      onChange={(e) => update(it.id, { qty: e.target.value })}
+                      placeholder="0"
                       className="h-8 w-24 rounded-md border border-border bg-input px-2 text-right text-sm tabular-nums"
                     />
                   </td>
-                  <td className="px-4 py-2.5 font-medium">{label(r)}</td>
+                  <td className="px-4 py-2.5">
+                    <select
+                      value={it.unit}
+                      onChange={(e) => update(it.id, { unit: e.target.value as "pcs" | "box" })}
+                      className="h-8 rounded-md border border-border bg-input px-2 text-sm"
+                    >
+                      <option value="pcs">pcs</option>
+                      {it.packSize && <option value="box">box ({it.packSize} pcs)</option>}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => remove(it.id)}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground"
+                      title="Remove"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -170,9 +260,11 @@ function ShortListPage() {
 }
 
 function printShortList(
-  items: { name: string; stock: number; qty: string }[],
+  items: { name: string; qty: string }[],
   size: PrintSize,
-  businessName: string
+  businessName: string,
+  title: string,
+  date: string
 ) {
   const printId = "short-list-print-page";
   const styleId = "short-list-print-style";
@@ -226,8 +318,8 @@ function printShortList(
   printPage.id = printId;
   printPage.innerHTML = `
     ${businessName ? `<div class="center bold" style="font-size:1.15em">${esc(businessName)}</div>` : ""}
-    <div class="center bold">Short Product List</div>
-    <div class="center muted">${esc(formatDate(new Date().toISOString()))}</div>
+    <div class="center bold">${esc(title)}</div>
+    <div class="center muted">${esc(formatDate(date))}</div>
     <div class="sep"></div>
     <table>
       <thead><tr><th style="width:24px">#</th><th>Product</th><th class="right">Qty</th></tr></thead>
