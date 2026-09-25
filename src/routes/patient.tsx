@@ -12,8 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { fmtDate as formatDate } from "@/lib/format-date";
 import {
   getPatientDashboard,
-  requestPatientCode,
-  verifyPatientCode,
+  loginPatientByPhone,
 } from "@/lib/patient-portal.functions";
 
 const KEY = "patient-portal-token";
@@ -52,60 +51,30 @@ function PatientPage() {
 }
 
 function Login({ onLogin }: { onLogin: (t: string) => void }) {
-  const request = useServerFn(requestPatientCode);
-  const verify = useServerFn(verifyPatientCode);
+  const login = useServerFn(loginPatientByPhone);
   const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"phone" | "code">("phone");
   const [busy, setBusy] = useState(false);
-
-  const send = async () => {
+  const go = async () => {
     setBusy(true);
     try {
-      await request({ data: { phone } });
-      setStep("code");
-      toast.success("আপনার মোবাইলে কোড পাঠানো হয়েছে");
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  };
-  const check = async () => {
-    setBusy(true);
-    try {
-      const r = await verify({ data: { phone, code } });
+      const r = await login({ data: { phone } });
       onLogin(r.token);
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
   };
-
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
       <Card>
         <CardHeader>
           <CardTitle>রোগী লগইন</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            ডাক্তারের কাছে যে মোবাইল নম্বর দিয়েছেন সেটি দিন।
-          </p>
+          <p className="text-sm text-muted-foreground">ডাক্তারের কাছে যে মোবাইল নম্বর দিয়েছেন সেটি দিন।</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input
-            inputMode="tel" placeholder="01XXXXXXXXX" value={phone} disabled={step === "code"}
+          <Input inputMode="tel" placeholder="01XXXXXXXXX" value={phone} autoFocus
             onChange={(e) => setPhone(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && step === "phone" && send()}
-          />
-          {step === "code" && (
-            <Input
-              inputMode="numeric" placeholder="৬ ডিজিটের কোড" value={code} autoFocus maxLength={6}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && check()}
-            />
-          )}
-          <Button className="w-full" disabled={busy} onClick={step === "phone" ? send : check}>
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {step === "phone" ? "কোড পাঠান" : "লগইন"}
+            onKeyDown={(e) => e.key === "Enter" && go()} />
+          <Button className="w-full" disabled={busy} onClick={go}>
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}প্রবেশ করুন
           </Button>
-          {step === "code" && (
-            <button className="w-full text-sm text-muted-foreground underline" onClick={() => { setStep("phone"); setCode(""); }}>
-              নম্বর বদলান
-            </button>
-          )}
         </CardContent>
       </Card>
     </div>
