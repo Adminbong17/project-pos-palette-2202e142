@@ -79,6 +79,7 @@ function ShortListPage() {
     ]);
     setSearch("");
     setDebounced("");
+    setFocusQtyId(p.id);
   }
 
   function update(id: string, patch: Partial<Item>) {
@@ -163,8 +164,16 @@ function ShortListPage() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
+            ref={searchRef}
             value={search}
             onChange={(e) => onSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const first = suggestions[0];
+                if (first) addProduct(first);
+              }
+            }}
             placeholder={
               items.length >= MAX_ITEMS
                 ? `Maximum ${MAX_ITEMS} items added — remove one to add more`
