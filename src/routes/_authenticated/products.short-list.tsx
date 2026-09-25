@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,16 @@ function ShortListPage() {
   const [title, setTitle] = useState("Short Product List");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const qtyRefs = useRef(new Map<string, HTMLInputElement>());
+  const unitRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [focusQtyId, setFocusQtyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusQtyId) return;
+    qtyRefs.current.get(focusQtyId)?.focus();
+    setFocusQtyId(null);
+  }, [focusQtyId, items]);
 
   const onSearch = (v: string) => {
     setSearch(v);
