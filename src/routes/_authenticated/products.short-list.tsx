@@ -93,7 +93,7 @@ function ShortListPage() {
   function qtyLabel(i: Item) {
     const q = i.qty.trim();
     if (!q) return "";
-    if (i.unit === "box" && i.packSize) return `${q} box (${Number(q) * i.packSize} pcs)`;
+    if (i.unit === "box") return `${q} box`;
     return `${q} ${i.unit}`;
   }
 
@@ -300,7 +300,7 @@ function ShortListPage() {
                             : "bg-input text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        box{it.packSize ? ` (${it.packSize} pcs)` : ""}
+                        box
                       </button>
                     </div>
                   </td>
