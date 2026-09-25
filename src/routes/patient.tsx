@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/format-date";
+import { fmtDate as formatDate } from "@/lib/format-date";
 import {
   getPatientDashboard,
   requestPatientCode,
