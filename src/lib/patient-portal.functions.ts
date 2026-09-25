@@ -141,3 +141,13 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       plans: withBiz(plans.data as any),
     };
   });
+
+/** Phone-only login (no SMS code) — issues a session token for the number. */
+export const loginPatientByPhone = createServerFn({ method: "POST" })
+  .inputValidator((d: { phone: string }) => z.object({ phone: z.string().max(20) }).parse(d))
+  .handler(async ({ data }) => {
+    const phone = localPhone(data.phone);
+    if (!phone) throw new Error("সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন");
+    const exp = Date.now() + 30 * 24 * 3600 * 1000;
+    return { token: `${phone}.${exp}.${await sign(`${phone}.${exp}`)}`, phone };
+  });
