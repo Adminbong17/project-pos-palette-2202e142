@@ -245,10 +245,20 @@ function ShortListPage() {
                   <td className="px-4 py-2.5 font-medium">{it.name}</td>
                   <td className="px-4 py-2.5 text-right">
                     <input
+                      ref={(el) => {
+                        if (el) qtyRefs.current.set(it.id, el);
+                        else qtyRefs.current.delete(it.id);
+                      }}
                       type="number"
                       min={0}
                       value={it.qty}
                       onChange={(e) => update(it.id, { qty: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          unitRefs.current.get(it.id)?.focus();
+                        }
+                      }}
                       placeholder="0"
                       className="h-8 w-24 rounded-md border border-border bg-input px-2 text-right text-sm tabular-nums"
                     />
