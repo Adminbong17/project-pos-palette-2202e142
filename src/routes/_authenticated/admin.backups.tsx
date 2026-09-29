@@ -16,6 +16,7 @@ import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import { Input } from "@/components/ui/input";
 import { DatabaseBackup, Download, History, Loader2, RefreshCw, Trash2, Search } from "lucide-react";
 import { FoldTable } from "@/components/fold-table";
+import { ArchivePanel } from "@/components/archive-panel";
 
 export const Route = createFileRoute("/_authenticated/admin/backups")({
   head: () => ({
@@ -401,6 +402,7 @@ function BackupsPage() {
           </div>
         </div>
       ) : null}
+      <ArchivePanel />
     </div>
   );
 }
