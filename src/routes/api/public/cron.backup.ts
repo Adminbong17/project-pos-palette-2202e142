@@ -14,7 +14,17 @@ export const Route = createFileRoute("/api/public/cron/backup")({
         try {
           const { runFullBackup } = await import("@/lib/backup.server");
           const result = await runFullBackup();
+          let archive: any = null;
+          try {
+            const { runArchive } = await import("@/lib/archive.server");
+            const a = await runArchive();
+            archive = { skipped: a.skipped, months: a.archived.length };
+          } catch (e: any) {
+            console.error("[cron/backup] archive failed", e);
+            archive = { error: String(e?.message ?? e) };
+          }
           return Response.json({
+            archive,
             ok: true,
             db_size_bytes: result.db_size_bytes,
             storage: result.storage,

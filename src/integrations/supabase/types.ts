@@ -214,6 +214,62 @@ export type Database = {
         }
         Relationships: []
       }
+      archive_chunks: {
+        Row: {
+          business_id: string
+          bytes: number
+          created_at: string
+          file_name: string | null
+          grp: string
+          id: string
+          key_index: Json
+          period_month: string
+          row_count: number
+          share_token: string | null
+          status: string
+          updated_at: string
+          vault_file_id: string | null
+        }
+        Insert: {
+          business_id: string
+          bytes?: number
+          created_at?: string
+          file_name?: string | null
+          grp: string
+          id?: string
+          key_index?: Json
+          period_month: string
+          row_count?: number
+          share_token?: string | null
+          status?: string
+          updated_at?: string
+          vault_file_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          bytes?: number
+          created_at?: string
+          file_name?: string | null
+          grp?: string
+          id?: string
+          key_index?: Json
+          period_month?: string
+          row_count?: number
+          share_token?: string | null
+          status?: string
+          updated_at?: string
+          vault_file_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_chunks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           business_id: string
@@ -4887,6 +4943,23 @@ export type Database = {
             Args: { _id: string; _notes?: string; _sections?: string[] }
             Returns: string
           }
+      archive_candidates: {
+        Args: { _cutoff: string }
+        Returns: {
+          business_id: string
+          grp: string
+          period_month: string
+        }[]
+      }
+      archive_collect: {
+        Args: { _business_id: string; _grp: string; _month: string }
+        Returns: Json
+      }
+      archive_delete: {
+        Args: { _business_id: string; _grp: string; _month: string }
+        Returns: number
+      }
+      archive_restore: { Args: { _payload: Json }; Returns: Json }
       backup_business_snapshot: {
         Args: { _business_id: string }
         Returns: Json
