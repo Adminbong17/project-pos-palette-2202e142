@@ -9,6 +9,8 @@ import { Plus, Receipt, Printer, Trash2, Pencil, Search, X } from "lucide-react"
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { getArchivedRows } from "@/lib/archive.functions";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -188,14 +190,45 @@ function SalesPage() {
     },
   });
 
+  // Old months (6+ months) may live in the vault archive — fetch them live.
+  const fetchArchived = useServerFn(getArchivedRows);
+  const sixMonthsAgo = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return d.toISOString();
+  }, []);
+  const needsArchive = searching ? term.length >= 3 : !!fromISO && fromISO < sixMonthsAgo;
+  const { data: archivedRows = [] } = useQuery({
+    queryKey: ["sales-archive", business?.id, searching ? term : fromISO, searching ? "" : toISO],
+    enabled: !!business?.id && needsArchive,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const res: any = await fetchArchived({
+        data: {
+          business_id: business!.id,
+          grp: "sales",
+          from: searching ? null : fromISO,
+          to: searching ? null : toISO,
+          key: searching ? term : null,
+        },
+      });
+      return ((res?.transactions ?? []) as any[])
+        .filter((t) => t.type === "sell")
+        .filter((t) => searching || (t.transaction_date >= fromISO! && t.transaction_date < toISO!))
+        .map((t) => ({ ...t, contact: null, location: null, archived: true })) as unknown as SaleRow[];
+    },
+  });
+
   const rows = useMemo(() => {
-    if (!searching) return allRows;
+    const ids = new Set(allRows.map((r: any) => r.id));
+    const merged = [...allRows, ...archivedRows.filter((r: any) => !ids.has(r.id))];
+    if (!searching) return merged;
     const t = term.toLowerCase();
-    return allRows.filter((r) =>
+    return merged.filter((r) =>
       [r.invoice_no, r.ref_no, r.contact?.name, r.location?.name]
         .some((v) => (v ?? "").toLowerCase().includes(t)),
     );
-  }, [allRows, searching, term]);
+  }, [allRows, archivedRows, searching, term]);
 
 
   const saleIds = useMemo(() => rows.map((r) => r.id), [rows]);
