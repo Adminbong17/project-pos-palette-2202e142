@@ -58,6 +58,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 
+// Newer @tanstack/react-router types expect errorComponent as a lazy component.
+const LazyErrorComponent = lazy(async () => ({ default: ErrorComponent }));
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
