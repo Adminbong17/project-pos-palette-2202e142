@@ -22,3 +22,9 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Vercel Integration Test
+- **Test ID:** `VERIFY-SHEIKH-PHARMA-7890`
+- **Timestamp:** 2026-10-15
+- **Triggered By:** Antigravity AI
+
