@@ -7,9 +7,12 @@ export const SUPER_ADMIN_EMAIL = "admin@bongbangla.top";
 export function useIsSuperAdmin() {
   const q = useQuery({
     queryKey: ["is-super-admin"],
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const { data } = await supabase.auth.getUser();
-      return (data.user?.email ?? "").toLowerCase() === SUPER_ADMIN_EMAIL;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const email = sessionData.session?.user?.email ?? (await supabase.auth.getUser()).data.user?.email ?? "";
+      return email.toLowerCase() === SUPER_ADMIN_EMAIL;
     },
   });
   return { isSuperAdmin: !!q.data, isLoading: q.isLoading };

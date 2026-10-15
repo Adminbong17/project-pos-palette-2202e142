@@ -30,6 +30,8 @@ function Dashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", businessId],
     enabled: !!businessId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: async () => {
       const [sales, productsCount, customersCount, locationsCount] = await Promise.all([
         supabase.from("transactions")
@@ -55,6 +57,8 @@ function Dashboard() {
   const { data: expiryBatches = [] } = useQuery({
     queryKey: ["dashboard-expiry", businessId],
     enabled: !!businessId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase
         .from("transaction_purchase_lines")
@@ -71,6 +75,8 @@ function Dashboard() {
   const { data: topSelling = [] } = useQuery({
     queryKey: ["dashboard-most-selling", businessId, monthRange.fromISO],
     enabled: !!businessId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: () => fetchMostSelling(businessId!, monthRange.fromISO, monthRange.toISO, 20),
   });
 

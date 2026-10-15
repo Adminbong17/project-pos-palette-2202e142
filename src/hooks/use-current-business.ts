@@ -18,13 +18,16 @@ export type Business = {
 export function useCurrentBusiness() {
   return useQuery({
     queryKey: ["current-business"],
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return null;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) return null;
       const { data: profile } = await supabase
         .from("profiles")
         .select("current_business_id")
-        .eq("id", u.user.id)
+        .eq("id", userId)
         .maybeSingle();
 
       let bizId = profile?.current_business_id ?? null;
@@ -32,7 +35,7 @@ export function useCurrentBusiness() {
         const { data: activeCurrent } = await supabase
           .from("business_users")
           .select("business_id")
-          .eq("user_id", u.user.id)
+          .eq("user_id", userId)
           .eq("business_id", bizId)
           .eq("is_active", true)
           .maybeSingle();
@@ -43,7 +46,7 @@ export function useCurrentBusiness() {
         const { data: bu } = await supabase
           .from("business_users")
           .select("business_id")
-          .eq("user_id", u.user.id)
+          .eq("user_id", userId)
           .eq("is_active", true)
           .limit(1)
           .maybeSingle();

@@ -174,6 +174,8 @@ function SalesPage() {
   const { data: allRows = [], isLoading } = useQuery({
     queryKey: ["sales", business?.id, searching ? "search" : fromISO, searching ? "search" : toISO],
     enabled: !!business?.id,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     queryFn: async () => {
       let q = supabase
         .from("transactions")

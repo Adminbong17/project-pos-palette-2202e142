@@ -135,9 +135,11 @@ export function useAllowedSections() {
   const q = useQuery({
     queryKey: ["allowed-sections", business?.id],
     enabled: !!business?.id && !roleLoading,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const { data: uid } = await supabase.auth.getUser();
-      const userId = uid.user?.id;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
       if (!userId) return withAlways(DEFAULT_SALESMAN);
       const { data: ur } = await supabase
         .from("user_roles")

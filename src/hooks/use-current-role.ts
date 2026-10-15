@@ -14,6 +14,8 @@ export function useCurrentRole() {
   const q = useQuery({
     queryKey: ["current-role", business?.id],
     enabled: !!business?.id,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("current_user_role_name", {
         _business_id: business!.id,

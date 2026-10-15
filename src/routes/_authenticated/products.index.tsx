@@ -38,6 +38,8 @@ function ProductsList() {
   } = useInfiniteQuery({
     queryKey: ["products", business?.id, search],
     enabled: !!business,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const from = (pageParam as number) * PAGE_SIZE;

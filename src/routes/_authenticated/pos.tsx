@@ -87,6 +87,7 @@ function PosScreen() {
   // Locations — auto-pick first
   const { data: locations = [] } = useQuery({
     queryKey: ["locations", business?.id],
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase.from("business_locations").select("id, name, landmark, city, state, country, zip_code, mobile, alternate_number, email").eq("business_id", business!.id);
       const list = data ?? [];
@@ -101,6 +102,7 @@ function PosScreen() {
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts-customers", business?.id],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase.from("contacts").select("id, name, mobile").eq("business_id", business!.id).in("type", ["customer", "both"]).eq("is_active", true);
       return data ?? [];
@@ -110,6 +112,8 @@ function PosScreen() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["pos-products", business?.id, locationId],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: async () => {
       const PAGE = 1000;
       const all: any[] = [];
