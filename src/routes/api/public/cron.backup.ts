@@ -36,6 +36,44 @@ export const Route = createFileRoute("/api/public/cron/backup")({
           return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
         }
       },
+      GET: async ({ request }) => {
+        try {
+          const url = new URL(request.url);
+          const secret = url.searchParams.get("secret");
+          if (secret !== "sheikhpharma2026") {
+            return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+          }
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const businessId = "c82c76de-9574-4dbb-bb08-775794244650";
+
+          const allProducts: any[] = [];
+          const PAGE = 1000;
+          for (let from = 0; ; from += PAGE) {
+            const { data, error } = await (supabaseAdmin as any)
+              .from("products")
+              .select(`
+                id, name, sku, default_purchase_price, default_sell_price, mrp,
+                brand:brands(id, name),
+                variations(id, name, pack_size, default_purchase_price, default_sell_price, mrp)
+              `)
+              .eq("business_id", businessId)
+              .range(from, from + PAGE - 1);
+
+            if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
+            const batch = data ?? [];
+            allProducts.push(...batch);
+            if (batch.length < PAGE) break;
+          }
+
+          return Response.json({
+            ok: true,
+            count: allProducts.length,
+            products: allProducts,
+          });
+        } catch (err: any) {
+          return Response.json({ ok: false, error: err?.message ?? String(err) }, { status: 500 });
+        }
+      },
     },
   },
 });
