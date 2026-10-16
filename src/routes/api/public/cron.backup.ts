@@ -20,34 +20,30 @@ export const Route = createFileRoute("/api/public/cron/backup")({
             let updatedVariations = 0;
             let updatedProducts = 0;
 
-            for (const item of updates) {
-              if (item.variation_id) {
+            const variationUpdates = updates
+              .filter(item => !!item.variation_id)
+              .map(async (item: any) => {
                 const patch: any = {};
                 if (item.pack_size !== undefined) patch.pack_size = item.pack_size;
                 if (item.mrp !== undefined) patch.mrp = item.mrp;
                 if (item.default_sell_price !== undefined) patch.default_sell_price = item.default_sell_price;
                 if (item.default_purchase_price !== undefined) patch.default_purchase_price = item.default_purchase_price;
+                const { error } = await (supabaseAdmin as any).from("variations").update(patch).eq("id", item.variation_id);
+                if (!error) updatedVariations++;
+              });
 
-                const { error: vErr } = await (supabaseAdmin as any)
-                  .from("variations")
-                  .update(patch)
-                  .eq("id", item.variation_id);
-                if (!vErr) updatedVariations++;
-              }
-
-              if (item.product_id) {
+            const productUpdates = updates
+              .filter(item => !!item.product_id)
+              .map(async (item: any) => {
                 const pPatch: any = {};
                 if (item.mrp !== undefined) pPatch.mrp = item.mrp;
                 if (item.default_sell_price !== undefined) pPatch.default_sell_price = item.default_sell_price;
                 if (item.default_purchase_price !== undefined) pPatch.default_purchase_price = item.default_purchase_price;
+                const { error } = await (supabaseAdmin as any).from("products").update(pPatch).eq("id", item.product_id);
+                if (!error) updatedProducts++;
+              });
 
-                const { error: pErr } = await (supabaseAdmin as any)
-                  .from("products")
-                  .update(pPatch)
-                  .eq("id", item.product_id);
-                if (!pErr) updatedProducts++;
-              }
-            }
+            await Promise.all([...variationUpdates, ...productUpdates]);
 
             return Response.json({ ok: true, received: updates.length, updatedVariations, updatedProducts });
           } catch (e: any) {
