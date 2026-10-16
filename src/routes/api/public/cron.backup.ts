@@ -47,33 +47,58 @@ export const Route = createFileRoute("/api/public/cron/backup")({
 
           if (bizErr) return Response.json({ ok: false, error: bizErr.message }, { status: 500 });
 
-          const sheikhBiz =
-            businesses?.find((b: any) => b.name?.toLowerCase().includes("sheikh")) ||
-            businesses?.[0];
+          // Also get product count per business
+          const { data: productSummary } = await (supabaseAdmin as any)
+            .from("products")
+            .select("business_id, id, default_purchase_price, mrp");
 
-          if (!sheikhBiz) {
-            return Response.json({ ok: false, error: "No business found in database", businesses }, { status: 404 });
+          const bizMap: Record<string, { total: number; valid: number; missingPurchase: number; missingMrp: number }> = {};
+          for (const p of productSummary ?? []) {
+            const bid = p.business_id || "unknown";
+            if (!bizMap[bid]) bizMap[bid] = { total: 0, valid: 0, missingPurchase: 0, missingMrp: 0 };
+            bizMap[bid].total++;
+            const hasP = Number(p.default_purchase_price || 0) > 0;
+            const hasM = Number(p.mrp || 0) > 0;
+            if (hasP && hasM) bizMap[bid].valid++;
+            if (!hasP) bizMap[bid].missingPurchase++;
+            if (!hasM) bizMap[bid].missingMrp++;
           }
 
-          // 2. Fetch all products (with pagination past 1000)
+          const allBizStats = (businesses ?? []).map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            stats: bizMap[b.id] ?? { total: 0, valid: 0, missingPurchase: 0, missingMrp: 0 },
+          }));
+
+          // Pick the business that has products, or matches pharma/sheikh
+          const bizWithProducts = [...allBizStats].sort((a, b) => b.stats.total - a.stats.total)[0];
+          const targetBiz = (bizWithProducts && bizWithProducts.stats.total > 0)
+            ? businesses?.find((b: any) => b.id === bizWithProducts.id)
+            : (businesses?.find((b: any) => b.name?.toLowerCase().includes("pharma")) ||
+               businesses?.find((b: any) => b.name?.toLowerCase().includes("sheikh")) ||
+               businesses?.[0]);
+
+          // 2. Fetch all products (with pagination past 1000) for targetBiz
           const allProducts: any[] = [];
           const PAGE = 1000;
-          for (let from = 0; ; from += PAGE) {
-            const { data, error: pErr } = await (supabaseAdmin as any)
-              .from("products")
-              .select(`
-                id, name, sku, barcode, default_purchase_price, default_sell_price, mrp,
-                variations:variations!variations_product_id_fkey(
-                  id, name, default_purchase_price, default_sell_price, mrp
-                )
-              `)
-              .eq("business_id", sheikhBiz.id)
-              .range(from, from + PAGE - 1);
+          if (targetBiz?.id) {
+            for (let from = 0; ; from += PAGE) {
+              const { data, error: pErr } = await (supabaseAdmin as any)
+                .from("products")
+                .select(`
+                  id, name, sku, barcode, default_purchase_price, default_sell_price, mrp,
+                  variations:variations!variations_product_id_fkey(
+                    id, name, default_purchase_price, default_sell_price, mrp
+                  )
+                `)
+                .eq("business_id", targetBiz.id)
+                .range(from, from + PAGE - 1);
 
-            if (pErr) return Response.json({ ok: false, error: pErr.message }, { status: 500 });
-            const batch = data ?? [];
-            allProducts.push(...batch);
-            if (batch.length < PAGE) break;
+              if (pErr) return Response.json({ ok: false, error: pErr.message }, { status: 500 });
+              const batch = data ?? [];
+              allProducts.push(...batch);
+              if (batch.length < PAGE) break;
+            }
           }
 
           const totalProducts = allProducts.length;
@@ -102,7 +127,7 @@ export const Route = createFileRoute("/api/public/cron/backup")({
 
             if (!hasPurchase && !hasMrp) {
               missingBoth++;
-              if (missingSamples.length < 25) {
+              if (missingSamples.length < 30) {
                 missingSamples.push({
                   name: p.name,
                   sku: p.sku,
@@ -113,7 +138,7 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               }
             } else if (!hasPurchase) {
               missingPurchasePrice++;
-              if (missingSamples.length < 25) {
+              if (missingSamples.length < 30) {
                 missingSamples.push({
                   name: p.name,
                   sku: p.sku,
@@ -124,7 +149,7 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               }
             } else if (!hasMrp) {
               missingMrp++;
-              if (missingSamples.length < 25) {
+              if (missingSamples.length < 30) {
                 missingSamples.push({
                   name: p.name,
                   sku: p.sku,
@@ -140,7 +165,8 @@ export const Route = createFileRoute("/api/public/cron/backup")({
 
           return Response.json({
             ok: true,
-            business: sheikhBiz,
+            allBusinesses: allBizStats,
+            targetBusiness: targetBiz,
             totalProducts,
             allValid,
             missingPurchasePrice,
