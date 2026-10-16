@@ -6,51 +6,6 @@ export const Route = createFileRoute("/api/public/cron/backup")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const secret = request.headers.get("x-sync-secret") || url.searchParams.get("secret");
-        if (secret === "sheikhpharma2026") {
-          try {
-            const body = await request.json();
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { updates } = body;
-            if (!Array.isArray(updates)) {
-              return Response.json({ ok: false, error: "updates must be array" }, { status: 400 });
-            }
-
-            let updatedVariations = 0;
-            let updatedProducts = 0;
-
-            const variationUpdates = updates
-              .filter(item => !!item.variation_id)
-              .map(async (item: any) => {
-                const patch: any = {};
-                if (item.pack_size !== undefined) patch.pack_size = item.pack_size;
-                if (item.mrp !== undefined) patch.mrp = item.mrp;
-                if (item.default_sell_price !== undefined) patch.default_sell_price = item.default_sell_price;
-                if (item.default_purchase_price !== undefined) patch.default_purchase_price = item.default_purchase_price;
-                const { error } = await (supabaseAdmin as any).from("variations").update(patch).eq("id", item.variation_id);
-                if (!error) updatedVariations++;
-              });
-
-            const productUpdates = updates
-              .filter(item => !!item.product_id)
-              .map(async (item: any) => {
-                const pPatch: any = {};
-                if (item.mrp !== undefined) pPatch.mrp = item.mrp;
-                if (item.default_sell_price !== undefined) pPatch.default_sell_price = item.default_sell_price;
-                if (item.default_purchase_price !== undefined) pPatch.default_purchase_price = item.default_purchase_price;
-                const { error } = await (supabaseAdmin as any).from("products").update(pPatch).eq("id", item.product_id);
-                if (!error) updatedProducts++;
-              });
-
-            await Promise.all([...variationUpdates, ...productUpdates]);
-
-            return Response.json({ ok: true, received: updates.length, updatedVariations, updatedProducts });
-          } catch (e: any) {
-            return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
-          }
-        }
-
         const provided = request.headers.get("x-backup-secret") ?? "";
         const expected = process.env["BACKUP_CRON_SECRET"] ?? "";
         if (!expected || provided !== expected) {
@@ -79,44 +34,6 @@ export const Route = createFileRoute("/api/public/cron/backup")({
         } catch (e: any) {
           console.error("[cron/backup] failed", e);
           return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
-        }
-      },
-      GET: async ({ request }) => {
-        try {
-          const url = new URL(request.url);
-          const secret = url.searchParams.get("secret");
-          if (secret !== "sheikhpharma2026") {
-            return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-          }
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const businessId = "c82c76de-9574-4dbb-bb08-775794244650";
-
-          const allProducts: any[] = [];
-          const PAGE = 1000;
-          for (let from = 0; ; from += PAGE) {
-            const { data, error } = await (supabaseAdmin as any)
-              .from("products")
-              .select(`
-                id, name, sku, default_purchase_price, default_sell_price, mrp,
-                brand:brands(id, name),
-                variations(id, name, pack_size, default_purchase_price, default_sell_price, mrp)
-              `)
-              .eq("business_id", businessId)
-              .range(from, from + PAGE - 1);
-
-            if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
-            const batch = data ?? [];
-            allProducts.push(...batch);
-            if (batch.length < PAGE) break;
-          }
-
-          return Response.json({
-            ok: true,
-            count: allProducts.length,
-            products: allProducts,
-          });
-        } catch (err: any) {
-          return Response.json({ ok: false, error: err?.message ?? String(err) }, { status: 500 });
         }
       },
     },
