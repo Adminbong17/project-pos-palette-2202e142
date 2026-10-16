@@ -8,10 +8,11 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll } from "@/lib/fetch-all";
 import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
 import {
-  BarChart3, TrendingUp, Package, Users, Receipt, Wallet, Boxes, AlertTriangle,
+  BarChart3, TrendingUp, Package, Users, Receipt, Wallet, Boxes, AlertTriangle, Printer,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { printHrmReport } from "@/lib/hrm-print";
 
 export const Route = createFileRoute("/_authenticated/reports/")({
   head: () => ({ meta: [{ title: "Reports — QweekPOS" }] }),
@@ -136,6 +137,90 @@ function ReportsPage() {
 
 
 
+  const [activeTab, setActiveTab] = useState<string>("sales");
+
+  const handlePrintReport = () => {
+    const periodStr = range === "custom" ? `${customFrom || "Start"} to ${customTo || "End"}` : range;
+    if (activeTab === "sales") {
+      printHrmReport({
+        title: "Sales Invoices Report",
+        subtitle: `Period: ${periodStr}`,
+        business,
+        columns: [
+          { label: "Invoice No", align: "left" },
+          { label: "Date & Time", align: "left" },
+          { label: "Status", align: "center" },
+          { label: "Discount", align: "right" },
+          { label: "Tax", align: "right" },
+          { label: "Total Amount", align: "right" },
+        ],
+        rows: sales.map((s: any) => [
+          s.invoice_no,
+          formatDateTime(s.transaction_date),
+          s.status?.toUpperCase(),
+          fmt(Number(s.discount_amount)),
+          fmt(Number(s.tax_amount)),
+          fmt(Number(s.final_total)),
+        ]),
+        footer: [
+          ["Total Invoices", String(totals.count), "", fmt(totals.discount), fmt(totals.tax), fmt(totals.total)],
+        ],
+        size: "A4",
+        filename: `sales-report-${periodStr}`,
+      });
+    } else if (activeTab === "top") {
+      printHrmReport({
+        title: "Top Selling Products Report",
+        subtitle: `Period: ${periodStr}`,
+        business,
+        columns: [
+          { label: "Product Name", align: "left" },
+          { label: "Quantity Sold", align: "right" },
+          { label: "Total Revenue", align: "right" },
+        ],
+        rows: topProducts.map((p) => [p.name, p.qty, fmt(p.revenue)]),
+        footer: [
+          ["Total Top Products", String(topProducts.length), ""],
+          ["Gross Revenue", "", fmt(totals.total)],
+        ],
+        size: "A4",
+        filename: `top-products-${periodStr}`,
+      });
+    } else if (activeTab === "stock") {
+      printHrmReport({
+        title: "Inventory Stock Summary Report",
+        subtitle: `Generated on ${new Date().toLocaleDateString("en-GB")}`,
+        business,
+        columns: [
+          { label: "Product Name", align: "left" },
+          { label: "SKU / Code", align: "left" },
+          { label: "In Stock (Qty)", align: "right" },
+          { label: "Alert Qty", align: "right" },
+        ],
+        rows: stockSummary.rows.map((r) => [r.name, r.sku, r.qty, r.alert || "—"]),
+        footer: [["Total Tracked Products", "", String(stockSummary.rows.length), ""]],
+        size: "A4",
+        filename: `stock-inventory-${Date.now()}`,
+      });
+    } else {
+      printHrmReport({
+        title: "Low Stock Alert Report",
+        subtitle: `Urgent Reorder Required • ${new Date().toLocaleDateString("en-GB")}`,
+        business,
+        columns: [
+          { label: "Product Name", align: "left" },
+          { label: "SKU / Code", align: "left" },
+          { label: "Current Stock", align: "right" },
+          { label: "Alert Threshold", align: "right" },
+        ],
+        rows: stockSummary.lowStock.map((r) => [r.name, r.sku, r.qty, r.alert]),
+        footer: [["Total Low Stock Items", "", String(stockSummary.lowStock.length), ""]],
+        size: "A4",
+        filename: `low-stock-alert-${Date.now()}`,
+      });
+    }
+  };
+
   const cards = [
     { label: "Total Sales", value: fmt(totals.total), icon: Receipt, color: "bg-primary/15 text-primary" },
     { label: "Invoices", value: String(totals.count), icon: BarChart3, color: "bg-chart-2/15 text-chart-2" },
@@ -151,6 +236,13 @@ function ReportsPage() {
           <p className="text-sm text-muted-foreground">Sales, products and stock at a glance.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:bg-primary/90 transition shadow-sm"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Print A4 Report
+          </button>
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
             {DATE_PRESETS.map(({ key, label }) => (
               <button
@@ -247,7 +339,7 @@ function ReportsPage() {
 
       </div>
 
-      <Tabs defaultValue="sales">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="sales"><Receipt className="mr-1.5 h-3.5 w-3.5" />Sales</TabsTrigger>
           <TabsTrigger value="top"><TrendingUp className="mr-1.5 h-3.5 w-3.5" />Top Products</TabsTrigger>

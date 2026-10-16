@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Search, X, ListPlus, Save, FolderOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
+import { isSheikhPharma, getSheikhPharmaHeaderHtml, getSheikhPharmaFooterHtml } from "@/lib/sheikh-pharma-letterhead";
 
 export const Route = createFileRoute("/_authenticated/products/short-list")({
   component: ShortListPage,
@@ -570,13 +571,11 @@ function printShortList(
     )
     .join("");
 
+  const useLetterhead = size === "a4" && isSheikhPharma(businessName);
   const printPage = document.createElement("div");
   printPage.id = printId;
-  printPage.innerHTML = `
-    ${businessName ? `<div class="center bold" style="font-size:1.15em">${esc(businessName)}</div>` : ""}
-    <div class="center bold">${esc(title)}</div>
-    <div class="center muted">${esc(formatDate(date))}</div>
-    <div class="sep"></div>
+
+  const tableContent = `
     <table>
       <thead><tr><th style="width:${size === "a4" ? "24px" : "14px"}">#</th><th>Product</th><th class="right">Qty</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -584,6 +583,28 @@ function printShortList(
     <div class="sep"></div>
     <div class="muted">Total items: ${items.length}</div>
   `;
+
+  if (useLetterhead) {
+    printPage.innerHTML = `
+      <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:265mm;">
+        <div>
+          ${getSheikhPharmaHeaderHtml({ title: esc(title), metaRight: `Date: ${esc(formatDate(date))}` })}
+          <div style="margin-top:10px;">
+            ${tableContent}
+          </div>
+        </div>
+        ${getSheikhPharmaFooterHtml()}
+      </div>
+    `;
+  } else {
+    printPage.innerHTML = `
+      ${businessName ? `<div class="center bold" style="font-size:1.15em">${esc(businessName)}</div>` : ""}
+      <div class="center bold">${esc(title)}</div>
+      <div class="center muted">${esc(formatDate(date))}</div>
+      <div class="sep"></div>
+      ${tableContent}
+    `;
+  }
   printPage.style.cssText = `position:fixed;left:0;top:0;z-index:-1;opacity:0;pointer-events:none;width:${
     size === "a4" ? "210mm" : size === "80mm" ? "80mm" : "58mm"
   };background:#fff;color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${fontSize};line-height:${size === "a4" ? "1.35" : "1.15"};`;

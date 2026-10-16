@@ -1,6 +1,7 @@
 // Simple A4 report print for HRM pages.
 // Builds an offscreen printable node and shows the shared print preview modal.
 import { showPrintPreview } from "@/lib/print-preview";
+import { isSheikhPharma, getSheikhPharmaHeaderHtml, getSheikhPharmaFooterHtml } from "@/lib/sheikh-pharma-letterhead";
 
 export function printHrmReport(opts: {
   title: string;
@@ -45,13 +46,10 @@ export function printHrmReport(opts: {
   const align = (a?: string) => a === "right" ? "right" : a === "center" ? "center" : "left";
   const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 
-  page.innerHTML = `
-    <div style="text-align:center;margin-bottom:8px;">
-      <div style="font-size:18px;font-weight:800;">${esc(business?.name ?? "")}</div>
-      <div style="font-size:14px;font-weight:700;">${esc(title)}</div>
-      ${subtitle ? `<div style="font-size:11px;">${esc(subtitle)}</div>` : ""}
-      <div style="font-size:10px;">Printed: ${new Date().toLocaleString("en-GB")}</div>
-    </div>
+  const useLetterhead = size === "A4" && isSheikhPharma(business?.name);
+  const printedDate = new Date().toLocaleString("en-GB");
+
+  const tableHtml = `
     <table>
       <thead><tr>${columns.map((c) => `<th style="text-align:${align(c.align)}">${esc(c.label)}</th>`).join("")}</tr></thead>
       <tbody>
@@ -60,6 +58,30 @@ export function printHrmReport(opts: {
       </tbody>
     </table>
   `;
+
+  if (useLetterhead) {
+    page.innerHTML = `
+      <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:265mm;">
+        <div>
+          ${getSheikhPharmaHeaderHtml({ title, subtitle, metaRight: `Printed: ${printedDate}` })}
+          <div style="margin-top:10px;">
+            ${tableHtml}
+          </div>
+        </div>
+        ${getSheikhPharmaFooterHtml()}
+      </div>
+    `;
+  } else {
+    page.innerHTML = `
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:18px;font-weight:800;">${esc(business?.name ?? "")}</div>
+        <div style="font-size:14px;font-weight:700;">${esc(title)}</div>
+        ${subtitle ? `<div style="font-size:11px;">${esc(subtitle)}</div>` : ""}
+        <div style="font-size:10px;">Printed: ${printedDate}</div>
+      </div>
+      ${tableHtml}
+    `;
+  }
 
   document.body.appendChild(page);
 

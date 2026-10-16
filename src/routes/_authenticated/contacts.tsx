@@ -9,6 +9,7 @@ import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { toast } from "sonner";
 import { Pencil, Trash2, Plus, X, Search, Wallet, Printer } from "lucide-react";
 import { FoldTable } from "@/components/fold-table";
+import { isSheikhPharma, getSheikhPharmaHeaderHtml, getSheikhPharmaFooterHtml } from "@/lib/sheikh-pharma-letterhead";
 
 function fmtDate(d: string) {
   const dt = new Date(d);
@@ -77,29 +78,42 @@ function printLedger(
     </tr>`;
   }).join("");
   const netLabel = totals.netDue > 0 ? "Receivable" : totals.netDue < 0 ? "Payable" : "Settled";
-  const bodyHtml = `
-    <div class="head">
-      <h1>${bizName}</h1>
-      ${addr ? `<div>${addr}</div>` : ""}
-      <h2>Customer / Supplier Ledger</h2>
-    </div>
-    <div class="meta">
-      <div><b>${c.name}</b>${c.supplier_business_name ? ` (${c.supplier_business_name})` : ""}<br/>
-        Type: ${c.type}${c.mobile ? `<br/>Mobile: ${c.mobile}` : ""}${c.email ? `<br/>Email: ${c.email}` : ""}
+  const useLetterhead = size === "A4" && isSheikhPharma(bizName);
+  const headHtml = useLetterhead
+    ? getSheikhPharmaHeaderHtml({ title: "Customer / Supplier Ledger", metaRight: `Date: ${today}` })
+    : `
+      <div class="head">
+        <h1>${bizName}</h1>
+        ${addr ? `<div>${addr}</div>` : ""}
+        <h2>Customer / Supplier Ledger</h2>
       </div>
-      <div>Date: ${today}</div>
-    </div>
-    <div class="grid">
-      <div class="box">Opening<br/><b>${money(totals.opening)}</b></div>
-      <div class="box">Total Sales<br/><b>${money(totals.sell)}</b></div>
-      <div class="box">Total Purchases<br/><b>${money(totals.purchase)}</b></div>
-      <div class="box">Total Paid<br/><b>${money(totals.sellPaid + totals.purchasePaid)}</b></div>
-      <div class="box">Net ${netLabel}<br/><span class="tot">${money(Math.abs(totals.netDue))}</span></div>
-    </div>
-    <table>
-      <thead><tr><th>Date</th><th>Type</th><th>Invoice/Ref</th><th>Status</th><th class="r">Total</th><th class="r">Paid</th><th class="r">Due</th></tr></thead>
-      <tbody>${rowsHtml || `<tr><td colspan="7" style="text-align:center">No transactions</td></tr>`}</tbody>
-    </table>`;
+    `;
+  const footerHtml = useLetterhead ? getSheikhPharmaFooterHtml() : "";
+
+  const bodyHtml = `
+    <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:${size === "A4" ? "265mm" : "auto"};">
+      <div>
+        ${headHtml}
+        <div class="meta" style="margin-top:10px;">
+          <div><b>${c.name}</b>${c.supplier_business_name ? ` (${c.supplier_business_name})` : ""}<br/>
+            Type: ${c.type}${c.mobile ? `<br/>Mobile: ${c.mobile}` : ""}${c.email ? `<br/>Email: ${c.email}` : ""}
+          </div>
+          <div>Date: ${today}</div>
+        </div>
+        <div class="grid">
+          <div class="box">Opening<br/><b>${money(totals.opening)}</b></div>
+          <div class="box">Total Sales<br/><b>${money(totals.sell)}</b></div>
+          <div class="box">Total Purchases<br/><b>${money(totals.purchase)}</b></div>
+          <div class="box">Total Paid<br/><b>${money(totals.sellPaid + totals.purchasePaid)}</b></div>
+          <div class="box">Net ${netLabel}<br/><span class="tot">${money(Math.abs(totals.netDue))}</span></div>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Invoice/Ref</th><th>Status</th><th class="r">Total</th><th class="r">Paid</th><th class="r">Due</th></tr></thead>
+          <tbody>${rowsHtml || `<tr><td colspan="7" style="text-align:center">No transactions</td></tr>`}</tbody>
+        </table>
+      </div>
+      ${footerHtml}
+    </div>`;
 
   const printId = "ledger-print-page";
   const styleId = "ledger-print-style";
