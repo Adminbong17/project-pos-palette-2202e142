@@ -36,6 +36,127 @@ export const Route = createFileRoute("/api/public/cron/backup")({
           return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
         }
       },
+      GET: async () => {
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          // 1. Fetch businesses
+          const { data: businesses, error: bizErr } = await (supabaseAdmin as any)
+            .from("businesses")
+            .select("id, name");
+
+          if (bizErr) return Response.json({ ok: false, error: bizErr.message }, { status: 500 });
+
+          const sheikhBiz =
+            businesses?.find((b: any) => b.name?.toLowerCase().includes("sheikh")) ||
+            businesses?.[0];
+
+          if (!sheikhBiz) {
+            return Response.json({ ok: false, error: "No business found in database", businesses }, { status: 404 });
+          }
+
+          // 2. Fetch all products (with pagination past 1000)
+          const allProducts: any[] = [];
+          const PAGE = 1000;
+          for (let from = 0; ; from += PAGE) {
+            const { data, error: pErr } = await (supabaseAdmin as any)
+              .from("products")
+              .select(`
+                id, name, sku, barcode, default_purchase_price, default_sell_price, mrp,
+                variations:variations!variations_product_id_fkey(
+                  id, name, default_purchase_price, default_sell_price, mrp
+                )
+              `)
+              .eq("business_id", sheikhBiz.id)
+              .range(from, from + PAGE - 1);
+
+            if (pErr) return Response.json({ ok: false, error: pErr.message }, { status: 500 });
+            const batch = data ?? [];
+            allProducts.push(...batch);
+            if (batch.length < PAGE) break;
+          }
+
+          const totalProducts = allProducts.length;
+          let missingPurchasePrice = 0;
+          let missingMrp = 0;
+          let missingBoth = 0;
+          let allValid = 0;
+
+          const missingSamples: any[] = [];
+
+          for (const p of allProducts) {
+            const pPrice = Number(p.default_purchase_price || 0);
+            const pMrp = Number(p.mrp || 0);
+
+            const vPrices = (p.variations ?? []).map((v: any) => Number(v.default_purchase_price || 0));
+            const vMrps = (p.variations ?? []).map((v: any) => Number(v.mrp || 0));
+
+            const maxVPrice = vPrices.length ? Math.max(0, ...vPrices) : 0;
+            const maxVMrp = vMrps.length ? Math.max(0, ...vMrps) : 0;
+
+            const effectivePurchasePrice = pPrice > 0 ? pPrice : maxVPrice;
+            const effectiveMrp = pMrp > 0 ? pMrp : maxVMrp;
+
+            const hasPurchase = effectivePurchasePrice > 0;
+            const hasMrp = effectiveMrp > 0;
+
+            if (!hasPurchase && !hasMrp) {
+              missingBoth++;
+              if (missingSamples.length < 25) {
+                missingSamples.push({
+                  name: p.name,
+                  sku: p.sku,
+                  purchase_price: effectivePurchasePrice,
+                  mrp: effectiveMrp,
+                  issue: "Missing both Purchase Price & MRP",
+                });
+              }
+            } else if (!hasPurchase) {
+              missingPurchasePrice++;
+              if (missingSamples.length < 25) {
+                missingSamples.push({
+                  name: p.name,
+                  sku: p.sku,
+                  purchase_price: effectivePurchasePrice,
+                  mrp: effectiveMrp,
+                  issue: "Missing Purchase Price",
+                });
+              }
+            } else if (!hasMrp) {
+              missingMrp++;
+              if (missingSamples.length < 25) {
+                missingSamples.push({
+                  name: p.name,
+                  sku: p.sku,
+                  purchase_price: effectivePurchasePrice,
+                  mrp: effectiveMrp,
+                  issue: "Missing MRP",
+                });
+              }
+            } else {
+              allValid++;
+            }
+          }
+
+          return Response.json({
+            ok: true,
+            business: sheikhBiz,
+            totalProducts,
+            allValid,
+            missingPurchasePrice,
+            missingMrp,
+            missingBoth,
+            totalWithIssues: missingBoth + missingPurchasePrice + missingMrp,
+            percentageComplete:
+              totalProducts > 0
+                ? ((allValid / totalProducts) * 100).toFixed(1) + "%"
+                : "0%",
+            missingSamples,
+          });
+        } catch (err: any) {
+          return Response.json({ ok: false, error: err?.message ?? String(err) }, { status: 500 });
+        }
+      },
     },
   },
 });
