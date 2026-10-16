@@ -7,6 +7,7 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Plus, Receipt, Printer, Trash2, Pencil, Search, X } from "lucide-react";
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
+import { printHrmReport } from "@/lib/hrm-print";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -286,21 +287,65 @@ function SalesPage() {
   const totalMargin = totals.revenue > 0 ? (totalProfit / totals.revenue) * 100 : 0;
 
 
+  const handlePrintSalesList = () => {
+    const periodStr = range === "custom" ? `${customFrom || "Start"} to ${customTo || "End"}` : range;
+    printHrmReport({
+      title: "Sales Invoices Statement",
+      subtitle: `Period: ${periodStr} • Generated on ${new Date().toLocaleDateString("en-GB")}`,
+      business,
+      columns: [
+        { label: "Invoice No", align: "left" },
+        { label: "Date", align: "left" },
+        { label: "Customer", align: "left" },
+        { label: "Status", align: "center" },
+        { label: "Paid Status", align: "center" },
+        { label: "Total (BDT)", align: "right" },
+        { label: "Paid (BDT)", align: "right" },
+        { label: "Due (BDT)", align: "right" },
+      ],
+      rows: rows.map((r: any) => [
+        r.invoice_no ?? r.ref_no ?? "—",
+        formatDate(r.transaction_date),
+        r.contact?.name ?? "Walk-in",
+        r.status,
+        r.payment_status,
+        fmt(Number(r.final_total)),
+        fmt(Number(r.total_paid)),
+        fmt(Math.max(0, Number(r.final_total) - Number(r.total_paid))),
+      ]),
+      footer: [
+        ["Total Summary", "", "", "", "", fmt(totals.total), fmt(totals.paid), fmt(totals.total - totals.paid)]
+      ],
+      size: "A4",
+      filename: `sales-statement-${Date.now()}`,
+    });
+  };
+
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Receipt className="h-6 w-6" /> Sales
           </h1>
           <p className="text-sm text-muted-foreground">All sales transactions from POS.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handlePrintSalesList}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-sm font-semibold shadow-sm transition active:scale-95"
+            title="Print sales list on official Sheikh Pharma letterhead"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Print A4 Statement</span>
+          </button>
           <select value={printWidth} onChange={(e) => setPrintWidth(e.target.value as "58" | "80" | "A4")}
-            className="h-9 rounded-lg border border-border bg-input px-2 text-sm">
-            <option value="80">80mm</option>
-            <option value="58">58mm</option>
-            <option value="A4">A4</option>
+            className="h-9 rounded-lg border border-border bg-input px-2 text-sm"
+            title="Default receipt width for reprint buttons"
+          >
+            <option value="80">Receipt: 80mm</option>
+            <option value="58">Receipt: 58mm</option>
+            <option value="A4">Receipt: A4</option>
           </select>
           <Button asChild>
             <Link to="/pos">

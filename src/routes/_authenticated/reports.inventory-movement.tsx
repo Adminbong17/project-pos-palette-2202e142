@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import { formatDate } from "@/lib/utils";
-import { ArrowDownCircle, ArrowUpCircle, Boxes, Search } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Boxes, Search, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { printHrmReport } from "@/lib/hrm-print";
 
 export const Route = createFileRoute("/_authenticated/reports/inventory-movement")({
   head: () => ({ meta: [{ title: "Inventory Movement — QweekPOS" }] }),
@@ -210,15 +211,54 @@ function InventoryMovementPage() {
     : k === "adjustment_add" ? "Stock Adjust (+)"
     : "Stock Adjust (−)";
 
+  const handlePrintReport = () => {
+    printHrmReport({
+      title: "Inventory Movement Report",
+      subtitle: `Generated on ${new Date().toLocaleDateString("en-GB")}`,
+      business,
+      columns: [
+        { label: "Date", align: "left" },
+        { label: "Product Name", align: "left" },
+        { label: "SKU", align: "left" },
+        { label: "Type", align: "center" },
+        { label: "Qty", align: "right" },
+        { label: "Reference", align: "left" },
+      ],
+      rows: filtered.slice(0, 200).map((m) => [
+        formatDate(m.date),
+        m.product_name,
+        m.sku || "—",
+        kindLabel(m.kind),
+        m.qty > 0 ? `+${m.qty}` : String(m.qty),
+        m.ref || "—",
+      ]),
+      footer: [
+        ["Total Summary", "", "", `In: +${totals.inQty} | Out: -${totals.outQty}`, `Net: ${totals.net >= 0 ? `+${totals.net}` : totals.net}`, ""]
+      ],
+      size: "A4",
+      filename: `inventory-movement-${Date.now()}`,
+    });
+  };
+
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold flex items-center gap-2">
-          <Boxes className="h-6 w-6" /> Inventory Movement
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Every stock-in and stock-out event per product — purchases, sales and adjustments.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold flex items-center gap-2">
+            <Boxes className="h-6 w-6" /> Inventory Movement
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Every stock-in and stock-out event per product — purchases, sales and adjustments.
+          </p>
+        </div>
+        <button
+          onClick={handlePrintReport}
+          className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-95"
+          title="Print report on official Sheikh Pharma letterhead"
+        >
+          <Printer className="h-4 w-4" />
+          <span>Print A4 Report</span>
+        </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">

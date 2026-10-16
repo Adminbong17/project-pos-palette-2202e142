@@ -238,10 +238,11 @@ function ReportsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handlePrintReport}
-            className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:bg-primary/90 transition shadow-sm"
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-95"
+            title="Print report on official Sheikh Pharma letterhead"
           >
-            <Printer className="h-3.5 w-3.5" />
-            Print A4 Report
+            <Printer className="h-4 w-4" />
+            <span>Print A4 Report</span>
           </button>
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
             {DATE_PRESETS.map(({ key, label }) => (
@@ -340,12 +341,21 @@ function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="sales"><Receipt className="mr-1.5 h-3.5 w-3.5" />Sales</TabsTrigger>
-          <TabsTrigger value="top"><TrendingUp className="mr-1.5 h-3.5 w-3.5" />Top Products</TabsTrigger>
-          <TabsTrigger value="stock"><Boxes className="mr-1.5 h-3.5 w-3.5" />Stock</TabsTrigger>
-          <TabsTrigger value="low"><AlertTriangle className="mr-1.5 h-3.5 w-3.5" />Low Stock</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <TabsList>
+            <TabsTrigger value="sales"><Receipt className="mr-1.5 h-3.5 w-3.5" />Sales</TabsTrigger>
+            <TabsTrigger value="top"><TrendingUp className="mr-1.5 h-3.5 w-3.5" />Top Products</TabsTrigger>
+            <TabsTrigger value="stock"><Boxes className="mr-1.5 h-3.5 w-3.5" />Stock</TabsTrigger>
+            <TabsTrigger value="low"><AlertTriangle className="mr-1.5 h-3.5 w-3.5" />Low Stock</TabsTrigger>
+          </TabsList>
+          <button
+            onClick={handlePrintReport}
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-3.5 py-1.5 text-xs font-semibold shadow-sm transition"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Print {activeTab === "sales" ? "Sales Invoices" : activeTab === "top" ? "Top Products" : activeTab === "stock" ? "Stock Summary" : "Low Stock Alert"} (A4)
+          </button>
+        </div>
 
 
 

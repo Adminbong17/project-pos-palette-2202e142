@@ -5,9 +5,10 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { fetchAll } from "@/lib/fetch-all";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, Search, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FoldTable } from "@/components/fold-table";
+import { printHrmReport } from "@/lib/hrm-print";
 
 export const Route = createFileRoute("/_authenticated/reports/expiry")({
   head: () => ({ meta: [{ title: "Expiring Batches — QweekPOS" }] }),
@@ -53,14 +54,56 @@ function ExpiryPage() {
     });
   }, [rows, q]);
 
+  const handlePrintReport = () => {
+    printHrmReport({
+      title: "Expiring Batches Alert Report",
+      subtitle: `Sorted by Nearest Expiry Date • Generated on ${new Date().toLocaleDateString("en-GB")}`,
+      business,
+      columns: [
+        { label: "Product Name", align: "left" },
+        { label: "SKU / Code", align: "left" },
+        { label: "Batch / Lot No", align: "left" },
+        { label: "Stock Qty", align: "right" },
+        { label: "Expiry Date", align: "center" },
+        { label: "Days Left", align: "right" },
+      ],
+      rows: filteredRows.map((b: any) => {
+        const dl = daysLeft(b.expire_date);
+        return [
+          b.product?.name ?? "—",
+          b.product?.sku ?? "—",
+          b.lot_no ?? "—",
+          String(b.quantity ?? 0),
+          formatDate(b.expire_date),
+          dl < 0 ? `Expired (${Math.abs(dl)}d ago)` : `${dl} days`,
+        ];
+      }),
+      footer: [
+        ["Total Batches Listed", "", "", String(filteredRows.length), "", ""]
+      ],
+      size: "A4",
+      filename: `expiring-batches-${Date.now()}`,
+    });
+  };
+
   return (
     <div className="space-y-4 p-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
           <h1 className="font-display text-2xl font-semibold">Expiring Batches</h1>
         </div>
-        <Link to="/reports" className="text-xs underline text-muted-foreground hover:text-foreground">← Back to Reports</Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-semibold shadow-sm transition active:scale-95"
+            title="Print report on official Sheikh Pharma letterhead"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            <span>Print A4 Report</span>
+          </button>
+          <Link to="/reports" className="text-xs underline text-muted-foreground hover:text-foreground">← Back to Reports</Link>
+        </div>
       </div>
       <p className="text-sm text-muted-foreground">Showing all batches, sorted by nearest expiry.</p>
 

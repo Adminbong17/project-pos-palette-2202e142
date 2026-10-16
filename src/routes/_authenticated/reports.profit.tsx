@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
-import { Wallet, Search } from "lucide-react";
+import { Wallet, Search, Printer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date-presets";
+import { printHrmReport } from "@/lib/hrm-print";
 
 export const Route = createFileRoute("/_authenticated/reports/profit")({
   head: () => ({ meta: [{ title: "Profit Report — QweekPOS" }] }),
@@ -179,6 +180,36 @@ function ProfitReportPage() {
       )
     : profit.invoiceRows;
 
+  const handlePrintReport = () => {
+    const periodStr = range === "custom" ? `${customFrom || "Start"} to ${customTo || "End"}` : range;
+    printHrmReport({
+      title: "Product Profitability & Margin Report",
+      subtitle: `Period: ${periodStr} • Generated: ${new Date().toLocaleDateString("en-GB")}`,
+      business,
+      columns: [
+        { label: "Product Name", align: "left" },
+        { label: "Qty Sold", align: "right" },
+        { label: "Revenue", align: "right" },
+        { label: "Cost (COGS)", align: "right" },
+        { label: "Net Profit", align: "right" },
+        { label: "Margin %", align: "right" },
+      ],
+      rows: filteredProductRows.map((r) => [
+        r.name,
+        String(r.qty),
+        fmt(r.revenue),
+        fmt(r.cost),
+        fmt(r.profit),
+        `${r.margin.toFixed(1)}%`,
+      ]),
+      footer: [
+        ["Total Summary", "", fmt(profit.totalRevenue), fmt(profit.totalCost), fmt(profit.netProfit), ""]
+      ],
+      size: "A4",
+      filename: `profit-report-${Date.now()}`,
+    });
+  };
+
   if (!roleLoading && !isAdmin) {
     return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
   }
@@ -192,6 +223,14 @@ function ProfitReportPage() {
           <p className="text-sm text-muted-foreground">Revenue, cost and profit per product.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-95"
+            title="Print report on official Sheikh Pharma letterhead"
+          >
+            <Printer className="h-4 w-4" />
+            <span>Print A4 Report</span>
+          </button>
           <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card p-1">
             {DATE_PRESETS.map(({ key, label }) => (
               <button key={key} onClick={() => setRange(key)}

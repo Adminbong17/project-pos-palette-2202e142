@@ -7,8 +7,9 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 import { fetchAll, fetchAllIn } from "@/lib/fetch-all";
 import {
   Briefcase, PackageOpen, ShoppingCart, TrendingUp, Coins, HandCoins,
-  CreditCard, PlusCircle, Layers, Gem, FileMinus, ReceiptText, Boxes, ArrowLeftRight,
+  CreditCard, PlusCircle, Layers, Gem, FileMinus, ReceiptText, Boxes, ArrowLeftRight, Printer,
 } from "lucide-react";
+import { printHrmReport } from "@/lib/hrm-print";
 
 export const Route = createFileRoute("/_authenticated/reports/analytics")({
   head: () => ({ meta: [{ title: "Business Analytics — QweekPOS" }] }),
@@ -180,14 +181,47 @@ function AnalyticsPage() {
     { label: "Total Transactions", value: m.txCount, icon: ArrowLeftRight, tint: "bg-cyan-500/15 text-cyan-400" },
   ];
 
+  const handlePrintReport = () => {
+    printHrmReport({
+      title: "Business Health & Analytics Report",
+      subtitle: `Range: ${range.toUpperCase()} • Generated on ${new Date().toLocaleDateString("en-GB")}`,
+      business,
+      columns: [
+        { label: "Metric / KPI", align: "left" },
+        { label: "Value (BDT)", align: "right" },
+        { label: "Category / Description", align: "left" },
+      ],
+      rows: cards.map((c) => [
+        c.label,
+        typeof c.value === "number" ? c.value.toLocaleString() : String(c.value),
+        c.sub || "Core KPI",
+      ]),
+      footer: [
+        ["Total Metrics Evaluated", String(cards.length), ""]
+      ],
+      size: "A4",
+      filename: `business-analytics-${Date.now()}`,
+    });
+  };
+
   if (!roleLoading && !isAdmin) {
     return <div className="p-8 text-sm text-muted-foreground">Only Admins can view profit data.</div>;
   }
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold">Business Analytics Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Real-time performance metrics and business health insights</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Business Analytics Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Real-time performance metrics and business health insights</p>
+        </div>
+        <button
+          onClick={handlePrintReport}
+          className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-95"
+          title="Print report on official Sheikh Pharma letterhead"
+        >
+          <Printer className="h-4 w-4" />
+          <span>Print A4 Report</span>
+        </button>
       </div>
 
       <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card p-2 w-fit">
