@@ -189,6 +189,39 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               return Response.json({ ok: true, fixed });
             }
 
+            if (body.action === "inspect_invoices") {
+              const { invoice_nos } = body;
+              const { data: sales } = await (supabaseAdmin as any)
+                .from("transactions")
+                .select("id, invoice_no, ref_no, transaction_date, final_total, total_paid, discount_amount")
+                .in("invoice_no", invoice_nos);
+
+              const sIds = (sales || []).map((s: any) => s.id);
+              const { data: lines } = await (supabaseAdmin as any)
+                .from("transaction_sell_lines")
+                .select("id, transaction_id, product_id, variation_id, quantity, unit_price, line_discount_amount")
+                .in("transaction_id", sIds);
+
+              const pIds = (lines || []).map((l: any) => l.product_id);
+              const { data: prods } = await (supabaseAdmin as any)
+                .from("products")
+                .select("id, name, default_purchase_price, mrp")
+                .in("id", pIds);
+
+              const prodMap = new Map((prods || []).map((p: any) => [p.id, p]));
+              const mappedLines = (lines || []).map((l: any) => {
+                const p = prodMap.get(l.product_id);
+                return {
+                  ...l,
+                  product_name: p?.name,
+                  mrp: p?.mrp,
+                  unit_cost: p?.default_purchase_price
+                };
+              });
+
+              return Response.json({ ok: true, sales, lines: mappedLines });
+            }
+
             return Response.json({ ok: false, error: "Unknown action" }, { status: 400 });
           } catch (e: any) {
             return Response.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
