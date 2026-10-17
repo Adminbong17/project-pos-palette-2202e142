@@ -91,15 +91,18 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               const saleIds = (sales ?? []).map((s: any) => s.id);
 
               const allLines: any[] = [];
-              const CHUNK = 500;
-              for (let i = 0; i < saleIds.length; i += CHUNK) {
-                const chunk = saleIds.slice(i, i + CHUNK);
+              let from = 0;
+              while (true) {
                 const { data: lData, error: lErr } = await (supabaseAdmin as any)
                   .from("transaction_sell_lines")
                   .select("transaction_id, product_id, variation_id, quantity, unit_price")
-                  .in("transaction_id", chunk);
+                  .in("transaction_id", saleIds)
+                  .range(from, from + 999);
                 if (lErr) throw lErr;
-                allLines.push(...(lData ?? []));
+                if (!lData || lData.length === 0) break;
+                allLines.push(...lData);
+                if (lData.length < 1000) break;
+                from += 1000;
               }
 
               const pIds = Array.from(new Set(allLines.map((l) => l.product_id).filter(Boolean)));
