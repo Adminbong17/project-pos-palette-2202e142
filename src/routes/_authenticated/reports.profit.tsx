@@ -41,6 +41,8 @@ function ProfitReportPage() {
   const { data: sales = [] } = useQuery({
     queryKey: ["profit-sales", businessId, range, customFrom, customTo],
     enabled: !!businessId,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () =>
       fetchAll(() => {
         let q = supabase.from("transactions")
@@ -56,11 +58,14 @@ function ProfitReportPage() {
   const { data: sellLines = [] } = useQuery({
     queryKey: ["profit-lines", businessId, range, sales.length],
     enabled: !!businessId && sales.length > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const ids = sales.map((s: any) => s.id);
       return fetchAllIn(
         (chunk) => supabase.from("transaction_sell_lines")
-          .select("transaction_id, product_id, variation_id, quantity, unit_price")
+          .select("id, transaction_id, product_id, variation_id, quantity, unit_price")
+          .order("id")
           .in("transaction_id", chunk),
         ids,
       );
@@ -79,11 +84,14 @@ function ProfitReportPage() {
   const { data: products = [] } = useQuery({
     queryKey: ["profit-products", businessId, productIds],
     enabled: !!businessId && productIds.length > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () =>
       fetchAllIn(
         (chunk) => supabase.from("products")
           .select("id, name, default_purchase_price")
           .eq("business_id", businessId!)
+          .order("id")
           .in("id", chunk),
         productIds,
       ),
@@ -92,16 +100,30 @@ function ProfitReportPage() {
   const { data: variations = [] } = useQuery({
     queryKey: ["profit-variations", businessId, variationIds],
     enabled: !!businessId && variationIds.length > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () =>
       fetchAllIn(
         (chunk) => supabase.from("variations")
           .select("id, product_id, default_purchase_price")
+          .order("id")
           .in("id", chunk),
         variationIds,
       ),
   });
 
   const profit = useMemo(() => {
+    // Deduplicate sellLines by id to prevent pagination artifact duplicates
+    const seenLineIds = new Set<string>();
+    const uniqueLines: any[] = [];
+    for (const l of sellLines as any[]) {
+      if (l.id) {
+        if (seenLineIds.has(l.id)) continue;
+        seenLineIds.add(l.id);
+      }
+      uniqueLines.push(l);
+    }
+
     const varCostById = new Map(variations.map((v: any) => [v.id, Number(v.default_purchase_price || 0)]));
     const productCostFallback = new Map(products.map((p: any) => [p.id, Number(p.default_purchase_price || 0)]));
     const nameById = new Map(products.map((p: any) => [p.id, p.name]));
@@ -111,7 +133,7 @@ function ProfitReportPage() {
     // Revenue = the prices entered at POS (quantity x unit price). Invoice-level
     // discount is NOT subtracted from revenue; it is only shown for reference.
     const grossByInvoice = new Map<string, number>();
-    for (const l of sellLines as any[]) {
+    for (const l of uniqueLines) {
       grossByInvoice.set(
         l.transaction_id,
         (grossByInvoice.get(l.transaction_id) || 0) + Number(l.quantity || 0) * Number(l.unit_price || 0),
@@ -121,7 +143,7 @@ function ProfitReportPage() {
 
     const map = new Map<string, { qty: number; revenue: number; cost: number; invoices: Set<string> }>();
     const byInvoice = new Map<string, { revenue: number; cost: number }>();
-    for (const l of sellLines as any[]) {
+    for (const l of uniqueLines) {
       const cur = map.get(l.product_id) || { qty: 0, revenue: 0, cost: 0, invoices: new Set<string>() };
       cur.invoices.add(String(invoiceNoById.get(l.transaction_id) ?? "—"));
       const qty = Number(l.quantity || 0);

@@ -175,10 +175,12 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               const { patches } = body;
               let fixed = 0;
               for (const patch of patches) {
-                const { id, quantity, unit_price } = patch;
+                const { id, quantity, unit_price, product_id, variation_id } = patch;
                 const updateData: any = {};
                 if (quantity !== undefined) updateData.quantity = quantity;
                 if (unit_price !== undefined) updateData.unit_price = unit_price;
+                if (product_id !== undefined) updateData.product_id = product_id;
+                if (variation_id !== undefined) updateData.variation_id = variation_id;
 
                 const { error } = await (supabaseAdmin as any)
                   .from("transaction_sell_lines")
