@@ -15,8 +15,8 @@ export const Route = createFileRoute("/api/public/cron/backup")({
             const businessId = "c82c76de-9574-4dbb-bb08-775794244650";
 
             if (body.action === "deep_audit") {
-              const fromISO = "2026-10-01T00:00:00.000+06:00";
-              const toISO = "2026-11-01T00:00:00.000+06:00";
+              const fromISO = body.fromISO || "2026-10-01T00:00:00.000+06:00";
+              const toISO = body.toISO || "2026-11-01T00:00:00.000+06:00";
 
               let q = (supabaseAdmin as any)
                 .from("transactions")
@@ -39,6 +39,7 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               }
 
               const saleIds = allSales.map((s) => s.id);
+              const saleMap = new Map(allSales.map((s) => [s.id, s]));
 
               const allLines: any[] = [];
               const CHUNK = 300;
@@ -155,6 +156,35 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               const topCostItems = [...items].sort((a, b) => b.cost - a.cost).slice(0, 60);
               const topProfitItems = [...items].sort((a, b) => b.profit - a.profit).slice(0, 60);
 
+              const lineResults = uniqueLines.map((l) => {
+                const v = varMap.get(l.variation_id);
+                const p = prodMap.get(l.product_id);
+                const s = saleMap.get(l.transaction_id);
+                const unitCost = Number(v?.default_purchase_price ?? p?.default_purchase_price ?? 0);
+                const mrp = Number(v?.mrp ?? p?.mrp ?? 0);
+                const qty = Number(l.quantity || 0);
+                const unitPrice = Number(l.unit_price || 0);
+                const rev = qty * unitPrice;
+                const cost = qty * unitCost;
+                return {
+                  id: l.id,
+                  txId: l.transaction_id,
+                  inv: s?.invoice_no ?? s?.ref_no ?? "—",
+                  date: s?.transaction_date,
+                  pid: l.product_id,
+                  vid: l.variation_id,
+                  name: p?.name ?? "Unknown",
+                  brand: p?.brand?.name ?? "",
+                  qty,
+                  price: unitPrice,
+                  mrp,
+                  cost: unitCost,
+                  totRev: Number(rev.toFixed(2)),
+                  totCost: Number(cost.toFixed(2)),
+                  profit: Number((rev - cost).toFixed(2)),
+                };
+              });
+
               return Response.json({
                 ok: true,
                 totalSales: allSales.length,
@@ -165,6 +195,8 @@ export const Route = createFileRoute("/api/public/cron/backup")({
                 marginOverall: Number(((totalRev - totalCost) / totalRev * 100).toFixed(2)),
                 allItemsCount: items.length,
                 allItems: items,
+                linesCount: lineResults.length,
+                lines: lineResults,
               });
             }
 
