@@ -163,12 +163,8 @@ export const Route = createFileRoute("/api/public/cron/backup")({
                 totalCost: Number(totalCost.toFixed(2)),
                 netProfit: Number((totalRev - totalCost).toFixed(2)),
                 marginOverall: Number(((totalRev - totalCost) / totalRev * 100).toFixed(2)),
-                negativeItemsCount: negativeItems.length,
-                negativeItems,
-                lowMarginItemsCount: lowMarginItems.length,
-                lowMarginItems: lowMarginItems.slice(0, 50),
-                topCostItems: topCostItems.slice(0, 50),
-                topProfitItems: topProfitItems.slice(0, 50),
+                allItemsCount: items.length,
+                allItems: items,
               });
             }
 
