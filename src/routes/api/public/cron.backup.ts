@@ -108,6 +108,7 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               const pIds = Array.from(new Set(allLines.map((l) => l.product_id).filter(Boolean)));
               const vIds = Array.from(new Set(allLines.map((l) => l.variation_id).filter(Boolean)));
 
+              const CHUNK = 500;
               const allProducts: any[] = [];
               for (let i = 0; i < pIds.length; i += CHUNK) {
                 const chunk = pIds.slice(i, i + CHUNK);
