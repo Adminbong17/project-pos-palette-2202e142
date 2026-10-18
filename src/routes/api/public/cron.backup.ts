@@ -42,6 +42,34 @@ export const Route = createFileRoute("/api/public/cron/backup")({
               return Response.json({ ok: true, fixed: true });
             }
 
+            if (body.action === "fix_pot_prices") {
+              const pots = [
+                { name: "Tab Xinc B Pot", pp: 92.41, mrp: 105 },
+                { name: "Tab Proviten GOLD", pp: 306, mrp: 360 },
+                { name: "Tab Cavic C", pp: 155, mrp: 195 },
+                { name: "Tab Cavic C PLUS", pp: 155, mrp: 195 },
+                { name: "Tab Neuro B", pp: 90, mrp: 100 },
+              ];
+              let updated = 0;
+              for (const item of pots) {
+                const { data: p } = await (supabaseAdmin as any)
+                  .from("products")
+                  .update({ default_purchase_price: item.pp, mrp: item.mrp })
+                  .ilike("name", item.name)
+                  .select("id");
+                if (p && p.length > 0) {
+                  for (const prod of p) {
+                    await (supabaseAdmin as any)
+                      .from("variations")
+                      .update({ default_purchase_price: item.pp, mrp: item.mrp })
+                      .eq("product_id", prod.id);
+                    updated++;
+                  }
+                }
+              }
+              return Response.json({ ok: true, updated });
+            }
+
             if (body.action === "find_strip_typos") {
               // Find all lines in October where unit_price > 50 and quantity <= 2 for tablets
               const fromISO = "2026-10-01T00:00:00.000+06:00";
