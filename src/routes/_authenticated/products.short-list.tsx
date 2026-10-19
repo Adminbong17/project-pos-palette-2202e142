@@ -526,7 +526,7 @@ function printShortList(
   const printId = "short-list-print-page";
   const styleId = "short-list-print-style";
   const pageSize = size === "a4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const margin = size === "a4" ? "12mm" : "2mm 1.5mm";
+  const margin = size === "a4" ? "12mm" : "0mm";
   const fontSize = `${fontPx}px`;
 
   document.getElementById(printId)?.remove();
@@ -606,8 +606,8 @@ function printShortList(
     `;
   }
   printPage.style.cssText = `position:fixed;left:0;top:0;z-index:-1;opacity:0;pointer-events:none;width:${
-    size === "a4" ? "210mm" : size === "80mm" ? "80mm" : "58mm"
-  };background:#fff;color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${fontSize};line-height:${size === "a4" ? "1.35" : "1.15"};`;
+    size === "a4" ? "210mm" : size === "80mm" ? "72mm" : "48mm"
+  };max-width:${size === "a4" ? "210mm" : size === "80mm" ? "72mm" : "48mm"};margin:0 auto;box-sizing:border-box;padding:${size === "58mm" ? "0 1mm" : "0 2mm"};background:#fff;color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:${fontSize};line-height:${size === "a4" ? "1.35" : "1.15"};`;
 
   document.head.appendChild(style);
   document.body.appendChild(printPage);

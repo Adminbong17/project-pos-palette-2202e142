@@ -123,12 +123,12 @@ function printLedger(
   const style = document.createElement("style");
   style.id = styleId;
   const pageSize = size === "A4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const pageMargin = size === "A4" ? "10mm" : "3mm 2mm";
-  const width = size === "A4" ? "210mm" : size === "80mm" ? "80mm" : "58mm";
+  const pageMargin = size === "A4" ? "10mm" : "0mm";
+  const width = size === "A4" ? "210mm" : size === "80mm" ? "72mm" : "48mm";
   const fontSize = size === "A4" ? "12px" : size === "80mm" ? "11px" : "10px";
   const gridCols = size === "A4" ? "repeat(5,1fr)" : "repeat(2,1fr)";
   style.textContent = `
-    #${printId} { font-family: Arial, sans-serif; color: #000; background: #fff; padding: ${size === "A4" ? "20px" : "6px"}; font-size: ${fontSize}; width: ${width}; max-width: 100%; box-sizing: border-box; }
+    #${printId} { font-family: Arial, sans-serif; color: #000; background: #fff; padding: ${size === "A4" ? "20px" : size === "58mm" ? "2px 1mm" : "6px"}; font-size: ${fontSize}; width: ${width}; max-width: ${width}; margin: 0 auto; box-sizing: border-box; }
     #${printId} *{ box-sizing: border-box; }
     #${printId} h1{font-size:${size === "A4" ? "18px" : "14px"};margin:0}
     #${printId} h2{font-size:${size === "A4" ? "14px" : "12px"};margin:8px 0 4px}

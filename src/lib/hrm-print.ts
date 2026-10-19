@@ -15,8 +15,8 @@ export function printHrmReport(opts: {
 }) {
   const { title, subtitle, business, columns, rows, footer = [], filename, size = "A4" } = opts;
   const pageSize = size === "A4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const pageMargin = size === "A4" ? "12mm" : "3mm 2mm";
-  const width = size === "A4" ? "210mm" : size === "80mm" ? "80mm" : "58mm";
+  const pageMargin = size === "A4" ? "12mm" : "0mm";
+  const width = size === "A4" ? "210mm" : size === "80mm" ? "72mm" : "48mm";
   const fontSize = size === "A4" ? "12px" : size === "80mm" ? "10px" : "9px";
 
   const styleId = "hrm-print-style";
@@ -41,7 +41,7 @@ export function printHrmReport(opts: {
   const page = document.createElement("div");
   page.id = "hrm-print-page";
   page.className = "hrm-report";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;padding:8px;width:${width};font-size:${fontSize};`;
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;padding:${size === "58mm" ? "2px 1mm" : "6px"};width:${width};max-width:${width};margin:0 auto;box-sizing:border-box;font-size:${fontSize};`;
 
   const align = (a?: string) => a === "right" ? "right" : a === "center" ? "center" : "left";
   const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));

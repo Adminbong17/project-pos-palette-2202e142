@@ -161,7 +161,7 @@ function printPurchaseInWhitePage(tx: any, lines: any[], size: PrintSize, header
   const printId = "purchase-white-print-page";
   const styleId = "purchase-white-print-style";
   const pageSize = size === "a4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const margin = size === "a4" ? "12mm" : size === "80mm" ? "3mm 2mm" : "3mm 2mm";
+  const margin = size === "a4" ? "12mm" : "0mm";
   const fontSize = size === "a4" ? "12px" : size === "80mm" ? "11px" : "10px";
 
   document.getElementById(printId)?.remove();
@@ -248,11 +248,11 @@ function printPurchaseInWhitePage(tx: any, lines: any[], size: PrintSize, header
   printPage.style.position = "fixed";
   printPage.style.inset = "0 auto auto 0";
   printPage.style.zIndex = "2147483647";
-  printPage.style.width = size === "a4" ? "210mm" : size === "80mm" ? "80mm" : "58mm";
+  printPage.style.width = size === "a4" ? "210mm" : size === "80mm" ? "72mm" : "48mm";
   printPage.style.maxWidth = printPage.style.width;
   printPage.style.boxSizing = "border-box";
-  printPage.style.padding = "0";
-  printPage.style.margin = "0";
+  printPage.style.padding = size === "58mm" ? "0 1mm" : size === "80mm" ? "0 2mm" : "0";
+  printPage.style.margin = "0 auto";
   printPage.style.background = "#ffffff";
   printPage.style.backgroundColor = "#ffffff";
   printPage.style.color = "#000000";

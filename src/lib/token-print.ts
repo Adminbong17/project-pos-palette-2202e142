@@ -40,9 +40,9 @@ export function patientTypeLabel(type?: string | null, isNew?: boolean) {
 }
 
 export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
-  const width = size === "A5" ? "148mm" : size === "80mm" ? "76mm" : "54mm";
+  const width = size === "A5" ? "148mm" : size === "80mm" ? "72mm" : "48mm";
   const pageSize = size === "A5" ? "A5" : size === "80mm" ? "80mm auto" : "58mm auto";
-  const pageMargin = size === "A5" ? "8mm" : "2mm";
+  const pageMargin = size === "A5" ? "8mm" : "0mm";
   const fontSize = size === "A5" ? "13px" : size === "80mm" ? "12px" : "11px";
   const serialSize = size === "A5" ? "56px" : size === "80mm" ? "44px" : "38px";
 
@@ -72,7 +72,7 @@ export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
   const page = document.createElement("div");
   page.id = "token-print-page";
   page.className = "patient-token";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${width};font-size:${fontSize};padding:6px;`;
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${width};max-width:${width};margin:0 auto;box-sizing:border-box;font-size:${fontSize};padding:${size === "58mm" ? "2px 1mm" : "6px"};`;
   page.innerHTML = `
     <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;">
       ${data.clinicName ? `<div style="font-size:11px;letter-spacing:.5px;">${esc(data.clinicName)}</div>` : ""}

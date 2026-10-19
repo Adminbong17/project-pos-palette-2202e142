@@ -650,8 +650,8 @@ function ReceiptModal({
   onWidthChange: (w: "58" | "80" | "A4") => void;
   onClose: () => void;
 }) {
-  const mm = width === "58" ? "58mm" : width === "80" ? "80mm" : "210mm";
-  const fontSize = width === "58" ? "13px" : width === "80" ? "15px" : "14px";
+  const mm = width === "58" ? "48mm" : width === "80" ? "72mm" : "210mm";
+  const fontSize = width === "58" ? "11px" : width === "80" ? "13px" : "13px";
   const handlePrint = () => printReceiptInWhitePage(sale, width, { businessName, businessAddress, businessMobile, businessEmail });
 
   return (
@@ -670,7 +670,7 @@ function ReceiptModal({
             <button onClick={() => onWidthChange("A4")} className={`flex-1 h-9 rounded-lg border text-sm ${width === "A4" ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>A4</button>
           </div>
           <div className="rounded-lg border border-border bg-white text-black p-3 max-h-80 overflow-auto" style={{ width: width === "A4" ? "100%" : mm, fontSize, fontFamily: "ui-monospace, monospace", margin: "0 auto" }}>
-            <Receipt sale={sale} businessName={businessName} businessAddress={businessAddress} businessMobile={businessMobile} businessEmail={businessEmail} />
+            <Receipt sale={sale} businessName={businessName} businessAddress={businessAddress} businessMobile={businessMobile} businessEmail={businessEmail} width={width} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={onClose} className="h-10 rounded-lg border border-border text-sm">Skip</button>
@@ -681,7 +681,7 @@ function ReceiptModal({
 
       <div id="receipt-print" className="hidden" style={{ width: mm, fontSize, fontFamily: "ui-monospace, monospace", color: "#000", background: "#fff", padding: "4px" }}>
 
-        <Receipt sale={sale} businessName={businessName} businessAddress={businessAddress} businessMobile={businessMobile} businessEmail={businessEmail} />
+        <Receipt sale={sale} businessName={businessName} businessAddress={businessAddress} businessMobile={businessMobile} businessEmail={businessEmail} width={width} />
       </div>
     </div>
   );
@@ -708,9 +708,11 @@ function printReceiptInWhitePage(sale: SaleSnapshot, width: "58" | "80" | "A4", 
   sharedPrintReceipt(toSharedSale(sale), width, { businessName: header.businessName, businessAddress: header.businessAddress, businessMobile: header.businessMobile });
 }
 
-function Receipt({ sale, businessName, businessAddress, businessMobile }: { sale: SaleSnapshot; businessName: string; businessAddress: string; businessMobile: string; businessEmail: string }) {
-  const html = sharedReceiptHtml(toSharedSale(sale), { businessName, businessAddress, businessMobile });
-  const css = receiptCss(".receipt-preview-clone", "13px", "100%");
+function Receipt({ sale, businessName, businessAddress, businessMobile, width = "80" }: { sale: SaleSnapshot; businessName: string; businessAddress: string; businessMobile: string; businessEmail: string; width?: "58" | "80" | "A4" }) {
+  const html = sharedReceiptHtml(toSharedSale(sale), { businessName, businessAddress, businessMobile }, width);
+  const mm = width === "58" ? "48mm" : width === "80" ? "72mm" : "100%";
+  const fontSize = width === "58" ? "11px" : "13px";
+  const css = receiptCss(".receipt-preview-clone", fontSize, mm);
   return (
     <>
       <style>{css}</style>

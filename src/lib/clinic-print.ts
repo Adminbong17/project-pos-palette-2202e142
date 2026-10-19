@@ -18,8 +18,8 @@ type Geometry = { width: string; pageSize: string; pageMargin: string; fontSize:
 
 function geometry(size: PrintSize): Geometry {
   if (size === "A4") return { width: "190mm", pageSize: "A4", pageMargin: "10mm", fontSize: "13px" };
-  if (size === "80mm") return { width: "76mm", pageSize: "80mm auto", pageMargin: "2mm", fontSize: "12px" };
-  return { width: "54mm", pageSize: "58mm auto", pageMargin: "2mm", fontSize: "11px" };
+  if (size === "80mm") return { width: "72mm", pageSize: "80mm auto", pageMargin: "0mm", fontSize: "12px" };
+  return { width: "48mm", pageSize: "58mm auto", pageMargin: "0mm", fontSize: "11px" };
 }
 
 function headerHtml(header: ClinicPrintHeader, title: string, big: boolean) {
@@ -100,7 +100,7 @@ function renderPrint(size: PrintSize, inner: string, filename: string) {
   const page = document.createElement("div");
   page.id = pageId;
   page.className = "clinic-doc";
-  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};font-size:${g.fontSize};padding:6px;`;
+  page.style.cssText = `font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#000;background:#fff;width:${g.width};max-width:${g.width};margin:0 auto;box-sizing:border-box;font-size:${g.fontSize};padding:${size === "58mm" ? "2px 1mm" : "6px"};`;
   page.innerHTML = `${inner}
     <div style="margin-top:8px;border-top:1px dashed #000;padding-top:4px;text-align:center;font-size:9px;">
       QweekRx ${new Date().getFullYear()} · 01712472839 (Phone/WhatsApp)

@@ -65,8 +65,11 @@ export function showPrintPreview(opts: {
     // Fresh clone that keeps the original id, so caller CSS scoped to
     // #printId inside <style> tags in <head> still applies inside the iframe.
     const printClone = printPage.cloneNode(true) as HTMLElement;
+    const widthStyle = printPage.style.width
+      ? `width:${printPage.style.width} !important;max-width:${printPage.style.maxWidth || printPage.style.width} !important;`
+      : "";
     printClone.style.cssText =
-      "position:static;left:auto;top:auto;opacity:1;pointer-events:auto;z-index:auto;width:auto;max-width:none;background:#fff;color:#000;";
+      `position:static;left:auto;top:auto;opacity:1;pointer-events:auto;z-index:auto;margin:0 auto !important;background:#fff;color:#000;${widthStyle}`;
 
     // Copy <link rel="stylesheet"> tags and every <style> block from the
     // host document, stripping the caller's `body > *:not(#printId)` rules
@@ -87,7 +90,7 @@ export function showPrintPreview(opts: {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title></title>${linkHtml}${styleHtml}
       <style>
         html,body{margin:0;padding:0;background:#fff !important;color:#000 !important;}
-        html body > *{display:block !important;visibility:visible !important;position:static !important;}
+        html body > *{display:block !important;visibility:visible !important;position:static !important;margin:0 auto !important;}
       </style>
       </head><body>${printClone.outerHTML}</body></html>`;
 

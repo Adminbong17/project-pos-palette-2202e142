@@ -989,12 +989,12 @@ function PrescriptionsPage() {
     }
 
 
-    const widthCss = size === "80mm" ? "80mm" : "58mm";
+    const widthCss = size === "80mm" ? "72mm" : "48mm";
     const fs = size === "58mm" ? "10px" : "11px";
     const styles = `
       @page { size: ${size} auto; margin: 0; }
       html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:${fs}; }
-      .page { width:${widthCss}; padding:4mm; box-sizing:border-box; background:#fff; }
+      .page { width:${widthCss}; max-width:${widthCss}; margin:0 auto; padding:${size === "58mm" ? "2px 1mm" : "4mm"}; box-sizing:border-box; background:#fff; }
       h2 { margin:2px 0; font-size:17px; }
       .desig { font-size:0.9em; }
       .center { text-align:center; }

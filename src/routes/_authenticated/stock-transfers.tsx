@@ -512,11 +512,11 @@ async function printTransfer(id: string, size: PrintSize, businessName: string, 
     const style = document.createElement("style");
     style.id = styleId;
     const pageSize = size === "A4" ? "A4" : size === "80mm" ? "80mm auto" : "58mm auto";
-    const pageMargin = size === "A4" ? "12mm" : "3mm 2mm";
-    const width = size === "A4" ? "210mm" : size === "80mm" ? "80mm" : "58mm";
+    const pageMargin = size === "A4" ? "12mm" : "0mm";
+    const width = size === "A4" ? "210mm" : size === "80mm" ? "72mm" : "48mm";
     const fs = size === "A4" ? "13px" : size === "80mm" ? "11px" : "10px";
     style.textContent = `
-      #${printId} { font-family: system-ui, -apple-system, Arial, sans-serif; color:#000; background:#fff; padding:${size === "A4" ? "24px" : "6px"}; width:${width}; max-width:100%; box-sizing:border-box; font-size:${fs}; }
+      #${printId} { font-family: system-ui, -apple-system, Arial, sans-serif; color:#000; background:#fff; padding:${size === "A4" ? "24px" : size === "58mm" ? "2px 1mm" : "6px"}; width:${width}; max-width:${width}; margin:0 auto; box-sizing:border-box; font-size:${fs}; }
       #${printId} * { box-sizing: border-box; }
       #${printId} h1 { font-size:${size === "A4" ? "20px" : "14px"}; margin:0 0 4px; }
       #${printId} table { width:100%; border-collapse: collapse; margin-top:12px; font-size:${fs}; }
