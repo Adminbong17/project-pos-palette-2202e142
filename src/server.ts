@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { isPatientHost } from "./lib/rx-mode";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -50,6 +51,30 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       bindRuntimeEnv(env);
+      // Patient portal domain routing (e.g. pt.sheikhpharma.shop):
+      // Redirect root "/" or any non-patient non-api routes directly to "/patient"
+      const url = new URL(request.url);
+      const rawHost =
+        request.headers.get("x-forwarded-host") ||
+        request.headers.get("host") ||
+        url.hostname;
+      const host = (rawHost || "").split(":")[0].toLowerCase().trim();
+
+      if (isPatientHost(host)) {
+        const p = url.pathname;
+        const isStaticOrApi =
+          p.startsWith("/_") ||
+          p.startsWith("/api") ||
+          p.startsWith("/assets") ||
+          /\.(png|jpe?g|svg|ico|webp|css|js|json|woff2?|ttf|txt|xml|pdf)$/i.test(p);
+
+        if (!isStaticOrApi && !p.startsWith("/patient")) {
+          const dest = new URL("/patient", request.url);
+          dest.search = url.search;
+          return Response.redirect(dest.toString(), 302);
+        }
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

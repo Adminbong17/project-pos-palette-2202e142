@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { useCurrentRole } from "@/hooks/use-current-role";
 import { useAllowedSections, isPathAllowed, sectionHomePath } from "@/hooks/use-allowed-sections";
-import { isRxMode, isRxPathAllowed } from "@/lib/rx-mode";
+import { isRxMode, isRxPathAllowed, isPatientHost } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    if (isPatientHost()) throw redirect({ to: "/patient" });
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData.session?.user) {
       return { user: sessionData.session.user };

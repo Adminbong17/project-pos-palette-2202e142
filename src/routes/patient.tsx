@@ -327,24 +327,21 @@ function LanguageToggle({
 /* -------------------------------------------------------------------------- */
 function PatientPage() {
   const [token, setToken] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
   const [lang, setLang] = useState<Lang>("bn");
 
   useEffect(() => {
-    setToken(localStorage.getItem(KEY));
+    const savedToken = localStorage.getItem(KEY);
+    if (savedToken) setToken(savedToken);
     const savedLang = localStorage.getItem(LANG_KEY) as Lang | null;
     if (savedLang === "bn" || savedLang === "en") {
       setLang(savedLang);
     }
-    setReady(true);
   }, []);
 
   const handleLangToggle = (newLang: Lang) => {
     setLang(newLang);
     localStorage.setItem(LANG_KEY, newLang);
   };
-
-  if (!ready) return null;
 
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background text-foreground font-sans flex flex-col justify-between selection:bg-primary/20">

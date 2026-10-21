@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { isRxMode, isPatientHost } from "@/lib/rx-mode";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,21 +16,48 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "QweekPOS — Modern Point of Sale for Growing Businesses" },
-      {
-        name: "description",
-        content:
-          "Fast, reliable POS and inventory management. Sell, track stock, manage suppliers, and grow — all in one place.",
-      },
-      { property: "og:title", content: "QweekPOS — Modern Point of Sale" },
-      {
-        property: "og:description",
-        content: "Sell faster, manage inventory smarter, and grow with confidence.",
-      },
-    ],
-  }),
+  beforeLoad: () => {
+    if (isPatientHost()) {
+      throw redirect({ to: "/patient" });
+    }
+  },
+  head: () => {
+    if (typeof window !== "undefined" && isPatientHost()) {
+      return {
+        meta: [
+          { title: "রোগী সেবা পোর্টাল — শেখ ফার্মা | Patient Care Portal" },
+          {
+            name: "description",
+            content:
+              "শেখ ফার্মা পেশেন্ট পোর্টাল। আপনার মোবাইল নম্বর দিয়ে লগইন করে প্রেসক্রিপশন, ল্যাব রিপোর্ট, ডাক্তারের সিরিয়াল ও বিলের হিসাব দেখুন।",
+          },
+          { property: "og:title", content: "রোগী সেবা পোর্টাল — শেখ ফার্মা" },
+          {
+            property: "og:description",
+            content:
+              "প্রেসক্রিপশন, ল্যাব টেস্ট রিপোর্ট, ডাক্তারের সিরিয়াল ও বিলের হিসাব এক ঠিকানায়।",
+          },
+          { property: "og:type", content: "website" },
+          { name: "twitter:card", content: "summary" },
+        ],
+      };
+    }
+    return {
+      meta: [
+        { title: "QweekPOS — Modern Point of Sale for Growing Businesses" },
+        {
+          name: "description",
+          content:
+            "Fast, reliable POS and inventory management. Sell, track stock, manage suppliers, and grow — all in one place.",
+        },
+        { property: "og:title", content: "QweekPOS — Modern Point of Sale" },
+        {
+          property: "og:description",
+          content: "Sell faster, manage inventory smarter, and grow with confidence.",
+        },
+      ],
+    };
+  },
   component: LandingPage,
 });
 
@@ -52,6 +79,10 @@ function LandingPage() {
       cancelled = true;
     };
   }, [navigate]);
+
+  if (typeof window !== "undefined" && isPatientHost()) {
+    return null;
+  }
 
   return (
     <div

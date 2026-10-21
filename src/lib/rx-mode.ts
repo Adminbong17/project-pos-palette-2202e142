@@ -94,6 +94,18 @@ export function isRxPathAllowed(pathname: string) {
 
 /** Patient portal hosts, e.g. pt.sheikhpharma.shop → opens the patient login. */
 export function isPatientHost(hostname?: string | null) {
-  const h = (hostname ?? (typeof window !== "undefined" ? window.location.hostname : "")).toLowerCase();
+  if (typeof window !== "undefined") {
+    try {
+      const search = window.location.search;
+      if (search) {
+        const p = new URLSearchParams(search);
+        if (p.get("pt") === "1" || p.get("patient") === "1") return true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  const raw = hostname ?? (typeof window !== "undefined" ? window.location.hostname : "");
+  const h = (raw || "").split(":")[0].toLowerCase().trim();
   return /^(pt|patient|patients)\./.test(h);
 }
