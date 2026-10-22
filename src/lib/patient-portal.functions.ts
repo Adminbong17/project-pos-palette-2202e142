@@ -225,8 +225,8 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
     // 1. Fetch active businesses
     const { data: businesses } = await db
       .from("businesses")
-      .select("id, name, is_active")
-      .eq("is_active", true);
+      .select("id, name, owner_id")
+      .order("name");
 
     const activeBizIds = (businesses ?? []).map((b) => b.id);
     const defaultBizId = activeBizIds[0] ?? "";
@@ -262,6 +262,24 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
     for (const p of (profilesRes.data ?? []) as any[]) {
       if (p.doctor_name || p.doctor_qualification) {
         doctorUserIds.add(p.id);
+      }
+    }
+
+    for (const c of (chambers ?? []) as any[]) {
+      if (c.doctor_id) {
+        doctorUserIds.add(c.doctor_id);
+      }
+    }
+
+    // Fallback if no specific doctor flags found
+    if (doctorUserIds.size === 0) {
+      for (const b of (businesses ?? []) as any[]) {
+        if (b.owner_id) doctorUserIds.add(b.owner_id);
+      }
+      if (doctorUserIds.size === 0) {
+        for (const p of ((profilesRes.data ?? []) as any[]).slice(0, 5)) {
+          doctorUserIds.add(p.id);
+        }
       }
     }
 
@@ -413,7 +431,6 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       const { data: anyBiz } = await db
         .from("businesses")
         .select("id")
-        .eq("is_active", true)
         .limit(1);
       businessId = anyBiz?.[0]?.id;
     }
@@ -506,6 +523,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
         patient_gender: data.patient_gender || null,
         appt_date: data.appt_date,
         patient_type: data.patient_type || "new",
+        is_new_patient: data.patient_type !== "old",
         fee_amount: feeAmount,
         status: "waiting",
         notes: data.notes?.trim()
