@@ -1,10 +1,10 @@
 import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute } from "@tanstack/react-router";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Search, FileText, X, Baby } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, FileText, X, Baby, Sparkles, Sliders } from "lucide-react";
 import { ChildDoseModal } from "@/components/ChildDoseModal";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -381,6 +381,7 @@ function PrescriptionsPage() {
   const [ccSearch, setCcSearch] = useState("");
   const [nextDays, setNextDays] = useState("");
   const [childDoseOpen, setChildDoseOpen] = useState(false);
+  const [childDoseMode, setChildDoseMode] = useState<"auto" | "manual">("auto");
 
   const isChildPatient = useMemo(() => {
     const ageStr = (form.patient_age || "").toLowerCase();
@@ -1495,7 +1496,43 @@ function PrescriptionsPage() {
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {isChildPatient && (
+                  <div className="flex items-center p-0.5 rounded-lg border bg-muted/60 text-xs shadow-xs">
+                    <span className="px-2 text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                      <Baby className="h-3 w-3 text-primary" />
+                      শিশু ডোজ:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChildDoseMode("auto");
+                        setChildDoseOpen(true);
+                      }}
+                      className={`px-2 py-0.5 rounded text-xs font-bold transition cursor-pointer ${
+                        childDoseMode === "auto"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      ⚡ অটো
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChildDoseMode("manual");
+                        setChildDoseOpen(true);
+                      }}
+                      className={`px-2 py-0.5 rounded text-xs font-bold transition cursor-pointer ${
+                        childDoseMode === "manual"
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      ✍️ ম্যানুয়াল
+                    </button>
+                  </div>
+                )}
                 <Button
                   size="sm"
                   type="button"
@@ -1567,6 +1604,7 @@ function PrescriptionsPage() {
         onClose={() => setChildDoseOpen(false)}
         patientAge={form.patient_age}
         patientWeight={vitals.weight}
+        initialMode={childDoseMode}
         onAddMedicine={handleAddChildMedicine}
       />
     </div>
@@ -1586,102 +1624,240 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   instrOptions: { id: string; name: string; removable?: boolean }[];
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
-  const [pOpen, setPOpen] = useState(false);
-  const [pSearch, setPSearch] = useState("");
-  const selected = useMemo(() => products.find((p) => p.id === line.product_id), [products, line.product_id]);
-  const allOptions = useMemo<ProductOpt[]>(() => {
-    const own = myMedicines.items.map((m) => ({ id: `my:${m.id}`, name: m.name, variation_id: null }));
-    return [...own, ...products];
-  }, [myMedicines.items, products]);
-  // Typing stays smooth: filtering runs on a deferred value and the rendered
-  // list is capped, so a 7000-item catalog never blocks the keystroke.
-  const deferredSearch = useDeferredValue(pSearch);
-  // The shared library can hold tens of thousands of medicines, more than one
-  // page of rows — so typed searches also hit the server for exact matches.
-  const remote = useQuery({
-    queryKey: ["rx-master-medicine-search", deferredSearch.trim().toLowerCase()],
-    enabled: deferredSearch.trim().length >= 2,
-    staleTime: 60_000,
-    queryFn: () => fetchMasterOptions("medicine", 200, deferredSearch.trim()),
-  });
-  const filtered = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
-    if (!q) return allOptions.slice(0, 50);
-    const starts: ProductOpt[] = [];
-    const contains: ProductOpt[] = [];
-    for (const p of allOptions) {
-      const n = p.name.toLowerCase();
-      const i = n.indexOf(q);
-      if (i === 0) starts.push(p);
-      else if (i > 0) contains.push(p);
-      if (starts.length >= 50) break;
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
     }
-    const merged = [...starts, ...contains];
-    const seen = new Set(merged.map((p) => p.name.trim().toLowerCase()));
-    for (const m of remote.data ?? []) {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const query = (line.medicine_name || "").trim();
+  const deferredSearch = useDeferredValue(query);
+
+  // Query master medicine options for 2+ typed characters
+  const remote = useQuery({
+    queryKey: ["rx-master-medicine-search", deferredSearch.toLowerCase()],
+    enabled: deferredSearch.length >= 2,
+    staleTime: 60_000,
+    queryFn: () => fetchMasterOptions("medicine", 100, deferredSearch),
+  });
+
+  // Intelligent clinical similarity scoring
+  const suggestions = useMemo(() => {
+    const q = deferredSearch.toLowerCase().trim();
+
+    // If query is empty or 1 character, NEVER dump random store items or devices!
+    if (q.length < 2) {
+      if (myMedicines.items.length > 0) {
+        return myMedicines.items.map((m) => ({
+          id: `my:${m.id}`,
+          name: m.name,
+          score: 100,
+          isSaved: true,
+        }));
+      }
+      return [];
+    }
+
+    const combined: { id: string; name: string; isSaved?: boolean }[] = [];
+    const seen = new Set<string>();
+
+    // 1. Doctor's saved / starred medicines
+    for (const m of myMedicines.items) {
       const k = m.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
       seen.add(k);
-      merged.push({ id: m.id, name: m.name, variation_id: null });
+      combined.push({ id: `my:${m.id}`, name: m.name, isSaved: true });
     }
-    return merged.slice(0, 80);
-  }, [allOptions, deferredSearch, remote.data]);
-  const query = pSearch.trim();
-  const exists = allOptions.some((p) => p.name.toLowerCase() === query.toLowerCase());
+
+    // 2. Remote database matched medicines
+    for (const r of remote.data ?? []) {
+      const k = r.name.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      combined.push({ id: r.id, name: r.name });
+    }
+
+    // 3. Local catalog
+    for (const p of products) {
+      const k = p.name.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      combined.push({ id: p.id, name: p.name });
+    }
+
+    // Score candidates: high scores for brand matches, severe penalty for hardware/devices
+    const scored = combined
+      .map((item) => {
+        const name = item.name.toLowerCase();
+
+        // Severe penalty for devices, monitors, equipment so real pharmaceutical medicines rank first
+        const isHardware = /\b(device|monitor|bp monitor|nebulizer|thermometer|strip|needle|syringe|gauge|pulse oximeter|scale|gloves|bandage|cotton|tape)\b/i.test(name);
+        const hardwarePenalty = isHardware ? -3000 : 0;
+
+        // Core medicine name stripped of dosage form prefix (Tab., Cap., Syr., etc.)
+        const core = name.replace(/^(tab\.|tab\s+|cap\.|cap\s+|syr\.|syr\s+|inj\.|susp\.|drops?\s+|ointment\.|cream\.|gel\.)\s*/i, "").trim();
+
+        let score = -9999;
+        if (core === q || name === q) {
+          score = 1000;
+        } else if (core.startsWith(q)) {
+          score = 800 + Math.max(0, 40 - core.length);
+        } else if (name.startsWith(q)) {
+          score = 700 + Math.max(0, 40 - name.length);
+        } else {
+          const words = core.split(/[\s-]+/);
+          const wIdx = words.findIndex((w) => w.startsWith(q));
+          if (wIdx >= 0) {
+            score = 600 - wIdx * 20;
+          } else {
+            const cIdx = core.indexOf(q);
+            if (cIdx >= 0) {
+              score = 400 - cIdx * 10;
+            } else {
+              const nIdx = name.indexOf(q);
+              if (nIdx >= 0) {
+                score = 300 - nIdx * 10;
+              }
+            }
+          }
+        }
+
+        if (item.isSaved) score += 50;
+        score += hardwarePenalty;
+
+        return { ...item, score };
+      })
+      .filter((x) => x.score > -1500)
+      .sort((a, b) => b.score - a.score);
+
+    return scored.slice(0, 30);
+  }, [deferredSearch, myMedicines.items, remote.data, products]);
+
+  const exactExists = suggestions.some((s) => s.name.toLowerCase() === query.toLowerCase());
+
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
-      <div className="md:col-span-4">
-        <Popover open={pOpen} onOpenChange={setPOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-full justify-between h-9 font-normal">
-              <span className="truncate text-left">{selected?.name || line.medicine_name || "Pick product or type name"}</span>
-              <Search className="ml-2 h-4 w-4 opacity-60" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 w-[360px]" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput placeholder={`Search ${allOptions.length} medicines…`} value={pSearch} onValueChange={setPSearch} />
-              <CommandList>
-                {query && !exists && (
-                  <CommandGroup>
-                    <CommandItem value={`__add_${query}`} onSelect={() => {
-                      myMedicines.add(query);
-                      onChange({ product_id: null, variation_id: null, medicine_name: query });
-                      setPSearch("");
-                      setPOpen(false);
-                    }}>
-                      <Plus className="mr-2 h-4 w-4" /> Add “{query}” to my medicines
-                    </CommandItem>
-                  </CommandGroup>
-                )}
-                {filtered.length === 0 && <CommandEmpty>No medicines.</CommandEmpty>}
-                {filtered.length >= 80 && (
-                  <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
-                    Showing first 50 — keep typing to narrow.
-                  </div>
-                )}
-                <CommandGroup>
-                  {filtered.map((p) => (
-                    <CommandItem key={p.id} value={p.id} onSelect={() => {
-                      // Library/personal picks are names only — nothing is tied
-                      // to a shop's product record.
+      {/* Medicine Name Autocomplete Input */}
+      <div className="relative md:col-span-4" ref={containerRef}>
+        <div className="relative">
+          <Input
+            className="h-9 pr-8 font-medium bg-background"
+            placeholder="ঔষধের নাম লিখুন (e.g. Napa, Cef-3, Ace)…"
+            value={line.medicine_name}
+            onChange={(e) => {
+              onChange({ product_id: null, variation_id: null, medicine_name: e.target.value });
+              setIsOpen(true);
+            }}
+            onFocus={() => {
+              if (query.length >= 2 || myMedicines.items.length > 0) {
+                setIsOpen(true);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsOpen(false);
+            }}
+          />
+          {line.medicine_name ? (
+            <button
+              type="button"
+              onClick={() => {
+                onChange({ product_id: null, variation_id: null, medicine_name: "" });
+                setIsOpen(false);
+              }}
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : (
+            <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none opacity-50" />
+          )}
+        </div>
+
+        {/* Anchored Suggestions Dropdown (Never jumps to top of screen!) */}
+        {isOpen && (query.length >= 2 || myMedicines.items.length > 0) && (
+          <div className="absolute left-0 top-full mt-1 w-full min-w-[320px] max-w-[420px] z-50 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95">
+            <div className="p-2 border-b bg-muted/40 text-[11px] font-semibold text-muted-foreground flex justify-between items-center">
+              <span>
+                {query.length >= 2
+                  ? `পরামর্শকৃত ওষুধ (${suggestions.length})`
+                  : "★ আপনার সংরক্ষিত ওষুধসমূহ"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                ✕ বন্ধ
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto p-1 divide-y divide-border/20">
+              {/* Add Custom Medicine Action */}
+              {query.length >= 2 && !exactExists && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    myMedicines.add(query);
+                    onChange({ product_id: null, variation_id: null, medicine_name: query });
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left p-2 rounded-lg text-xs hover:bg-primary/10 text-primary font-bold flex items-center gap-2 cursor-pointer transition"
+                >
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Add “{query}” to my medicines</span>
+                </button>
+              )}
+
+              {suggestions.length === 0 && (
+                <div className="p-3 text-center text-xs text-muted-foreground">
+                  কোনো ওষুধ পাওয়া যায়নি। নতুন নাম লিখে এন্টার চাপুন।
+                </div>
+              )}
+
+              {suggestions.map((p) => {
+                const formMatch = p.name.match(/^(Tab\.|Tab|Cap\.|Cap|Syr\.|Syr|Inj\.|Inj|Susp\.|Susp|Drops?)\s+/i);
+                const formTag = formMatch ? formMatch[1].replace(".", "") : null;
+                const cleanName = formMatch ? p.name.slice(formMatch[0].length) : p.name;
+
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
                       onChange({
                         product_id: null,
                         variation_id: null,
                         medicine_name: p.name,
                       });
-                      setPSearch("");
-                      setPOpen(false);
-                    }}>{p.id.startsWith("my:") ? `★ ${p.name}` : p.name}</CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <Input className="mt-1 h-8" placeholder="Medicine name" value={line.medicine_name}
-          onChange={(e) => onChange({ medicine_name: e.target.value })} />
+                      setIsOpen(false);
+                    }}
+                    className="w-full text-left p-2 rounded-lg text-xs hover:bg-muted flex items-center justify-between gap-2 transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {p.isSaved && <span className="text-amber-500 font-bold shrink-0">★</span>}
+                      {formTag && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary/40 text-primary font-bold shrink-0">
+                          {formTag}
+                        </Badge>
+                      )}
+                      <span className="font-semibold text-foreground truncate">{cleanName}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="md:col-span-4 flex items-start gap-1">
         <Input className="h-9 flex-1" placeholder="Freq (1+0+1)" value={line.frequency}
           onChange={(e) => onChange(withAutoQty(line, { frequency: e.target.value }))} />

@@ -25,6 +25,7 @@ import {
   Clock,
   RotateCcw,
   Sliders,
+  CheckCircle2,
 } from "lucide-react";
 import {
   PEDIATRIC_DRUGS,
@@ -40,6 +41,7 @@ export interface ChildDoseModalProps {
   onClose: () => void;
   patientAge?: string | null;
   patientWeight?: string | null;
+  initialMode?: "auto" | "manual";
   onAddMedicine: (med: {
     medicine_name: string;
     frequency: string;
@@ -54,8 +56,12 @@ export function ChildDoseModal({
   onClose,
   patientAge,
   patientWeight,
+  initialMode = "auto",
   onAddMedicine,
 }: ChildDoseModalProps) {
+  // Mode: "auto" (Clinical guideline auto calculation) vs "manual" (Doctor custom override)
+  const [mode, setMode] = useState<"auto" | "manual">(initialMode);
+
   // 1. Weight & Age State
   const [weightInput, setWeightInput] = useState<string>("10");
   const [isEstimatedWeight, setIsEstimatedWeight] = useState(false);
@@ -66,28 +72,26 @@ export function ChildDoseModal({
   const [selectedDrugId, setSelectedDrugId] = useState<string>("paracetamol");
   const [selectedFormulationIdx, setSelectedFormulationIdx] = useState<number>(0);
 
-  // 3. Custom Overrides
+  // 3. Custom Overrides for Manual Mode
   const [customDoseRate, setCustomDoseRate] = useState<number | undefined>(undefined);
   const [customFreq, setCustomFreq] = useState<string>("");
   const [customDuration, setCustomDuration] = useState<string>("");
   const [customInstructions, setCustomInstructions] = useState<string>("");
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
-
-  // 4. Custom Manual Drug Mode
-  const [isManualDrugMode, setIsManualDrugMode] = useState(false);
-  const [manualDrugName, setManualDrugName] = useState("");
-  const [manualMgPerKg, setManualMgPerKg] = useState("10");
+  const [manualMedicineName, setManualMedicineName] = useState<string>("");
   const [manualStrengthMg, setManualStrengthMg] = useState("120");
   const [manualStrengthMl, setManualStrengthMl] = useState("5");
+  const [manualPerDoseMl, setManualPerDoseMl] = useState<string>("");
+  const [manualSpoonText, setManualSpoonText] = useState<string>("");
 
   // Sync with patient data on open
   useEffect(() => {
     if (isOpen) {
+      setMode(initialMode || "auto");
       const wtNum = parseFloat(patientWeight || "");
       if (!isNaN(wtNum) && wtNum > 0) {
         setWeightInput(wtNum.toFixed(1));
         setIsEstimatedWeight(false);
-        setEstimationNote("ভাইটালস থেকে প্রাপ্ত রোগীর ওজন");
+        setEstimationNote("ভাইটালস থেকে সরাসরি প্রাপ্ত ওজন");
       } else if (patientAge) {
         const est = estimateWeightFromAge(patientAge);
         setWeightInput(est.weightKg.toString());
@@ -99,16 +103,21 @@ export function ChildDoseModal({
         setEstimationNote("ডিফল্ট প্রাক্কলিত ওজন (১০ কেজি)");
       }
 
-      // Reset drug selection overrides
+      // Reset drug selection
       setSelectedDrugId("paracetamol");
       setSelectedFormulationIdx(0);
-      setCustomDoseRate(undefined);
-      setCustomFreq("");
-      setCustomDuration("");
-      setCustomInstructions("");
-      setIsManualDrugMode(false);
+      const defaultDrug = PEDIATRIC_DRUGS[0];
+      setCustomDoseRate(defaultDrug.defaultDoseRate);
+      setCustomFreq(defaultDrug.defaultFrequency);
+      setCustomDuration(defaultDrug.defaultDuration);
+      setCustomInstructions(defaultDrug.defaultInstructions);
+      setManualMedicineName(`Syr. ${defaultDrug.name}`);
+      setManualStrengthMg("120");
+      setManualStrengthMl("5");
+      setManualPerDoseMl("");
+      setManualSpoonText("");
     }
-  }, [isOpen, patientAge, patientWeight]);
+  }, [isOpen, patientAge, patientWeight, initialMode]);
 
   // Current active drug rule
   const currentDrug = useMemo<PediatricDrugRule>(() => {
@@ -117,7 +126,7 @@ export function ChildDoseModal({
 
   // Current active formulation
   const currentFormulation = useMemo<PediatricDrugFormulation>(() => {
-    if (isManualDrugMode) {
+    if (mode === "manual" && manualMedicineName && manualStrengthMg) {
       return {
         name: `Custom (${manualStrengthMg}mg / ${manualStrengthMl}ml)`,
         type: "syrup",
@@ -129,7 +138,7 @@ export function ChildDoseModal({
       currentDrug.formulations[selectedFormulationIdx] ||
       currentDrug.formulations[0]
     );
-  }, [currentDrug, selectedFormulationIdx, isManualDrugMode, manualStrengthMg, manualStrengthMl]);
+  }, [currentDrug, selectedFormulationIdx, mode, manualMedicineName, manualStrengthMg, manualStrengthMl]);
 
   // When drug changes, reset formulation index and overrides
   const handleSelectDrug = (drugId: string) => {
@@ -141,8 +150,15 @@ export function ChildDoseModal({
       setCustomFreq(d.defaultFrequency);
       setCustomDuration(d.defaultDuration);
       setCustomInstructions(d.defaultInstructions);
+      setManualMedicineName(`Syr. ${d.name}`);
+      const f = d.formulations[0];
+      if (f) {
+        setManualStrengthMg(f.mg.toString());
+        setManualStrengthMl(f.ml.toString());
+      }
+      setManualPerDoseMl("");
+      setManualSpoonText("");
     }
-    setIsManualDrugMode(false);
   };
 
   // Filtered drugs list based on search
@@ -164,34 +180,36 @@ export function ChildDoseModal({
   }, [weightInput]);
 
   // Execute Dose Calculation
-  const calculation = useMemo<DoseCalculationResult>(() => {
-    if (isManualDrugMode) {
-      const drugMock: PediatricDrugRule = {
-        id: "manual",
-        name: manualDrugName || "Custom Medicine",
-        genericName: manualDrugName || "Custom Medicine",
-        category: "other",
-        defaultDoseRate: parseFloat(manualMgPerKg) || 10,
-        doseType: "per_dose",
-        recommendedDoseRange: { min: 5, max: 20 },
-        formulations: [currentFormulation],
-        defaultFrequency: customFreq || "১+১+১",
-        defaultDuration: customDuration || "৩ দিন",
-        defaultInstructions: customInstructions || "ভরা পেটে সেব্য",
-      };
-      return calculateChildDose({
-        drug: drugMock,
-        formulation: currentFormulation,
-        weightKg,
-        doseRate: parseFloat(manualMgPerKg) || 10,
-        frequencyOverride: customFreq,
-        durationOverride: customDuration,
-        instructionsOverride: customInstructions,
-      });
-    }
-
+  const autoCalculation = useMemo<DoseCalculationResult>(() => {
     return calculateChildDose({
       drug: currentDrug,
+      formulation: currentFormulation,
+      weightKg,
+      doseRate: currentDrug.defaultDoseRate,
+      frequencyOverride: undefined,
+      durationOverride: undefined,
+      instructionsOverride: undefined,
+    });
+  }, [currentDrug, currentFormulation, weightKg]);
+
+  // Manual Calculation Result
+  const manualCalculation = useMemo<DoseCalculationResult>(() => {
+    const effectiveDrug: PediatricDrugRule = {
+      id: "manual",
+      name: manualMedicineName.trim() || currentDrug.name,
+      genericName: manualMedicineName.trim() || currentDrug.genericName,
+      category: currentDrug.category,
+      defaultDoseRate: customDoseRate ?? currentDrug.defaultDoseRate,
+      doseType: currentDrug.doseType,
+      recommendedDoseRange: currentDrug.recommendedDoseRange,
+      formulations: [currentFormulation],
+      defaultFrequency: customFreq || currentDrug.defaultFrequency,
+      defaultDuration: customDuration || currentDrug.defaultDuration,
+      defaultInstructions: customInstructions || currentDrug.defaultInstructions,
+    };
+
+    const res = calculateChildDose({
+      drug: effectiveDrug,
       formulation: currentFormulation,
       weightKg,
       doseRate: customDoseRate,
@@ -199,18 +217,42 @@ export function ChildDoseModal({
       durationOverride: customDuration || undefined,
       instructionsOverride: customInstructions || undefined,
     });
+
+    // If doctor gave explicit manual ml or spoon
+    if (manualPerDoseMl || manualSpoonText) {
+      const spoon = manualSpoonText ? `(${manualSpoonText})` : res.teaspoonText.bn;
+      const ml = manualPerDoseMl ? `${manualPerDoseMl} মিলি` : `${res.mlPerDose} মিলি`;
+      const freq = customFreq || res.frequency;
+      const instr = customInstructions || res.instructions;
+      return {
+        ...res,
+        mlPerDose: parseFloat(manualPerDoseMl) || res.mlPerDose,
+        prescriptionLineText: {
+          ...res.prescriptionLineText,
+          medicineName: manualMedicineName.trim() || res.prescriptionLineText.medicineName,
+          frequency: `${ml} ${spoon} করে ${freq} (${instr})`.trim(),
+          duration: customDuration || res.duration,
+          instructions: instr,
+        },
+      };
+    }
+
+    return res;
   }, [
-    isManualDrugMode,
-    manualDrugName,
-    manualMgPerKg,
+    manualMedicineName,
     currentDrug,
-    currentFormulation,
-    weightKg,
     customDoseRate,
+    currentFormulation,
     customFreq,
     customDuration,
     customInstructions,
+    weightKg,
+    manualPerDoseMl,
+    manualSpoonText,
   ]);
+
+  // Active calculation depending on mode
+  const calculation = mode === "auto" ? autoCalculation : manualCalculation;
 
   // Adjust weight helper
   const adjustWeight = (delta: number) => {
@@ -244,11 +286,11 @@ export function ChildDoseModal({
                 <DialogTitle className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
                   <span>শিশু ডোজ ক্যালকুলেটর</span>
                   <Badge variant="outline" className="text-[10px] font-semibold border-primary/40 text-primary">
-                    Auto Pediatric Dosing
+                    Pediatric Dose Calculator
                   </Badge>
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  ওজন ও বয়স অনুযায়ী শিশুদের সঠিক মিলিলিটার (ml) ও চামচের ডোজ অটো-ক্যালকুলেশন।
+                  বাচ্চার বয়স ও ওজন অনুযায়ী সঠিক মিলিগ্রাম, মিলিলিটার (ml) ও চামচের ডোজ হিসাব।
                 </DialogDescription>
               </div>
             </div>
@@ -263,8 +305,77 @@ export function ChildDoseModal({
         </DialogHeader>
 
         {/* Scrollable Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-track]:bg-transparent">
-          {/* ================= 1. PATIENT WEIGHT & AGE BAR ================= */}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-track]:bg-transparent">
+          {/* ================= 1. PROMINENT MODE TOGGLE & CONFIRMATION ================= */}
+          <div className="rounded-2xl border-2 p-3 sm:p-4 bg-card shadow-sm transition-all duration-200 border-border/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-foreground">ক্যালকুলেশন মোড:</span>
+                  <Badge
+                    className={`text-xs font-bold px-2.5 py-0.5 transition-all ${
+                      mode === "auto"
+                        ? "bg-emerald-600 hover:bg-emerald-600 text-white"
+                        : "bg-blue-600 hover:bg-blue-600 text-white"
+                    }`}
+                  >
+                    {mode === "auto" ? "⚡ অটোমেটিক মোড (Auto)" : "✍️ ম্যানুয়াল মোড (Manual)"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {mode === "auto"
+                    ? "ক্লিনিক্যাল গাইডলাইন অনুযায়ী ডোজ, মিলি ও চামচ স্বয়ংক্রিয়ভাবে হিসাব হচ্ছে।"
+                    : "ডাক্তার নিজের ইচ্ছামতো যে কোনো ওষুধ, ডোজ, চামচ ও খাওয়ার নিয়ম কাস্টমাইজ করতে পারবেন।"}
+                </p>
+              </div>
+
+              {/* Segmented Toggle Control */}
+              <div className="flex items-center p-1 rounded-xl bg-muted/80 border border-border shadow-inner shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setMode("auto")}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    mode === "auto"
+                      ? "bg-emerald-600 text-white shadow-md scale-102"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>অটোমেটিক (Auto)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("manual")}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    mode === "manual"
+                      ? "bg-blue-600 text-white shadow-md scale-102"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Sliders className="h-3.5 w-3.5" />
+                  <span>ম্যানুয়াল (Manual)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* LIVE CONFIRMATION BANNER */}
+            <div
+              className={`mt-3 p-2.5 rounded-xl border text-xs flex items-center gap-2 transition-all ${
+                mode === "auto"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200 font-medium"
+                  : "bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-200 font-medium"
+              }`}
+            >
+              <CheckCircle2 className="h-4 w-4 shrink-0 font-bold" />
+              <span>
+                {mode === "auto"
+                  ? `কনফার্মড: অটোমেটিক সিস্টেম সক্রিয়। বাচ্চার বয়স (${patientAge || "৩ বছর"}) ও ওজন (${weightKg} কেজি) অনুযায়ী ডোজ, প্রতি বারের মিলি, চামচের মাপ এবং খাওয়ার নিয়ম ১০০% স্বয়ংক্রিয়ভাবে ক্লিনিক্যাল ফর্মুলায় হিসাব করা হচ্ছে।`
+                  : `কনফার্মড: ম্যানুয়াল মোড সক্রিয়। ডাক্তার নিজের ক্লিনিক্যাল প্রয়োজন অনুযায়ী যে কোনো ওষুধের নাম, ডোজ (mg/kg), প্রতি বারের মিলি, চামচ, খাওয়ার সময় (১+১+১) ও দিন সংখ্যা সরাসরি কাস্টমাইজ করতে পারবেন।`}
+              </span>
+            </div>
+          </div>
+
+          {/* ================= 2. PATIENT WEIGHT & AGE BAR ================= */}
           <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-background p-3.5 sm:p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
@@ -339,125 +450,196 @@ export function ChildDoseModal({
             </div>
           </div>
 
-          {/* ================= 2. DRUG SELECTION TABS & PILLS ================= */}
+          {/* ================= 3. DRUG SELECTION (AUTO OR MANUAL PRESETS) ================= */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5 text-primary" />
-                <span>ওষুধ নির্বাচন করুন (Common Pediatric Medicines)</span>
+                <span>ওষুধের তালিকা (Common Pediatric Medicines)</span>
               </Label>
-              <button
-                type="button"
-                onClick={() => setIsManualDrugMode(!isManualDrugMode)}
-                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Sliders className="h-3 w-3" />
-                <span>{isManualDrugMode ? "কমন প্রিসেট তালিকা" : "অন্যান্য / কাস্টম ওষুধ"}</span>
-              </button>
+              {mode === "auto" && (
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> ১-ক্লিকে সিলেক্ট করুন
+                </span>
+              )}
             </div>
 
-            {!isManualDrugMode ? (
-              <>
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="ওষুধ খুঁজুন (যেমন: Napa, Moxacil, Cef-3, Azithromycin)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 text-xs bg-muted/40"
+              />
+            </div>
+
+            {/* Drug Pills Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1 border rounded-xl border-border/60 bg-muted/20">
+              {filteredDrugs.map((d) => {
+                const isSelected = d.id === selectedDrugId;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => handleSelectDrug(d.id)}
+                    className={`text-left p-2 rounded-lg text-xs transition border cursor-pointer ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm font-bold"
+                        : "bg-background hover:bg-muted text-foreground border-border/80 font-medium"
+                    }`}
+                  >
+                    <div className="truncate">{d.genericName}</div>
+                    <div
+                      className={`text-[10px] truncate ${
+                        isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
+                      }`}
+                    >
+                      {d.name.split("(")[1]?.replace(")", "") || d.category}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ================= 4. MANUAL MODE DIRECT CUSTOMIZATIONS ================= */}
+          {mode === "manual" && (
+            <div className="rounded-2xl border-2 border-blue-500/40 bg-blue-500/5 p-4 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-blue-500/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <Sliders className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="font-bold text-sm text-foreground">ম্যানুয়াল কাস্টমাইজেশন ফিল্ডস</span>
+                </div>
+                <Badge variant="outline" className="text-xs border-blue-500/40 text-blue-600 dark:text-blue-400">
+                  Doctor Override
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <Label className="text-[11px] font-semibold">ওষুধের নাম (Medicine Name)</Label>
                   <Input
-                    type="text"
-                    placeholder="ওষুধ খুঁজুন (যেমন: Napa, Moxacil, Cef-3, Azithromycin)..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 pl-8 text-xs bg-muted/40"
+                    value={manualMedicineName}
+                    onChange={(e) => setManualMedicineName(e.target.value)}
+                    placeholder="e.g. Syr. Napa / Syr. Cef-3"
+                    className="h-8 text-xs mt-1 bg-background"
                   />
                 </div>
 
-                {/* Drug Pills Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto p-1 border rounded-xl border-border/60 bg-muted/20">
-                  {filteredDrugs.map((d) => {
-                    const isSelected = d.id === selectedDrugId;
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => handleSelectDrug(d.id)}
-                        className={`text-left p-2 rounded-lg text-xs transition border cursor-pointer ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm font-bold"
-                            : "bg-background hover:bg-muted text-foreground border-border/80 font-medium"
-                        }`}
-                      >
-                        <div className="truncate">{d.genericName}</div>
-                        <div
-                          className={`text-[10px] truncate ${
-                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-                          }`}
-                        >
-                          {d.name.split("(")[1]?.replace(")", "") || d.category}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              /* Custom Manual Drug Fields */
-              <div className="rounded-xl border border-dashed border-primary/40 bg-muted/30 p-3 space-y-3 animate-in fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-[11px] font-semibold">ওষুধের নাম (Medicine Name)</Label>
-                    <Input
-                      placeholder="e.g. Syr. Clavamox"
-                      value={manualDrugName}
-                      onChange={(e) => setManualDrugName(e.target.value)}
-                      className="h-8 text-xs mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold">ডোজ রেট (mg / kg)</Label>
+                <div>
+                  <Label className="text-[11px] font-semibold">সিরাপের স্ট্রেন্থ (Strength)</Label>
+                  <div className="flex items-center gap-1 mt-1">
                     <Input
                       type="number"
-                      step="0.5"
-                      placeholder="e.g. 15"
-                      value={manualMgPerKg}
-                      onChange={(e) => setManualMgPerKg(e.target.value)}
-                      className="h-8 text-xs mt-1"
+                      placeholder="120"
+                      value={manualStrengthMg}
+                      onChange={(e) => setManualStrengthMg(e.target.value)}
+                      className="h-8 text-xs bg-background"
                     />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold">ঘনত্ব / স্ট্রেন্থ (mg in ml)</Label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Input
-                        type="number"
-                        placeholder="120"
-                        value={manualStrengthMg}
-                        onChange={(e) => setManualStrengthMg(e.target.value)}
-                        className="h-8 text-xs"
-                      />
-                      <span className="text-xs">mg/</span>
-                      <Input
-                        type="number"
-                        placeholder="5"
-                        value={manualStrengthMl}
-                        onChange={(e) => setManualStrengthMl(e.target.value)}
-                        className="h-8 text-xs w-16"
-                      />
-                      <span className="text-xs">ml</span>
-                    </div>
+                    <span className="text-xs">mg /</span>
+                    <Input
+                      type="number"
+                      placeholder="5"
+                      value={manualStrengthMl}
+                      onChange={(e) => setManualStrengthMl(e.target.value)}
+                      className="h-8 text-xs w-16 bg-background"
+                    />
+                    <span className="text-xs">ml</span>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* ================= 3. AUTO-CALCULATION DISPLAY CARD ================= */}
-          <div className="rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10 p-4 sm:p-5 shadow-md">
+                <div>
+                  <Label className="text-[11px] font-semibold">প্রতি বারের মাত্রা (ml / চামচ)</Label>
+                  <div className="grid grid-cols-2 gap-1.5 mt-1">
+                    <Input
+                      placeholder="e.g. 5"
+                      value={manualPerDoseMl}
+                      onChange={(e) => setManualPerDoseMl(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                    <Input
+                      placeholder="১ চামচ / আধ চামচ"
+                      value={manualSpoonText}
+                      onChange={(e) => setManualSpoonText(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-semibold">ডোজ রেট (mg / kg)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={customDoseRate ?? currentDrug.defaultDoseRate}
+                    onChange={(e) => setCustomDoseRate(parseFloat(e.target.value) || 0)}
+                    className="h-8 text-xs mt-1 bg-background font-bold"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-semibold">সেবনবিধি (Frequency)</Label>
+                  <Input
+                    value={customFreq || currentDrug.defaultFrequency}
+                    onChange={(e) => setCustomFreq(e.target.value)}
+                    placeholder="e.g. ১+১+১ বা ১+০+১"
+                    className="h-8 text-xs mt-1 bg-background"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-semibold">মেয়াদ (Duration)</Label>
+                  <Input
+                    value={customDuration || currentDrug.defaultDuration}
+                    onChange={(e) => setCustomDuration(e.target.value)}
+                    placeholder="e.g. ৩ দিন বা ৭ দিন"
+                    className="h-8 text-xs mt-1 bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-[11px] font-semibold">নির্দেশনা (Instructions)</Label>
+                <Input
+                  value={customInstructions || currentDrug.defaultInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  placeholder="e.g. ভরা পেটে সেব্য / জ্বর আসলে"
+                  className="h-8 text-xs mt-1 bg-background"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ================= 5. LIVE CALCULATION RESULT CARD ================= */}
+          <div
+            className={`rounded-2xl border-2 p-4 sm:p-5 shadow-md transition-all ${
+              mode === "auto"
+                ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10"
+                : "border-blue-500/40 bg-gradient-to-br from-blue-500/10 via-card to-indigo-500/10"
+            }`}
+          >
             <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                {mode === "auto" ? (
+                  <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <Sliders className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                )}
                 <h4 className="font-bold text-sm sm:text-base text-foreground">
                   {calculation.drugName}
                 </h4>
               </div>
-              <Badge variant="outline" className="font-semibold text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+              <Badge
+                variant="outline"
+                className={`font-semibold text-xs ${
+                  mode === "auto"
+                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                    : "border-blue-500/40 text-blue-600 dark:text-blue-400"
+                }`}
+              >
                 {calculation.formulationName}
               </Badge>
             </div>
@@ -468,7 +650,11 @@ export function ChildDoseModal({
                 <span className="text-[10px] uppercase font-bold text-muted-foreground block">
                   প্রতি বারের মাত্রা
                 </span>
-                <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+                <span
+                  className={`text-lg sm:text-xl font-black ${
+                    mode === "auto" ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                  }`}
+                >
                   {calculation.mlPerDose} ml
                 </span>
                 <span className="text-[11px] text-foreground font-semibold block mt-0.5">
@@ -502,7 +688,7 @@ export function ChildDoseModal({
 
               <div className="rounded-xl bg-background/80 p-2.5 border border-border/60 shadow-xs">
                 <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                  আনুমানিক প্রয়োজন
+                  আনুমানিক বোতল
                 </span>
                 <span className="text-lg sm:text-xl font-black text-primary">
                   {calculation.bottlesNeededEstimate} বোতল
@@ -525,7 +711,7 @@ export function ChildDoseModal({
               </div>
               <div className="flex justify-between items-center border-t border-border/40 pt-1">
                 <span className="text-muted-foreground font-semibold">নির্দেশনা (Instructions):</span>
-                <span className="text-emerald-700 dark:text-emerald-300 font-medium">{calculation.instructions}</span>
+                <span className="font-medium text-foreground">{calculation.instructions}</span>
               </div>
             </div>
 
@@ -537,97 +723,12 @@ export function ChildDoseModal({
               </div>
             )}
           </div>
-
-          {/* ================= 4. CUSTOMIZE PANEL (TOGGLEABLE) ================= */}
-          <div className="border border-border/70 rounded-2xl p-3.5 space-y-3 bg-muted/10">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between text-xs font-bold text-foreground cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5">
-                <Sliders className="h-3.5 w-3.5 text-primary" />
-                <span>ডাক্তারের কাস্টমাইজেশন (স্ট্রেন্থ, mg/kg, ডোজ শিডিউল পরিবর্তন করুন)</span>
-              </div>
-              <span className="text-primary text-[11px] font-semibold underline">
-                {showAdvanced ? "লুকান (Hide)" : "এডিট করুন (Customize)"}
-              </span>
-            </button>
-
-            {showAdvanced && (
-              <div className="space-y-3 pt-2 border-t border-border/60 animate-in fade-in">
-                {/* Available Formulations of this drug */}
-                {!isManualDrugMode && currentDrug.formulations.length > 1 && (
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">সিরাপের শক্তি / প্রিপারেশন নির্বাচন:</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentDrug.formulations.map((f, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setSelectedFormulationIdx(idx)}
-                          className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                            selectedFormulationIdx === idx
-                              ? "bg-primary text-primary-foreground border-primary font-bold shadow-xs"
-                              : "bg-background text-foreground border-border hover:bg-muted"
-                          }`}
-                        >
-                          {f.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* mg/kg Custom Input */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-[11px] font-semibold">ডোজ রেট (mg / kg)</Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={customDoseRate ?? currentDrug.defaultDoseRate}
-                      onChange={(e) => setCustomDoseRate(parseFloat(e.target.value) || 0)}
-                      className="h-8 text-xs mt-1 font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-[11px] font-semibold">সেবনবিধি (Frequency)</Label>
-                    <Input
-                      value={customFreq || currentDrug.defaultFrequency}
-                      onChange={(e) => setCustomFreq(e.target.value)}
-                      className="h-8 text-xs mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-[11px] font-semibold">মেয়াদ (Duration)</Label>
-                    <Input
-                      value={customDuration || currentDrug.defaultDuration}
-                      onChange={(e) => setCustomDuration(e.target.value)}
-                      className="h-8 text-xs mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-[11px] font-semibold">নির্দেশনা (Instructions)</Label>
-                  <Input
-                    value={customInstructions || currentDrug.defaultInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
-                    className="h-8 text-xs mt-1"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* ================= 5. MODAL FOOTER & ACTION BUTTONS ================= */}
+        {/* ================= 6. MODAL FOOTER & ACTION BUTTONS ================= */}
         <div className="p-4 border-t border-border/80 bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
-          <div className="text-[11px] text-muted-foreground w-full sm:w-auto text-center sm:text-left">
-            প্রেসক্রিপশনে যুক্ত হবে: <strong className="text-foreground">{calculation.prescriptionLineText.medicineName}</strong>
+          <div className="text-[11px] text-muted-foreground w-full sm:w-auto text-center sm:text-left truncate max-w-sm">
+            প্রেসক্রিপশনে যাবে: <strong className="text-foreground">{calculation.prescriptionLineText.medicineName}</strong>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -643,10 +744,16 @@ export function ChildDoseModal({
               type="button"
               variant="default"
               onClick={() => handleAddToPrescription(true)}
-              className="flex-1 sm:flex-initial h-10 font-bold text-xs gap-1.5 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+              className={`flex-1 sm:flex-initial h-10 font-bold text-xs gap-1.5 cursor-pointer text-white shadow-md ${
+                mode === "auto"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700"
+              }`}
             >
               <Plus className="h-4 w-4" />
-              <span>+ প্রেসক্রিপশনে যোগ করুন</span>
+              <span>
+                {mode === "auto" ? "⚡ অটো-ডোজ প্রেসক্রিপশনে যোগ করুন" : "✍️ ম্যানুয়াল ডোজ প্রেসক্রিপশনে যোগ করুন"}
+              </span>
             </Button>
           </div>
         </div>
