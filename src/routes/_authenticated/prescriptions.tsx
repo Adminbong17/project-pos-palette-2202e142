@@ -4,7 +4,8 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Search, FileText, X } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, FileText, X, Baby } from "lucide-react";
+import { ChildDoseModal } from "@/components/ChildDoseModal";
 
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMasterOptions, mergeByName } from "@/hooks/use-rx-master-options";
@@ -379,6 +380,41 @@ function PrescriptionsPage() {
   const [ccOpen, setCcOpen] = useState(false);
   const [ccSearch, setCcSearch] = useState("");
   const [nextDays, setNextDays] = useState("");
+  const [childDoseOpen, setChildDoseOpen] = useState(false);
+
+  const isChildPatient = useMemo(() => {
+    const ageStr = (form.patient_age || "").toLowerCase();
+    if (ageStr.includes("m") || ageStr.includes("মাস") || ageStr.includes("day") || ageStr.includes("দিন")) return true;
+    const num = parseFloat(ageStr.replace(/[^0-9.]/g, ""));
+    if (!isNaN(num) && num > 0 && num <= 12) return true;
+    const wtNum = parseFloat(vitals.weight || "");
+    if (!isNaN(wtNum) && wtNum > 0 && wtNum <= 35) return true;
+    return false;
+  }, [form.patient_age, vitals.weight]);
+
+  const handleAddChildMedicine = (med: {
+    medicine_name: string;
+    frequency: string;
+    duration: string;
+    instructions: string;
+    quantity: number;
+  }) => {
+    const newLine: Line = {
+      product_id: null,
+      variation_id: null,
+      medicine_name: med.medicine_name,
+      frequency: med.frequency,
+      duration: med.duration,
+      instructions: med.instructions,
+      quantity: med.quantity,
+    };
+    setLines((prev) => {
+      if (prev.length === 1 && !prev[0].medicine_name.trim()) {
+        return [newLine];
+      }
+      return [...prev, newLine];
+    });
+  };
 
   // Doctor's own saved lists (private to the logged-in doctor).
   const rxSettings = useRxOptionSettings(businessId);
@@ -1446,11 +1482,34 @@ function PrescriptionsPage() {
           </div>
 
           <div className="mt-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base">Medicines</Label>
-              <Button size="sm" variant="outline" onClick={() => setLines([...lines, emptyLine()])}>
-                <Plus className="h-4 w-4 mr-1" /> Add Row
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-base font-bold">Medicines</Label>
+                {isChildPatient && (
+                  <Badge
+                    variant="outline"
+                    className="text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold animate-pulse"
+                  >
+                    <Baby className="h-3.5 w-3.5" />
+                    <span>শিশু রোগী শনাক্ত (Child Patient)</span>
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setChildDoseOpen(true)}
+                  className="h-8 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 font-bold shadow-xs cursor-pointer"
+                >
+                  <Baby className="h-3.5 w-3.5" />
+                  <span>শিশু ডোজ ক্যালকুলেটর</span>
+                </Button>
+                <Button size="sm" type="button" variant="outline" onClick={() => setLines([...lines, emptyLine()])}>
+                  <Plus className="h-4 w-4 mr-1" /> Add Row
+                </Button>
+              </div>
             </div>
             <div className="space-y-2 mt-2">
               {lines.map((l, i) => (
@@ -1502,6 +1561,14 @@ function PrescriptionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ChildDoseModal
+        isOpen={childDoseOpen}
+        onClose={() => setChildDoseOpen(false)}
+        patientAge={form.patient_age}
+        patientWeight={vitals.weight}
+        onAddMedicine={handleAddChildMedicine}
+      />
     </div>
   );
 }
