@@ -22,11 +22,12 @@ import {
   ChevronRight,
   Languages,
   Plus,
-  Printer,
   Calendar,
   Building2,
   Clock,
   User,
+  Download,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +56,7 @@ import {
   DoctorCard,
   DoctorBookingModal,
 } from "@/components/patient-doctor-booking";
-import { printPatientToken } from "@/lib/token-print";
+import { downloadTokenAsJpg } from "@/lib/token-jpg";
 import { SHEIKH_PHARMA_DETAILS } from "@/lib/sheikh-pharma-letterhead";
 import { SHEIKH_PHARMA_LOGO_BASE64 } from "@/lib/sheikh-pharma-logo.base64";
 import { cn } from "@/lib/utils";
@@ -188,9 +189,9 @@ const t = {
     logoutCancel: "না, থাকুন",
     logoutConfirm: "হ্যাঁ, লগআউট",
     myAppointmentsTitle: "আপনার অ্যাপয়েন্টমেন্ট ও সিরিয়াল তালিকা",
-    myAppointmentsDesc: "চেম্বারের লাইভ সিরিয়াল স্ট্যাটাস ট্র্যাক করুন ও টোকেন প্রিন্ট করুন।",
+    myAppointmentsDesc: "চেম্বারের লাইভ সিরিয়াল স্ট্যাটাস ট্র্যাক করুন ও টোকেন সেভ করুন (JPG)।",
     noAppointmentsHint: "বর্তমানে আপনার কোনো সিরিয়াল বুক করা নেই। নতুন সিরিয়াল নিতে নিচের বাটনে ক্লিক করুন।",
-    printTokenTooltip: "টোকেন স্লিপ প্রিন্ট",
+    saveTokenBtn: "টোকেন সেভ (JPG)",
   },
   en: {
     brandName: "Sheikh Pharma",
@@ -291,9 +292,9 @@ const t = {
     logoutCancel: "Stay Logged In",
     logoutConfirm: "Yes, Sign Out",
     myAppointmentsTitle: "Your Appointments & Queue Serials",
-    myAppointmentsDesc: "Track live serial status and print chamber tokens.",
+    myAppointmentsDesc: "Track live serial status and save chamber tokens as JPG images.",
     noAppointmentsHint: "You currently have no booked serials. Click below to book a doctor appointment.",
-    printTokenTooltip: "Print Token Slip",
+    saveTokenBtn: "Save Token (JPG)",
   },
 };
 
@@ -937,6 +938,7 @@ function Dashboard({
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [selectedPatientUid, setSelectedPatientUid] = useState<string>("all");
 
   useEffect(() => {
     if (q.error && /log in/i.test(String((q.error as Error).message))) onLogout();
@@ -971,16 +973,29 @@ function Dashboard({
     (a: any) => a.appt_date >= new Date().toISOString().slice(0, 10)
   );
 
+  // Filter lists by selected family member / patient UID
+  const filteredAppointments = selectedPatientUid === "all"
+    ? d.appointments
+    : d.appointments.filter((a: any) => (a.patient_code === selectedPatientUid) || (a.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+
+  const filteredPrescriptions = selectedPatientUid === "all"
+    ? d.prescriptions
+    : d.prescriptions.filter((r: any) => (r.patient_code === selectedPatientUid) || (r.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+
+  const filteredLabReports = selectedPatientUid === "all"
+    ? d.labReports
+    : d.labReports.filter((l: any) => (l.patient_code === selectedPatientUid) || (l.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+
   const stats = [
     {
       label: curr.statPrescriptions,
-      value: d.prescriptions.length,
+      value: filteredPrescriptions.length,
       icon: FileText,
       color: "text-emerald-500",
     },
     {
       label: curr.statReports,
-      value: d.labReports.length,
+      value: filteredLabReports.length,
       icon: FlaskConical,
       color: "text-cyan-500",
     },
@@ -1073,6 +1088,58 @@ function Dashboard({
         </div>
       </div>
 
+      {/* Family Member / Patient UID Filter Bar */}
+      {d.patients && d.patients.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl border border-border/80 bg-card/75 backdrop-blur-md shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5 mr-1">
+              <Users className="h-4 w-4 text-primary" />
+              <span>{lang === "bn" ? "রোগী নির্বাচন (এক নম্বরে একাধিক রোগী):" : "Select Patient Profile:"}</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setSelectedPatientUid("all")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer",
+                selectedPatientUid === "all"
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              )}
+            >
+              👥 {lang === "bn" ? "সকল রোগী" : "All Members"} ({d.patients.length})
+            </button>
+
+            {d.patients.map((p: any) => (
+              <button
+                key={p.uid}
+                type="button"
+                onClick={() => setSelectedPatientUid(p.uid)}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5",
+                  selectedPatientUid === p.uid
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-background text-foreground border-border hover:bg-muted"
+                )}
+              >
+                <span>👤 {p.name}</span>
+                <span className="font-mono text-[10px] opacity-80">({p.uid})</span>
+              </button>
+            ))}
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenBooking()}
+            className="rounded-xl h-8 text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/5 cursor-pointer ml-auto"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>{lang === "bn" ? "+ নতুন রোগীর সিরিয়াল" : "+ New Patient Serial"}</span>
+          </Button>
+        </div>
+      )}
+
       {/* 4 Stats Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s, idx) => (
@@ -1138,7 +1205,7 @@ function Dashboard({
             </Button>
           </div>
 
-          {d.appointments.length === 0 ? (
+          {filteredAppointments.length === 0 ? (
             <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-border/80 bg-card/60">
               <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground/40 mb-2" />
               <p className="text-sm font-semibold text-foreground">{curr.empty}</p>
@@ -1155,19 +1222,33 @@ function Dashboard({
             </div>
           ) : (
             <div className="space-y-3">
-              {d.appointments.map((a: any) => (
+              {filteredAppointments.map((a: any) => (
                 <Card key={a.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md overflow-hidden">
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-base font-bold text-foreground">
-                            {a.doctor_name || "বিশেষজ্ঞ ডাক্তার"}
+                            {a.doctor_name || "চিকিৎসক"}
                           </h4>
                           {a.doctor_qualification && (
                             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                               ({a.doctor_qualification})
                             </span>
+                          )}
+                        </div>
+
+                        {/* Patient Name & UID */}
+                        <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
+                          {a.patient_name && (
+                            <span className="font-semibold text-foreground">
+                              রোগী: {a.patient_name}
+                            </span>
+                          )}
+                          {a.patient_code && (
+                            <Badge variant="secondary" className="font-mono text-[10px] text-primary border-primary/20">
+                              UID: {a.patient_code}
+                            </Badge>
                           )}
                         </div>
 
@@ -1225,30 +1306,32 @@ function Dashboard({
                               : "Waiting"}
                           </Badge>
 
+                          {/* Save as JPG Image Button */}
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              printPatientToken(
-                                {
-                                  clinicName: "Sheikh Pharma",
-                                  doctorName: a.doctor_name,
-                                  doctorQualification: a.doctor_qualification,
-                                  serialNo: a.serial_no,
-                                  patientCode: a.patient_code,
-                                  fee: a.fee_amount,
-                                  patientName: a.patient_name || d.name,
-                                  phone: d.phone,
-                                  location: a.chamber_name || a.clinic,
-                                  date: a.appt_date,
-                                },
-                                "80mm"
-                              )
-                            }
-                            title={curr.printTokenTooltip}
-                            className="h-9 w-9 p-0 rounded-xl cursor-pointer hover:bg-muted"
+                            variant="outline"
+                            onClick={async () => {
+                              const ok = await downloadTokenAsJpg({
+                                clinicName: "শেখ ফার্মা ও ডায়াগনস্টিক",
+                                doctorName: a.doctor_name,
+                                doctorQualification: a.doctor_qualification,
+                                serialNo: a.serial_no,
+                                patientCode: a.patient_code,
+                                fee: a.fee_amount,
+                                patientType: a.patient_type === "new" ? "New patient" : a.patient_type === "old" ? "Old patient" : "Report",
+                                patientName: a.patient_name || d.name,
+                                phone: d.phone,
+                                location: a.chamber_name || a.clinic,
+                                date: a.appt_date,
+                              });
+                              if (ok) {
+                                toast.success(lang === "bn" ? "🎉 টোকেনটি JPG ছবি হিসেবে ডাউনলোড হয়েছে!" : "🎉 Token saved as JPG image!");
+                              }
+                            }}
+                            className="rounded-xl h-9 px-3 font-semibold gap-1.5 text-xs cursor-pointer border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 shadow-sm"
                           >
-                            <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                            <Download className="h-3.5 w-3.5" />
+                            <span>{curr.saveTokenBtn || "টোকেন সেভ (JPG)"}</span>
                           </Button>
                         </div>
                       </div>
@@ -1262,8 +1345,8 @@ function Dashboard({
 
         {/* PRESCRIPTIONS TAB */}
         <TabsContent value="rx" className="mt-4 space-y-3">
-          {d.prescriptions.length === 0 && <Empty message={curr.empty} />}
-          {d.prescriptions.map((r: any) => (
+          {filteredPrescriptions.length === 0 && <Empty message={curr.empty} />}
+          {filteredPrescriptions.map((r: any) => (
             <Card key={r.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md">
               <CardContent className="space-y-3 p-4 sm:p-5">
                 <div className="flex flex-wrap justify-between gap-2 border-b border-border/60 pb-3">
@@ -1273,6 +1356,19 @@ function Dashboard({
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {r.doctor_qualification} · {r.clinic}
+                    </div>
+                    {/* Patient Name & UID */}
+                    <div className="flex items-center gap-2 text-xs pt-1">
+                      {r.patient_name && (
+                        <span className="font-semibold text-foreground">
+                          রোগী: {r.patient_name}
+                        </span>
+                      )}
+                      {r.patient_code && (
+                        <Badge variant="secondary" className="font-mono text-[10px] text-primary border-primary/20">
+                          UID: {r.patient_code}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="text-right text-sm">
@@ -1338,8 +1434,8 @@ function Dashboard({
 
         {/* LAB REPORTS TAB */}
         <TabsContent value="lab" className="mt-4 space-y-3">
-          {d.labReports.length === 0 && <Empty message={curr.empty} />}
-          {d.labReports.map((r: any) => (
+          {filteredLabReports.length === 0 && <Empty message={curr.empty} />}
+          {filteredLabReports.map((r: any) => (
             <Card key={r.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md">
               <CardContent className="space-y-3 p-4 sm:p-5">
                 <div className="flex flex-wrap justify-between gap-2 border-b border-border/60 pb-3">
@@ -1349,6 +1445,19 @@ function Dashboard({
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {r.department} · {r.clinic}
+                    </div>
+                    {/* Patient Name & UID */}
+                    <div className="flex items-center gap-2 text-xs pt-1">
+                      {r.patient_name && (
+                        <span className="font-semibold text-foreground">
+                          রোগী: {r.patient_name}
+                        </span>
+                      )}
+                      {r.patient_code && (
+                        <Badge variant="secondary" className="font-mono text-[10px] text-primary border-primary/20">
+                          UID: {r.patient_code}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="text-sm font-semibold text-foreground">

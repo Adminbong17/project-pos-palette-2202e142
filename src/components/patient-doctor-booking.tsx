@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -9,22 +9,19 @@ import {
   Stethoscope,
   MapPin,
   CheckCircle2,
-  Printer,
+  Download,
   Sparkles,
   ArrowRight,
   Loader2,
-  ChevronRight,
   Building2,
   ShieldCheck,
-  AlertCircle,
-  Receipt,
-  RotateCcw,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -41,9 +38,10 @@ import {
 } from "@/components/ui/select";
 import {
   bookPatientAppointment,
+  getPatientsByPhone,
   type AvailableDoctor,
 } from "@/lib/patient-portal.functions";
-import { printPatientToken } from "@/lib/token-print";
+import { downloadTokenAsJpg } from "@/lib/token-jpg";
 import { cn } from "@/lib/utils";
 
 type Lang = "bn" | "en";
@@ -156,18 +154,25 @@ export function DoctorCard({
               {doctor.qualification}
             </p>
 
-            {primaryChamber && (
-              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="font-semibold text-foreground">{primaryChamber.name}</span>
+            {/* Doctor Sitting Locations */}
+            {doctor.chambers.length > 0 && (
+              <div className="mt-2.5 space-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span>
+                    {doctor.chambers.length === 1
+                      ? doctor.chambers[0].name
+                      : isBn
+                      ? `${doctor.chambers.length}টি চেম্বার / লোকেশন`
+                      : `${doctor.chambers.length} Sitting Locations`}
+                  </span>
                 </div>
-                {primaryChamber.address && (
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="line-clamp-1">{primaryChamber.address}</span>
+                {doctor.chambers.map((c, i) => (
+                  <div key={c.id || i} className="text-[11px] pl-5 text-muted-foreground flex items-center justify-between">
+                    <span className="line-clamp-1">{c.name} {c.address ? `(${c.address})` : ""}</span>
+                    <span className="shrink-0 font-semibold text-foreground ml-2">৳{c.fee_new || 500}</span>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -215,23 +220,66 @@ export function DoctorBookingModal({
 }: BookingModalProps) {
   const isBn = lang === "bn";
   const bookFn = useServerFn(bookPatientAppointment);
+  const fetchPatientsFn = useServerFn(getPatientsByPhone);
 
   const dates = getAvailableDates(lang);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
     initialDoctorId || (doctors[0]?.id ?? "")
   );
   const [selectedDate, setSelectedDate] = useState<string>(dates[0]?.value ?? "");
+  const [selectedChamberId, setSelectedChamberId] = useState<string>("");
   const [name, setName] = useState(patientName);
   const [phone, setPhone] = useState(patientPhone);
+  const [patientCode, setPatientCode] = useState<string>("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("Male");
   const [patientType, setPatientType] = useState<"new" | "old" | "report">("new");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isSavingJpg, setIsSavingJpg] = useState(false);
   const [successData, setSuccessData] = useState<any | null>(null);
 
+  // Multiple patients under single phone
+  const [familyMembers, setFamilyMembers] = useState<{ uid: string; name: string; age?: string; gender?: string }[]>([]);
+  const [isNewMemberMode, setIsNewMemberMode] = useState(false);
+
   const currentDoctor = doctors.find((d) => d.id === selectedDoctorId) || doctors[0];
-  const primaryChamber = currentDoctor?.chambers?.[0];
+  
+  // Set default chamber when doctor changes
+  useEffect(() => {
+    if (currentDoctor?.chambers?.length) {
+      setSelectedChamberId(currentDoctor.chambers[0].id || "");
+    }
+  }, [currentDoctor]);
+
+  const activeChamber =
+    currentDoctor?.chambers?.find((c) => c.id === selectedChamberId) ||
+    currentDoctor?.chambers?.[0];
+
+  // Fetch registered patients whenever 11 digits phone is entered
+  useEffect(() => {
+    const clean = cleanPhone(phone);
+    if (clean.length === 11) {
+      fetchPatientsFn({ data: { phone: clean } })
+        .then((res) => {
+          const pts = res?.patients || [];
+          setFamilyMembers(pts);
+          if (pts.length > 0 && !name.trim()) {
+            // Pre-select first family member if name not typed yet
+            const first = pts[0];
+            setName(first.name);
+            setPatientCode(first.uid);
+            if (first.age) setAge(first.age);
+            if (first.gender) setGender(first.gender);
+            setPatientType("old");
+            setIsNewMemberMode(false);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setFamilyMembers([]);
+    }
+  }, [phone]);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,7 +302,8 @@ export function DoctorBookingModal({
       const res = await bookFn({
         data: {
           doctor_id: currentDoctor.id,
-          chamber_id: primaryChamber?.id || null,
+          chamber_id: activeChamber?.id || null,
+          patient_code: patientCode.trim() || null,
           patient_name: name.trim(),
           phone: normalizedPhone,
           patient_age: age.trim() || null,
@@ -269,13 +318,13 @@ export function DoctorBookingModal({
       if (res.already_booked) {
         toast.info(
           isBn
-            ? `আপনি ইতিমধ্যে এই ডাক্তারের জন্য সিরিয়াল নিয়েছেন (নং #${res.serial_no})`
-            : `You already have serial #${res.serial_no} for this doctor`
+            ? `এই রোগীর জন্য আজকের সিরিয়াল ইতিমধ্যে নেওয়া রয়েছে (নং #${res.serial_no})`
+            : `Serial #${res.serial_no} is already booked for this patient today`
         );
       } else {
         toast.success(
           isBn
-            ? `🎉 সিরিয়াল সফলভাবে নিশ্চিত হয়েছে! সিরিয়াল নং: #${res.serial_no}`
+            ? `🎉 সিরিয়াল নিশ্চিত হয়েছে! সিরিয়াল নং: #${res.serial_no}`
             : `🎉 Serial confirmed! Serial #${res.serial_no}`
         );
       }
@@ -286,15 +335,16 @@ export function DoctorBookingModal({
     }
   };
 
-  const handlePrintSlip = () => {
+  const handleSaveTokenJpg = async () => {
     if (!successData) return;
-    printPatientToken(
-      {
-        clinicName: "Sheikh Pharma",
+    setIsSavingJpg(true);
+    try {
+      const ok = await downloadTokenAsJpg({
+        clinicName: "শেখ ফার্মা ও ডায়াগনস্টিক",
         doctorName: successData.doctor_name,
         doctorQualification: successData.doctor_qualification,
         serialNo: successData.serial_no,
-        patientCode: successData.patient_code,
+        patientCode: successData.patient_code || patientCode,
         fee: successData.fee_amount,
         patientType: patientType === "new" ? "New patient" : patientType === "old" ? "Old patient" : "Report",
         patientName: successData.patient_name,
@@ -303,9 +353,15 @@ export function DoctorBookingModal({
         phone: successData.phone,
         location: successData.chamber_name,
         date: successData.appt_date,
-      },
-      "80mm"
-    );
+      });
+      if (ok) {
+        toast.success(isBn ? "🎉 টোকেনটি JPG ছবি হিসেবে ডাউনলোড হয়েছে!" : "🎉 Token saved as JPG image!");
+      }
+    } catch (err: any) {
+      toast.error(isBn ? "ছবি সেভ করতে সমস্যা হয়েছে" : "Failed to save token image");
+    } finally {
+      setIsSavingJpg(false);
+    }
   };
 
   const handleFinish = () => {
@@ -320,8 +376,8 @@ export function DoctorBookingModal({
     patientType === "report"
       ? 0
       : patientType === "old"
-      ? primaryChamber?.fee_old || 300
-      : primaryChamber?.fee_new || 500;
+      ? activeChamber?.fee_old || 300
+      : activeChamber?.fee_new || 500;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -339,7 +395,7 @@ export function DoctorBookingModal({
                     <Calendar className="h-4 w-4" />
                   </span>
                   <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-                    {isBn ? "ডাক্তারের সিরিয়াল বুকিং" : "Book Doctor Appointment"}
+                    {isBn ? "সিরিয়াল বুকিং করুন" : "Book Doctor Appointment"}
                   </DialogTitle>
                 </div>
                 <DialogDescription className="text-xs text-muted-foreground">
@@ -353,7 +409,7 @@ export function DoctorBookingModal({
                 {/* 1. Doctor Picker */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold flex items-center justify-between">
-                    <span>{isBn ? "ডাক্তার নির্বাচন" : "Select Doctor"}</span>
+                    <span>{isBn ? "চিকিৎসক নির্বাচন" : "Select Doctor"}</span>
                     {currentDoctor && (
                       <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                         {currentDoctor.qualification}
@@ -380,7 +436,47 @@ export function DoctorBookingModal({
                   </Select>
                 </div>
 
-                {/* 2. Date Picker (Pills) */}
+                {/* 2. Doctor Sitting Locations (Chambers) */}
+                {currentDoctor && currentDoctor.chambers.length > 1 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <span>{isBn ? "চেম্বার / বসার স্থান নির্বাচন করুন *" : "Select Sitting Location *"}</span>
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {currentDoctor.chambers.map((ch) => {
+                        const fee = patientType === "old" ? ch.fee_old : ch.fee_new;
+                        const isSelected = (selectedChamberId || currentDoctor.chambers[0]?.id) === ch.id;
+                        return (
+                          <div
+                            key={ch.id}
+                            onClick={() => setSelectedChamberId(ch.id || "")}
+                            className={cn(
+                              "flex items-start justify-between p-2.5 rounded-xl border text-xs cursor-pointer transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary shadow-sm"
+                                : "border-border/70 hover:bg-muted/40 text-muted-foreground"
+                            )}
+                          >
+                            <div className="space-y-0.5 pr-2">
+                              <span className="font-bold text-foreground block">{ch.name}</span>
+                              {ch.address && (
+                                <span className="text-[10px] text-muted-foreground line-clamp-1 block">
+                                  {ch.address}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                              ৳{fee}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Date Picker (Pills) */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-primary" />
@@ -406,39 +502,121 @@ export function DoctorBookingModal({
                   </div>
                 </div>
 
-                {/* 3. Patient Name & Phone */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                {/* 4. Mobile Number */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5 text-primary" />
+                      {isBn ? "মোবাইল নম্বর *" : "Mobile Number *"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">১১ ডিজিট</span>
+                  </Label>
+                  <Input
+                    type="tel"
+                    placeholder="01XXXXXXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-10 rounded-xl font-mono text-sm"
+                    required
+                  />
+                </div>
+
+                {/* 5. Multiple Patients Under Same Mobile (Family Members Picker) */}
+                {familyMembers.length > 0 && (
+                  <div className="space-y-2 p-3 rounded-2xl bg-muted/40 border border-border/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                        {isBn ? "কার জন্য সিরিয়াল নিচ্ছেন?" : "Who is this serial for?"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">এক নম্বরে একাধিক রোগী</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {familyMembers.map((fm) => {
+                        const isSelected =
+                          !isNewMemberMode &&
+                          (patientCode === fm.uid || name.trim().toLowerCase() === fm.name.trim().toLowerCase());
+                        return (
+                          <button
+                            key={fm.uid}
+                            type="button"
+                            onClick={() => {
+                              setName(fm.name);
+                              setPatientCode(fm.uid);
+                              if (fm.age) setAge(fm.age);
+                              if (fm.gender) setGender(fm.gender);
+                              setPatientType("old");
+                              setIsNewMemberMode(false);
+                            }}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer",
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-card text-foreground border-border hover:bg-muted"
+                            )}
+                          >
+                            <span>👤 {fm.name}</span>
+                            <span className="text-[10px] opacity-80 font-mono">({fm.uid})</span>
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setName("");
+                          setPatientCode("");
+                          setAge("");
+                          setPatientType("new");
+                          setIsNewMemberMode(true);
+                        }}
+                        className={cn(
+                          "flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-dashed transition-all cursor-pointer",
+                          isNewMemberMode
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-card text-primary border-primary/40 hover:bg-primary/5"
+                        )}
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>{isBn ? "নতুন সদস্য / রোগী" : "New Member"}</span>
+                      </button>
+                    </div>
+
+                    {patientCode && !isNewMemberMode && (
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium pt-0.5 flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                        <span>{isBn ? `রোগীর আইডি (UID): ${patientCode}` : `Patient UID: ${patientCode}`}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. Patient Name & UID */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold flex items-center gap-1">
                       <User className="h-3.5 w-3.5 text-primary" />
                       <span>{isBn ? "রোগীর পুরো নাম *" : "Patient Name *"}</span>
                     </Label>
-                    <Input
-                      placeholder={isBn ? "যেমন: মোহাম্মদ আলী" : "e.g. John Doe"}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="h-10 rounded-xl"
-                      required
-                    />
+                    {patientCode ? (
+                      <Badge variant="outline" className="font-mono text-[10px] text-primary border-primary/30">
+                        UID: {patientCode}
+                      </Badge>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">নতুন UID তৈরি হবে</span>
+                    )}
                   </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-primary" />
-                      <span>{isBn ? "মোবাইল নম্বর *" : "Mobile Number *"}</span>
-                    </Label>
-                    <Input
-                      type="tel"
-                      placeholder="01XXXXXXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-10 rounded-xl font-mono"
-                      required
-                    />
-                  </div>
+                  <Input
+                    placeholder={isBn ? "যেমন: মোহাম্মদ আলী" : "e.g. John Doe"}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-10 rounded-xl"
+                    required
+                  />
                 </div>
 
-                {/* 4. Age, Gender & Patient Type */}
+                {/* 7. Age, Gender & Patient Type */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-semibold">{isBn ? "বয়স" : "Age"}</Label>
@@ -482,23 +660,23 @@ export function DoctorBookingModal({
                   </div>
                 </div>
 
-                {/* 5. Chamber & Fee Estimate Banner */}
-                {primaryChamber && (
+                {/* 8. Chamber & Fee Estimate Banner */}
+                {activeChamber && (
                   <div className="rounded-xl border border-border/80 bg-muted/40 p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary shrink-0" />
                       <div>
                         <span className="text-xs font-bold text-foreground block">
-                          {primaryChamber.name}
+                          {activeChamber.name}
                         </span>
                         <span className="text-[11px] text-muted-foreground line-clamp-1">
-                          {primaryChamber.address || "শেখ ফার্মা, মুক্তাগাছা"}
+                          {activeChamber.address || "শেখ ফার্মা, মুক্তাগাছা"}
                         </span>
                       </div>
                     </div>
                     <div className="text-right shrink-0 pl-2">
                       <span className="text-[10px] text-muted-foreground uppercase font-semibold block">
-                        {isBn ? "আনুমানিক ফি" : "Fee"}
+                        {isBn ? "পরামর্শ ফি" : "Fee"}
                       </span>
                       <span className="text-sm font-bold text-foreground">
                         {estimatedFee > 0 ? `৳${estimatedFee}` : isBn ? "ফ্রি / ০৳" : "Free"}
@@ -516,7 +694,7 @@ export function DoctorBookingModal({
                   {busy ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>{isBn ? "সিরিয়াল কনফার্ম করা হচ্ছে..." : "Confirming Serial..."}</span>
+                      <span>{isBn ? "সিরিয়াল নিশ্চিত করা হচ্ছে..." : "Confirming Serial..."}</span>
                     </>
                   ) : (
                     <>
@@ -546,13 +724,13 @@ export function DoctorBookingModal({
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {isBn
-                    ? "নিচের টোকেনটি সংরক্ষণ করুন বা প্রিন্ট করে চেম্বারে নিয়ে আসুন।"
-                    : "Save or print this token slip for your chamber visit."}
+                    ? "নিচের টোকেনটি JPG ছবি হিসেবে সেভ করে চেম্বারে নিয়ে আসুন।"
+                    : "Save this token as a JPG image for your chamber visit."}
                 </p>
               </div>
 
-              {/* Digital Token Slip Card */}
-              <div className="relative mx-auto max-w-sm rounded-2xl border-2 border-dashed border-primary/30 bg-muted/30 p-5 text-left shadow-sm">
+              {/* Digital Token Slip Card Preview */}
+              <div className="relative mx-auto max-w-sm rounded-2xl border-2 border-dashed border-primary/30 bg-card p-5 text-left shadow-sm">
                 <div className="flex items-center justify-between border-b border-border/80 pb-3">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
@@ -580,6 +758,12 @@ export function DoctorBookingModal({
                     <span>{isBn ? "রোগীর নাম:" : "Patient:"}</span>
                     <span className="font-semibold text-foreground">{successData.patient_name}</span>
                   </div>
+                  {successData.patient_code && (
+                    <div className="flex justify-between">
+                      <span>{isBn ? "রোগীর আইডি (UID):" : "Patient UID:"}</span>
+                      <span className="font-mono font-bold text-primary">{successData.patient_code}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>{isBn ? "তারিখ:" : "Date:"}</span>
                     <span className="font-semibold text-foreground font-mono">{successData.appt_date}</span>
@@ -601,19 +785,25 @@ export function DoctorBookingModal({
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Save JPG instead of Print */}
               <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Button
-                  variant="outline"
-                  onClick={handlePrintSlip}
-                  className="flex-1 rounded-xl h-11 font-semibold gap-1.5 cursor-pointer hover:bg-muted"
+                  variant="default"
+                  onClick={handleSaveTokenJpg}
+                  disabled={isSavingJpg}
+                  className="flex-1 rounded-xl h-11 font-bold gap-2 cursor-pointer bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
                 >
-                  <Printer className="h-4 w-4" />
-                  <span>{isBn ? "টোকেন প্রিন্ট / স্লিপ" : "Print Token Slip"}</span>
+                  {isSavingJpg ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  <span>{isBn ? "টোকেন সেভ করুন (JPG)" : "Save Token as JPG"}</span>
                 </Button>
                 <Button
+                  variant="outline"
                   onClick={handleFinish}
-                  className="flex-1 rounded-xl h-11 font-bold shadow-md shadow-primary/20 cursor-pointer"
+                  className="flex-1 rounded-xl h-11 font-semibold cursor-pointer hover:bg-muted"
                 >
                   <span>{isBn ? "ড্যাশবোর্ডে দেখুন" : "View in Dashboard"}</span>
                   <ArrowRight className="ml-1.5 h-4 w-4" />

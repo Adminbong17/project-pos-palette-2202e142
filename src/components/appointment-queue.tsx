@@ -457,7 +457,7 @@ export function useChambers(businessId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_chambers")
-        .select("id, name, address, is_active, fee_new, fee_old, fee_medical")
+        .select("id, name, address, is_active, fee_new, fee_old, fee_medical, doctor_id")
         .eq("business_id", businessId!)
         .order("name");
       if (error) throw error;

@@ -60,7 +60,7 @@ function AppointmentsPage() {
   const [date, setDate] = useState(dhakaToday());
   const [chamberId, setChamberId] = useState<string>("");
   const [doctorId, setDoctorId] = useState<string>("");
-  const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
+  const [newChamber, setNewChamber] = useState({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "", doctor_id: "" });
   const [history, setHistory] = useState("");
   const [form, setForm] = useState({
     patient_name: "",
@@ -87,13 +87,29 @@ function AppointmentsPage() {
         fee_new: Number(newChamber.fee_new) || 0,
         fee_old: Number(newChamber.fee_old) || 0,
         fee_medical: Number(newChamber.fee_medical) || 0,
+        doctor_id: newChamber.doctor_id || null,
         created_by: auth.user?.id ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Location added");
-      setNewChamber({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "" });
+      setNewChamber({ name: "", address: "", fee_new: "", fee_old: "", fee_medical: "", doctor_id: "" });
+      qc.invalidateQueries({ queryKey: ["rx-chambers"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateChamberDoctor = useMutation({
+    mutationFn: async (v: { id: string; doctor_id: string | null }) => {
+      const { error } = await supabase
+        .from("rx_chambers")
+        .update({ doctor_id: v.doctor_id })
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Doctor assigned to chamber location");
       qc.invalidateQueries({ queryKey: ["rx-chambers"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -200,31 +216,46 @@ function AppointmentsPage() {
           <MapPin className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Chamber locations</h2>
         </div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto_auto]">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto_auto_auto]">
           <Input
-            placeholder="Location name"
+            placeholder="Location name (যেমন: প্রধান চেম্বার)"
             value={newChamber.name}
             onChange={(e) => setNewChamber((s) => ({ ...s, name: e.target.value }))}
           />
           <Input
-            placeholder="Address (optional)"
+            placeholder="Address (ঠিকানা)"
             value={newChamber.address}
             onChange={(e) => setNewChamber((s) => ({ ...s, address: e.target.value }))}
           />
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 py-1 text-xs"
+            value={newChamber.doctor_id}
+            onChange={(e) => setNewChamber((s) => ({ ...s, doctor_id: e.target.value }))}
+          >
+            <option value="">সকল ডাক্তার / All Doctors</option>
+            {doctorList.map((d) => (
+              <option key={d.user_id} value={d.user_id}>
+                ডাক্তার: {d.name}
+              </option>
+            ))}
+          </select>
           <Input
-            placeholder="New patient fee"
+            placeholder="New fee ৳"
+            className="w-24"
             inputMode="numeric"
             value={newChamber.fee_new}
             onChange={(e) => setNewChamber((s) => ({ ...s, fee_new: e.target.value.replace(/[^0-9.]/g, "") }))}
           />
           <Input
-            placeholder="Old patient fee"
+            placeholder="Old fee ৳"
+            className="w-24"
             inputMode="numeric"
             value={newChamber.fee_old}
             onChange={(e) => setNewChamber((s) => ({ ...s, fee_old: e.target.value.replace(/[^0-9.]/g, "") }))}
           />
           <Input
-            placeholder="Medical person fee"
+            placeholder="Medical ৳"
+            className="w-24"
             inputMode="numeric"
             value={newChamber.fee_medical}
             onChange={(e) => setNewChamber((s) => ({ ...s, fee_medical: e.target.value.replace(/[^0-9.]/g, "") }))}
@@ -240,8 +271,22 @@ function AppointmentsPage() {
                 key={c.id}
                 className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs"
               >
-                <span className="font-medium">{c.name}</span>
-                {c.address && <span className="text-muted-foreground">{c.address}</span>}
+                <span className="font-semibold">{c.name}</span>
+                {c.address && <span className="text-muted-foreground">({c.address})</span>}
+                <select
+                  className="h-7 rounded border border-border bg-background px-2 text-[11px]"
+                  value={c.doctor_id || ""}
+                  onChange={(e) =>
+                    updateChamberDoctor.mutate({ id: c.id, doctor_id: e.target.value || null })
+                  }
+                >
+                  <option value="">সকল ডাক্তার / All Doctors</option>
+                  {doctorList.map((d) => (
+                    <option key={d.user_id} value={d.user_id}>
+                      ডাক্তার: {d.name}
+                    </option>
+                  ))}
+                </select>
                 <span className="ml-auto flex items-center gap-1.5">
                   <span className="text-muted-foreground">New ৳</span>
                   <Input

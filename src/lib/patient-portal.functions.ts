@@ -156,13 +156,51 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     const name =
       rx.data?.[0]?.patient_name || appts.data?.[0]?.patient_name || labs.data?.[0]?.patient_name || "";
 
+    // Extract unique individual patients under this family mobile number
+    const patientMap = new Map<string, {
+      uid: string;
+      name: string;
+      age?: string;
+      gender?: string;
+      count: number;
+    }>();
+
+    const registerPatient = (code?: string | null, pName?: string | null, age?: string | null, gender?: string | null) => {
+      const trimmedName = (pName || "").trim();
+      if (!trimmedName) return;
+      const trimmedCode = (code || "").trim();
+      const key = (trimmedCode || trimmedName).toLowerCase();
+      const existing = patientMap.get(key);
+      if (existing) {
+        existing.count += 1;
+        if (!existing.age && age) existing.age = String(age);
+        if (!existing.gender && gender) existing.gender = String(gender);
+        if (!existing.uid && trimmedCode) existing.uid = trimmedCode;
+      } else {
+        patientMap.set(key, {
+          uid: trimmedCode || `PAT-${Math.floor(100000 + Math.random() * 900000)}`,
+          name: trimmedName,
+          age: age ? String(age) : undefined,
+          gender: gender ? String(gender) : undefined,
+          count: 1,
+        });
+      }
+    };
+
+    for (const a of (appts.data ?? []) as any[]) {
+      registerPatient(a.patient_code, a.patient_name, a.patient_age, a.patient_gender);
+    }
+    for (const r of (rx.data ?? []) as any[]) {
+      registerPatient(r.patient_code, r.patient_name, (r as any).patient_age, (r as any).patient_gender);
+    }
+    for (const l of (labs.data ?? []) as any[]) {
+      registerPatient(l.patient_code, l.patient_name, (l as any).patient_age, (l as any).patient_gender);
+    }
+
     const enrichedAppointments = (appts.data ?? []).map((a: any) => {
-      const rawDoc = docNameMap[a.doctor_id] || "";
-      const doctor_name = rawDoc
-        ? rawDoc.startsWith("Dr.") || rawDoc.startsWith("ডা.")
-          ? rawDoc
-          : `ডা. ${rawDoc}`
-        : "বিশেষজ্ঞ ডাক্তার";
+      const rawDoc = (docNameMap[a.doctor_id] || "").trim();
+      // Clean doctor name - do not add redundant "ডা." or "Dr."
+      const doctor_name = rawDoc && rawDoc !== "ডাক্তার" ? rawDoc : "চিকিৎসক";
       return {
         ...a,
         clinic: bizName[a.business_id] ?? "",
@@ -175,8 +213,10 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     return {
       phone,
       name,
+      patients: Array.from(patientMap.values()),
       prescriptions: withBiz(rx.data as any).map((r: any) => ({
         ...r,
+        doctor_name: (r.doctor_name || "").trim() || "চিকিৎসক",
         lines: lines.filter((l: any) => l.prescription_id === r.id),
       })),
       labReports: withBiz(labs.data as any),
@@ -213,6 +253,7 @@ export type AvailableDoctor = {
     address: string;
     fee_new: number;
     fee_old: number;
+    fee_medical: number;
   }[];
   today_queue: number;
 };
@@ -235,7 +276,7 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
     // 2. Fetch chambers
     const { data: chambers } = await db
       .from("rx_chambers")
-      .select("id, name, address, business_id, doctor_id, fee_new, fee_old, is_active")
+      .select("id, name, address, business_id, doctor_id, fee_new, fee_old, fee_medical, is_active")
       .eq("is_active", true);
 
     // 3. Fetch doctor profiles
@@ -305,38 +346,46 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
       address: "দোকান নং ১৩, আরব প্যারাডাইস মার্কেট, নতুন বাজার, মুক্তাগাছা, ময়মনসিংহ",
       fee_new: 500,
       fee_old: 300,
+      fee_medical: 0,
     };
 
     const doctorsList: AvailableDoctor[] = ((profilesRes.data ?? []) as any[])
       .filter((p) => doctorUserIds.has(p.id))
       .map((p) => {
-        const docChambers = ((chambers ?? []) as any[]).filter(
-          (c) => c.doctor_id === p.id || !c.doctor_id
+        // Specific chambers assigned to this doctor
+        const specificChambers = ((chambers ?? []) as any[]).filter(
+          (c) => c.doctor_id === p.id
+        );
+        // General chambers with no doctor specified
+        const generalChambers = ((chambers ?? []) as any[]).filter(
+          (c) => !c.doctor_id
         );
 
-        const rawName =
+        const assignedChambers = specificChambers.length > 0 ? specificChambers : generalChambers;
+
+        const rawName = (
           p.doctor_name ||
           [p.first_name, p.last_name].filter(Boolean).join(" ") ||
           p.email?.split("@")[0] ||
-          "ডাক্তার";
+          ""
+        ).trim();
 
-        const name =
-          rawName.startsWith("Dr.") || rawName.startsWith("ডা.")
-            ? rawName
-            : `ডা. ${rawName}`;
+        // Clean name - DO NOT force prefix "ডা." or "Dr."
+        const name = rawName && rawName !== "ডাক্তার" ? rawName : "চিকিৎসক";
 
         const chList =
-          docChambers.length > 0
-            ? docChambers.map((c) => ({
+          assignedChambers.length > 0
+            ? assignedChambers.map((c) => ({
                 id: c.id,
                 name: c.name,
                 address: c.address ?? "শেখ ফার্মা, মুক্তাগাছা",
                 fee_new: Number(c.fee_new) || 500,
                 fee_old: Number(c.fee_old) || 300,
+                fee_medical: Number(c.fee_medical) || 0,
               }))
             : [defaultChamber];
 
-        const bizId = docChambers[0]?.business_id || defaultBizId;
+        const bizId = assignedChambers[0]?.business_id || defaultBizId;
 
         return {
           id: p.id,
@@ -354,6 +403,58 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
   }
 );
 
+/** Fetch existing patients/family members registered under this mobile number. */
+export const getPatientsByPhone = createServerFn({ method: "POST" })
+  .inputValidator((d: { phone: string }) => z.object({ phone: z.string().max(20) }).parse(d))
+  .handler(async ({ data }) => {
+    const phone = localPhone(data.phone);
+    if (!phone) return { patients: [] };
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const like = `%${phone.slice(1)}`;
+
+    const [appts, rx, labs] = await Promise.all([
+      db.from("rx_appointments")
+        .select("patient_name, patient_code, patient_age, patient_gender, created_at")
+        .ilike("patient_phone", like)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      db.from("prescriptions")
+        .select("patient_name, patient_code, patient_age, patient_gender, created_at")
+        .ilike("patient_phone", like)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      db.from("lab_reports")
+        .select("patient_name, patient_code, patient_age, patient_gender, created_at")
+        .ilike("phone_no", like)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+
+    const patientMap = new Map<string, {
+      uid: string;
+      name: string;
+      age?: string;
+      gender?: string;
+    }>();
+
+    for (const row of [...(appts.data ?? []), ...(rx.data ?? []), ...(labs.data ?? [])] as any[]) {
+      const name = String(row.patient_name ?? "").trim();
+      const code = String(row.patient_code ?? "").trim();
+      if (!name) continue;
+      const key = (code || name).toLowerCase();
+      if (!patientMap.has(key)) {
+        patientMap.set(key, {
+          uid: code || `PAT-${Math.floor(100000 + Math.random() * 900000)}`,
+          name,
+          age: row.patient_age || "",
+          gender: row.patient_gender || "",
+        });
+      }
+    }
+
+    return { patients: Array.from(patientMap.values()) };
+  });
+
 /** Book an appointment/serial directly from the patient portal. */
 export const bookPatientAppointment = createServerFn({ method: "POST" })
   .inputValidator(
@@ -362,6 +463,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       phone?: string;
       doctor_id: string;
       chamber_id?: string | null;
+      patient_code?: string | null;
       patient_name: string;
       patient_age?: string | null;
       patient_gender?: string | null;
@@ -375,6 +477,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
           phone: z.string().max(20).optional(),
           doctor_id: z.string().uuid("সঠিক ডাক্তার আইডি দিন"),
           chamber_id: z.string().uuid().optional().nullable(),
+          patient_code: z.string().max(50).optional().nullable(),
           patient_name: z.string().min(2, "রোগীর নাম দিন").max(100),
           patient_age: z.string().max(20).optional().nullable(),
           patient_gender: z.string().max(20).optional().nullable(),
@@ -409,14 +512,13 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       throw new Error("নির্বাচিত ডাক্তার খুঁজে পাওয়া যায়নি");
     }
 
-    const rawDocName =
+    const rawDocName = (
       docProfile.doctor_name ||
       [docProfile.first_name, docProfile.last_name].filter(Boolean).join(" ") ||
-      "ডাক্তার";
-    const doctorName =
-      rawDocName.startsWith("Dr.") || rawDocName.startsWith("ডা.")
-        ? rawDocName
-        : `ডা. ${rawDocName}`;
+      ""
+    ).trim();
+    // Clean name - DO NOT force prefix "ডা." or "Dr."
+    const doctorName = rawDocName && rawDocName !== "ডাক্তার" ? rawDocName : "চিকিৎসক";
 
     // 3. Resolve Business
     const { data: bizUsers } = await db
@@ -477,16 +579,32 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       feeAmount = 0;
     }
 
-    // 5. Duplicate Check: Same Doctor + Same Date + Same Patient Phone
-    const { data: existing } = await db
+    // Resolve UID (patient_code)
+    let patientCode = (data.patient_code || "").trim().toUpperCase();
+    if (!patientCode) {
+      const alpha = data.patient_name.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "PAT";
+      const pad = alpha.padEnd(3, "X");
+      const rand = Math.floor(100000 + Math.random() * 900000);
+      patientCode = `${pad}${rand}`;
+    }
+
+    // 5. Duplicate Check: Same Doctor + Same Date + Same Patient Phone + (Same Patient Code OR Same Patient Name)
+    let dupQuery = db
       .from("rx_appointments")
-      .select("id, serial_no, appt_date, patient_name, status, fee_amount, chamber_id")
+      .select("id, serial_no, appt_date, patient_name, patient_code, status, fee_amount, chamber_id")
       .eq("business_id", businessId)
       .eq("doctor_id", data.doctor_id)
       .eq("appt_date", data.appt_date)
       .ilike("patient_phone", `%${phone.slice(1)}`)
-      .in("status", ["waiting", "in_progress"])
-      .limit(1);
+      .in("status", ["waiting", "in_progress"]);
+
+    if (data.patient_code?.trim()) {
+      dupQuery = dupQuery.eq("patient_code", data.patient_code.trim().toUpperCase());
+    } else {
+      dupQuery = dupQuery.ilike("patient_name", data.patient_name.trim());
+    }
+
+    const { data: existing } = await dupQuery.limit(1);
 
     const exp = Date.now() + 30 * 24 * 3600 * 1000;
     const sessionToken = `${phone}.${exp}.${await sign(`${phone}.${exp}`)}`;
@@ -498,6 +616,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
         already_booked: true,
         id: row.id,
         serial_no: row.serial_no,
+        patient_code: row.patient_code || patientCode,
         appt_date: row.appt_date,
         patient_name: row.patient_name,
         doctor_name: doctorName,
@@ -517,6 +636,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
         business_id: businessId,
         doctor_id: data.doctor_id,
         chamber_id: chamberId,
+        patient_code: patientCode,
         patient_name: data.patient_name.trim(),
         patient_phone: phone,
         patient_age: data.patient_age?.trim() || null,
@@ -543,7 +663,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       already_booked: false,
       id: inserted.id,
       serial_no: inserted.serial_no,
-      patient_code: inserted.patient_code,
+      patient_code: inserted.patient_code || patientCode,
       appt_date: inserted.appt_date,
       patient_name: inserted.patient_name,
       doctor_name: doctorName,

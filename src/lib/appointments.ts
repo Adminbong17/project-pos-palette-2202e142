@@ -8,6 +8,7 @@ export type Chamber = {
   fee_new?: number | null;
   fee_old?: number | null;
   fee_medical?: number | null;
+  doctor_id?: string | null;
 };
 
 export type Appointment = {
