@@ -355,7 +355,7 @@ export function DoctorBookingModal({
         date: successData.appt_date,
       });
       if (ok) {
-        toast.success(isBn ? "🎉 টোকেনটি JPG ছবি হিসেবে ডাউনলোড হয়েছে!" : "🎉 Token saved as JPG image!");
+        toast.success(isBn ? "🎉 টোকেনটি সফলভাবে সেভ হয়েছে!" : "🎉 Token saved successfully!");
       }
     } catch (err: any) {
       toast.error(isBn ? "ছবি সেভ করতে সমস্যা হয়েছে" : "Failed to save token image");
@@ -724,8 +724,8 @@ export function DoctorBookingModal({
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {isBn
-                    ? "নিচের টোকেনটি JPG ছবি হিসেবে সেভ করে চেম্বারে নিয়ে আসুন।"
-                    : "Save this token as a JPG image for your chamber visit."}
+                    ? "নিচের টোকেনটি সেভ করে চেম্বারে নিয়ে আসুন।"
+                    : "Save this token slip for your chamber visit."}
                 </p>
               </div>
 
@@ -798,7 +798,7 @@ export function DoctorBookingModal({
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
-                  <span>{isBn ? "টোকেন সেভ করুন (JPG)" : "Save Token as JPG"}</span>
+                  <span>{isBn ? "টোকেন সেভ করুন" : "Save Token"}</span>
                 </Button>
                 <Button
                   variant="outline"

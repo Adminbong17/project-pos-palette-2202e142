@@ -189,9 +189,9 @@ const t = {
     logoutCancel: "না, থাকুন",
     logoutConfirm: "হ্যাঁ, লগআউট",
     myAppointmentsTitle: "আপনার অ্যাপয়েন্টমেন্ট ও সিরিয়াল তালিকা",
-    myAppointmentsDesc: "চেম্বারের লাইভ সিরিয়াল স্ট্যাটাস ট্র্যাক করুন ও টোকেন সেভ করুন (JPG)।",
+    myAppointmentsDesc: "চেম্বারের লাইভ সিরিয়াল স্ট্যাটাস ট্র্যাক করুন ও টোকেন সেভ করে সঙ্গে রাখুন।",
     noAppointmentsHint: "বর্তমানে আপনার কোনো সিরিয়াল বুক করা নেই। নতুন সিরিয়াল নিতে নিচের বাটনে ক্লিক করুন।",
-    saveTokenBtn: "টোকেন সেভ (JPG)",
+    saveTokenBtn: "টোকেন সেভ",
   },
   en: {
     brandName: "Sheikh Pharma",
@@ -292,9 +292,9 @@ const t = {
     logoutCancel: "Stay Logged In",
     logoutConfirm: "Yes, Sign Out",
     myAppointmentsTitle: "Your Appointments & Queue Serials",
-    myAppointmentsDesc: "Track live serial status and save chamber tokens as JPG images.",
+    myAppointmentsDesc: "Track live serial status and save chamber tokens.",
     noAppointmentsHint: "You currently have no booked serials. Click below to book a doctor appointment.",
-    saveTokenBtn: "Save Token (JPG)",
+    saveTokenBtn: "Save Token",
   },
 };
 
@@ -1325,13 +1325,13 @@ function Dashboard({
                                 date: a.appt_date,
                               });
                               if (ok) {
-                                toast.success(lang === "bn" ? "🎉 টোকেনটি JPG ছবি হিসেবে ডাউনলোড হয়েছে!" : "🎉 Token saved as JPG image!");
+                                toast.success(lang === "bn" ? "🎉 টোকেনটি সফলভাবে সেভ হয়েছে!" : "🎉 Token saved successfully!");
                               }
                             }}
                             className="rounded-xl h-9 px-3 font-semibold gap-1.5 text-xs cursor-pointer border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 shadow-sm"
                           >
                             <Download className="h-3.5 w-3.5" />
-                            <span>{curr.saveTokenBtn || "টোকেন সেভ (JPG)"}</span>
+                            <span>{curr.saveTokenBtn || (lang === "bn" ? "টোকেন সেভ" : "Save Token")}</span>
                           </Button>
                         </div>
                       </div>
