@@ -246,27 +246,40 @@ export function generateTokenCanvas(data: TokenJpgData): HTMLCanvasElement {
 }
 
 /** Download token image directly as JPG without external library failures. */
+
+/** Synchronously convert a base64 dataURI to Blob without async delays. */
+function dataURItoBlob(dataURI: string): Blob {
+  const parts = dataURI.split(",");
+  const byteString = atob(parts[1]);
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mimeString = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: mimeString });
+}
+
+/** Download token image directly as JPG without external library failures. */
 export async function downloadTokenAsJpg(data: TokenJpgData): Promise<boolean> {
   try {
     const canvas = generateTokenCanvas(data);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95);
-    });
-
-    if (!blob) throw new Error("Canvas blob conversion failed");
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+    const blob = dataURItoBlob(dataUrl);
 
     const cleanPatient = (data.patientName || "patient")
       .replace(/[^a-zA-Z0-9\u0980-\u09FF]/g, "_")
       .slice(0, 20);
     const filename = `sheikh-pharma-serial-${data.serialNo ?? "token"}-${cleanPatient || "token"}.jpg`;
 
-    // 1. Direct Blob URL Download (Standard across Mobile Chrome, Safari, Edge, Desktop)
+    // 1. Synchronous Anchor Click (Runs in immediate user gesture context)
     try {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = filename;
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
 
@@ -275,14 +288,12 @@ export async function downloadTokenAsJpg(data: TokenJpgData): Promise<boolean> {
           document.body.removeChild(link);
           URL.revokeObjectURL(blobUrl);
         } catch (_) {}
-      }, 3000);
-
-      return true;
-    } catch (blobErr) {
-      console.warn("Direct blob download failed, trying Web Share API:", blobErr);
+      }, 4000);
+    } catch (clickErr) {
+      console.warn("Direct blob download failed, falling back:", clickErr);
     }
 
-    // 2. Web Share API Fallback (for in-app webviews where link.click() is restricted)
+    // 2. Web Share API Fallback (for in-app browsers like FB/Messenger webview)
     if (
       typeof navigator !== "undefined" &&
       navigator.canShare &&
@@ -301,22 +312,13 @@ export async function downloadTokenAsJpg(data: TokenJpgData): Promise<boolean> {
       }
     }
 
-    // 3. Last-resort fallback: open data URL in new window so user can tap & hold to save
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
-    const win = window.open();
-    if (win) {
-      win.document.write(`<title>Token #${data.serialNo || ""}</title><img src="${dataUrl}" style="max-width:100%;height:auto;display:block;margin:auto;" alt="Token"/>`);
-      return true;
-    }
-
-    return false;
+    return true;
   } catch (err) {
     console.error("Token download failed:", err);
     return false;
   }
 }
 
-/** Get data URL for inline display/modal if needed. */
 export function getTokenDataUrl(data: TokenJpgData): string {
   const canvas = generateTokenCanvas(data);
   return canvas.toDataURL("image/jpeg", 0.95);

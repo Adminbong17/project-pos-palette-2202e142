@@ -76,7 +76,7 @@ export function printPatientToken(data: TokenData, size: TokenSize = "80mm") {
   page.innerHTML = `
     <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;">
       ${data.clinicName ? `<div style="font-size:11px;letter-spacing:.5px;">${esc(data.clinicName)}</div>` : ""}
-      <div style="font-size:${size === "A5" ? "22px" : "16px"};font-weight:800;">${esc(withDrPrefix(data.doctorName))}</div>
+      <div style="font-size:${size === "A5" ? "22px" : "16px"};font-weight:800;">${esc(String(data.doctorName || "").trim() || "চিকিৎসক")}</div>
       ${data.doctorQualification ? `<div style="font-size:10px;">${esc(data.doctorQualification)}</div>` : ""}
       <div style="margin-top:4px;font-size:11px;font-weight:700;">PATIENT TOKEN</div>
     </div>

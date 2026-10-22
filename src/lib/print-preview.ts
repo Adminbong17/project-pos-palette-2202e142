@@ -34,9 +34,9 @@ export function showPrintPreview(opts: {
     b.style.cssText = `padding:10px 20px;border-radius:8px;border:0;font-weight:600;cursor:pointer;font-size:14px;background:${bg};color:${color};`;
     return b;
   };
-  const saveBtn = mkBtn("💾 Save JPG", "#10b981", "#ffffff");
-  const printBtn = mkBtn("🖨️ Print", "#3b82f6", "#ffffff");
-  const cancelBtn = mkBtn("Cancel", "#e5e7eb", "#000000");
+  const saveBtn = mkBtn("💾 সেভ করুন", "#10b981", "#ffffff");
+  const printBtn = mkBtn("🖨️ প্রিন্ট", "#3b82f6", "#ffffff");
+  const cancelBtn = mkBtn("বাতিল", "#e5e7eb", "#000000");
   btns.append(saveBtn, printBtn, cancelBtn);
 
   overlay.append(frame, btns);
@@ -177,8 +177,44 @@ export function showPrintPreview(opts: {
 
 
   saveBtn.onclick = async () => {
-    saveBtn.textContent = "Saving…";
+    saveBtn.textContent = "সেভ হচ্ছে…";
     saveBtn.setAttribute("disabled", "true");
+    try {
+      // 1. Primary: html2canvas
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95);
+      });
+
+      if (!blob) throw new Error("Canvas blob conversion failed");
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${filename}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        try {
+          a.remove();
+          URL.revokeObjectURL(blobUrl);
+        } catch (_) {}
+      }, 3000);
+
+      close();
+      return;
+    } catch (h2cErr) {
+      console.warn("html2canvas save failed, trying html-to-image fallback:", h2cErr);
+    }
+
     try {
       const { toJpeg } = await import("html-to-image");
       const url = await toJpeg(clone, {
@@ -186,11 +222,6 @@ export function showPrintPreview(opts: {
         pixelRatio: 2,
         quality: 0.95,
         skipFonts: true,
-        filter: (node) => {
-          // Skip <style>/<link> tags from being inlined (they may contain oklch)
-          const tag = (node as HTMLElement).tagName;
-          return tag !== "STYLE" && tag !== "LINK";
-        },
       });
       const a = document.createElement("a");
       a.href = url;
@@ -198,10 +229,12 @@ export function showPrintPreview(opts: {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (e) {
-      console.error(e);
-      alert("Failed to save image: " + ((e as Error)?.message ?? "unknown"));
+      close();
+    } catch (err2) {
+      console.error("Image save error:", err2);
+      alert("ছবি সেভ করতে সমস্যা হয়েছে। অনুগ্রহ করে প্রিন্ট অপশনটি ব্যবহার করুন।");
+      saveBtn.textContent = "💾 সেভ করুন";
+      saveBtn.removeAttribute("disabled");
     }
-    close();
   };
 }

@@ -41,7 +41,7 @@ import {
   getPatientsByPhone,
   type AvailableDoctor,
 } from "@/lib/patient-portal.functions";
-import { downloadTokenAsJpg } from "@/lib/token-jpg";
+import { downloadTokenAsJpg, getTokenDataUrl } from "@/lib/token-jpg";
 import { cn } from "@/lib/utils";
 
 type Lang = "bn" | "en";
@@ -362,6 +362,31 @@ export function DoctorBookingModal({
     } finally {
       setIsSavingJpg(false);
     }
+  };
+
+  const handleOpenImage = () => {
+    if (!successData) return;
+    try {
+      const dataUrl = getTokenDataUrl({
+        clinicName: "শেখ ফার্মা ও ডায়াগনস্টিক",
+        doctorName: successData.doctor_name,
+        doctorQualification: successData.doctor_qualification,
+        serialNo: successData.serial_no,
+        patientCode: successData.patient_code || patientCode,
+        fee: successData.fee_amount,
+        patientType: patientType === "new" ? "New patient" : patientType === "old" ? "Old patient" : "Report",
+        patientName: successData.patient_name,
+        age: age ? `${age} Y` : undefined,
+        gender: gender,
+        phone: successData.phone,
+        location: successData.chamber_name,
+        date: successData.appt_date,
+      });
+      const win = window.open();
+      if (win) {
+        win.document.write(`<title>টোকেন #${successData.serial_no}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;background:#0f172a;min-height:100vh;padding:12px;box-sizing:border-box;}img{max-width:100%;max-height:95vh;box-shadow:0 10px 40px rgba(0,0,0,0.5);border-radius:16px;}</style><img src="${dataUrl}" alt="টোকেন"/>`);
+      }
+    } catch (_) {}
   };
 
   const handleFinish = () => {
@@ -808,6 +833,15 @@ export function DoctorBookingModal({
                   <span>{isBn ? "ড্যাশবোর্ডে দেখুন" : "View in Dashboard"}</span>
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
+              </div>
+              <div className="flex justify-center pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenImage}
+                  className="text-xs text-muted-foreground hover:text-primary transition underline cursor-pointer"
+                >
+                  {isBn ? "টোকেনের পূর্ণাঙ্গ স্লিপ দেখতে এখানে ক্লিক করুন" : "Click here to view full token slip"}
+                </button>
               </div>
             </div>
           )}

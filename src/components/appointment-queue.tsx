@@ -260,7 +260,7 @@ export function AppointmentQueue({
               <span className="text-xs text-muted-foreground">{chamberName(a.chamber_id)}</span>
               {a.doctor_id && doctors.data?.[a.doctor_id]?.name && (
                 <span className="text-xs text-muted-foreground">
-                  Dr. {doctors.data[a.doctor_id]!.name}
+                  {doctors.data[a.doctor_id]!.name}
                 </span>
               )}
               {a.appt_time && (
