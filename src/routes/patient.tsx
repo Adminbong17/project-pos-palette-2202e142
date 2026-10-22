@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -21,6 +21,12 @@ import {
   Stethoscope,
   ChevronRight,
   Languages,
+  Plus,
+  Printer,
+  Calendar,
+  Building2,
+  Clock,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +48,14 @@ import { fmtDate as formatDate } from "@/lib/format-date";
 import {
   getPatientDashboard,
   loginPatientByPhone,
+  getAvailableDoctors,
+  type AvailableDoctor,
 } from "@/lib/patient-portal.functions";
+import {
+  DoctorCard,
+  DoctorBookingModal,
+} from "@/components/patient-doctor-booking";
+import { printPatientToken } from "@/lib/token-print";
 import { SHEIKH_PHARMA_DETAILS } from "@/lib/sheikh-pharma-letterhead";
 import { SHEIKH_PHARMA_LOGO_BASE64 } from "@/lib/sheikh-pharma-logo.base64";
 import { cn } from "@/lib/utils";
@@ -59,13 +72,13 @@ export const Route = createFileRoute("/patient")({
       {
         name: "description",
         content:
-          "শেখ ফার্মা পেশেন্ট পোর্টাল। আপনার মোবাইল নম্বর দিয়ে লগইন করে প্রেসক্রিপশন, ল্যাব রিপোর্ট, ডাক্তারের সিরিয়াল ও বিলের হিসাব দেখুন।",
+          "শেখ ফার্মা পেশেন্ট পোর্টাল। আপনার মোবাইল নম্বর দিয়ে লগইন করে প্রেসক্রিপশন, ল্যাব রিপোর্ট, ডাক্তারের সিরিয়াল ও বিলের হিসাব দেখুন। অনলাইনে সরাসরি ডাক্তারের সিরিয়াল বুকিং করুন।",
       },
       { property: "og:title", content: "রোগী সেবা পোর্টাল — শেখ ফার্মা" },
       {
         property: "og:description",
         content:
-          "প্রেসক্রিপশন, ল্যাব টেস্ট রিপোর্ট, ডাক্তারের সিরিয়াল ও বিলের হিসাব এক ঠিকানায়।",
+          "ডাক্তার তালিকা, সিরিয়াল বুকিং, প্রেসক্রিপশন, ল্যাব টেস্ট রিপোর্ট ও বিলের হিসাব এক ঠিকানায়।",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -83,15 +96,23 @@ const t = {
     brandSubtitle: "ডিজিটাল স্বাস্থ্যসেবা ও পেশেন্ট পোর্টাল",
     helpline: "হেল্পলাইন",
     heroBadge: "স্মার্ট পেশেন্ট সার্ভিস • ২৪/৭ রেকর্ড অ্যাক্সেস",
-    heroTitle: "আপনার প্রেসক্রিপশন ও মেডিকেল রেকর্ড, এখন এক ঠিকানায়",
+    heroTitle: "আপনার প্রেসক্রিপশন, সিরিয়াল ও মেডিকেল রেকর্ড",
     heroSubtitle:
-      "ডাক্তারের প্রেসক্রিপশন, ল্যাব পরীক্ষার ফলাফল, অ্যাপয়েন্টমেন্ট সিরিয়াল এবং ফার্মেসির সঠিক বিলের হিসাব দেখুন যেকোনো সময় নিরাপদে।",
+      "অনলাইনে অভিজ্ঞ ডাক্তারদের তালিকা দেখুন, সরাসরি সিরিয়াল বুকিং করুন, প্রেসক্রিপশন ও ল্যাব টেস্টের রিপোর্ট পান ঘরে বসেই।",
     liveRecord: "লাইভ রেকর্ড সিঙ্ক",
     verifiedNetwork: "শেখ ফার্মা ভেরিফাইড ক্লিনিক ও ফার্মেসি নেটওয়ার্ক",
     features: [
       {
+        title: "ডাক্তারের সিরিয়াল বুকিং",
+        desc: "চেম্বারে না গিয়ে ঘরে বসেই ডাক্তার বেছে নিয়ে তাৎক্ষণিক সিরিয়াল নম্বর সংগ্রহ করুন।",
+        badge: "অনলাইন বুকিং",
+        icon: CalendarDays,
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-500/10 border-blue-500/20",
+      },
+      {
         title: "ডিজিটাল প্রেসক্রিপশন",
-        desc: "ডাক্তারের ব্যবস্থাপত্র ও ওষুধের ডোজের সঠিক নিয়মাবলী সংরক্ষিত থাকবে সবসময়।",
+        desc: "ডাক্তারের ব্যবস্থাপত্র ও ওষুধের ডোজের সঠিক নিয়মাবলী সংরক্ষিত থাকবে সবসময়।",
         badge: "তাত্ক্ষণিক ভিউ",
         icon: FileText,
         color: "text-emerald-600 dark:text-emerald-400",
@@ -99,23 +120,15 @@ const t = {
       },
       {
         title: "ল্যাব টেস্ট রিপোর্ট",
-        desc: "রক্ত পরীক্ষা ও সকল ডায়াগনস্টিক টেস্টের নির্ভুল ফলাফল ডিজিটাল ফরম্যাটে।",
+        desc: "রক্ত পরীক্ষা ও সকল ডায়াগনস্টিক টেস্টের নির্ভুল ফলাফল ডিজিটাল ফরম্যাটে।",
         badge: "ডাউনলোড ও প্রিন্ট",
         icon: FlaskConical,
         color: "text-cyan-600 dark:text-cyan-400",
         bg: "bg-cyan-500/10 border-cyan-500/20",
       },
       {
-        title: "ডাক্তারের সিরিয়াল",
-        desc: "চেম্বারে সিরিয়াল নম্বর ও কনসালটেশনের লাইভ আপডেট ট্র্যাক করুন ঘরে বসেই।",
-        badge: "রিয়েল-টাইম",
-        icon: CalendarDays,
-        color: "text-blue-600 dark:text-blue-400",
-        bg: "bg-blue-500/10 border-blue-500/20",
-      },
-      {
         title: "স্বচ্ছ বিল ও পেমেন্ট",
-        desc: "ফার্মেসির ওষুধের বিল, কিস্তি ও বকেয়ার পরিষ্কার হিসাব যেকোনো সময় দেখুন।",
+        desc: "ফার্মেসির ওষুধের বিল, কিস্তি ও বকেয়ার পরিষ্কার হিসাব যেকোনো সময় দেখুন।",
         badge: "স্বচ্ছ হিসাব",
         icon: Receipt,
         color: "text-teal-600 dark:text-teal-400",
@@ -124,7 +137,7 @@ const t = {
     ],
     cardTitle: "রোগী লগইন",
     cardSubtitle:
-      "ডাক্তার বা ফার্মেসিতে দেওয়া আপনার ১১ ডিজিটের মোবাইল নম্বরটি লিখুন।",
+      "ডাক্তার বা ফার্মেসিতে দেওয়া আপনার ১১ ডিজিটের মোবাইল নম্বরটি লিখুন।",
     phoneLabel: "নিবন্ধিত মোবাইল নম্বর",
     phonePlaceholder: "০১৭১২-৩৪৫৬৭৮",
     phoneHint: "১১ ডিজিটের বাংলাদেশি মোবাইল নম্বর দিন",
@@ -139,6 +152,17 @@ const t = {
     footerAddress: "দোকান নং ১৩, আরব প্যারাডাইস মার্কেট, নতুন বাজার, মুক্তাগাছা, ময়মনসিংহ।",
     footerText: "© শেখ ফার্মা ডিজিটাল হেলথ প্ল্যাটফর্ম • সর্বস্বত্ব সংরক্ষিত",
 
+    // Doctor Directory
+    doctorDirectoryBadge: "অনলাইন অ্যাপয়েন্টমেন্ট",
+    doctorDirectoryTitle: "আমাদের বিশেষজ্ঞ ডাক্তারগণ",
+    doctorDirectorySubtitle:
+      "অভিজ্ঞ ডাক্তার নির্বাচন করুন এবং আপনার সুবিধাজনক তারিখে সরাসরি সিরিয়াল বুকিং করুন।",
+    loadingDoctors: "ডাক্তার তালিকা লোড হচ্ছে...",
+    noDoctors: "বর্তমানে কোনো ডাক্তার তালিকাভুক্ত নেই। প্রয়োজনে হেল্পলাইনে কল করুন।",
+    bookSerialBtn: "সিরিয়াল নিন",
+    newSerialBtn: "+ নতুন সিরিয়াল নিন",
+    quickBookHeroBtn: "সরাসরি সিরিয়াল বুকিং",
+
     // Dashboard
     myDashboard: "আমার ড্যাশবোর্ড",
     logout: "লগআউট",
@@ -148,7 +172,7 @@ const t = {
     statDue: "মোট বকেয়া",
     tabRx: "প্রেসক্রিপশন",
     tabLab: "ল্যাব রিপোর্ট",
-    tabAppt: "সিরিয়াল",
+    tabAppt: "সিরিয়াল ও অ্যাপয়েন্টমেন্ট",
     tabBill: "বিল ও পেমেন্ট",
     empty: "কোনো রেকর্ড পাওয়া যায়নি",
     nextVisit: "পরবর্তী ভিজিট",
@@ -156,25 +180,37 @@ const t = {
     paid: "পরিশোধিত",
     due: "বকেয়া",
     treatmentPlan: "ট্রিটমেন্ট প্ল্যান",
-    serialNo: "সিরিয়াল",
+    serialNo: "সিরিয়াল নং",
     diagnosis: "রোগের লক্ষণ (Dx):",
     advice: "ডাক্তারের পরামর্শ:",
     logoutTitle: "লগআউট করবেন?",
     logoutDesc: "আপনি কি নিশ্চিত যে পোর্টাল থেকে লগআউট করতে চান?",
     logoutCancel: "না, থাকুন",
     logoutConfirm: "হ্যাঁ, লগআউট",
+    myAppointmentsTitle: "আপনার অ্যাপয়েন্টমেন্ট ও সিরিয়াল তালিকা",
+    myAppointmentsDesc: "চেম্বারের লাইভ সিরিয়াল স্ট্যাটাস ট্র্যাক করুন ও টোকেন প্রিন্ট করুন।",
+    noAppointmentsHint: "বর্তমানে আপনার কোনো সিরিয়াল বুক করা নেই। নতুন সিরিয়াল নিতে নিচের বাটনে ক্লিক করুন।",
+    printTokenTooltip: "টোকেন স্লিপ প্রিন্ট",
   },
   en: {
     brandName: "Sheikh Pharma",
     brandSubtitle: "Digital Healthcare & Patient Portal",
     helpline: "Helpline",
     heroBadge: "Smart Patient Portal • 24/7 Record Access",
-    heroTitle: "Your Prescriptions & Health Records, All in One Place",
+    heroTitle: "Your Prescriptions, Serials & Medical Records",
     heroSubtitle:
-      "Instantly view doctor prescriptions, lab diagnostic findings, appointment serials, and pharmacy invoices anytime, anywhere.",
+      "Explore experienced doctors, book your appointment serials online, and access diagnostic findings & prescriptions anytime.",
     liveRecord: "Live Record Sync",
     verifiedNetwork: "Sheikh Pharma Verified Clinic & Pharmacy Network",
     features: [
+      {
+        title: "Doctor Appointments",
+        desc: "Book consultation queue serials from home without waiting in lines.",
+        badge: "Online Booking",
+        icon: CalendarDays,
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-500/10 border-blue-500/20",
+      },
       {
         title: "Digital Prescriptions",
         desc: "Instant access to your doctor prescriptions, medication dosage, and dietary advice.",
@@ -190,14 +226,6 @@ const t = {
         icon: FlaskConical,
         color: "text-cyan-600 dark:text-cyan-400",
         bg: "bg-cyan-500/10 border-cyan-500/20",
-      },
-      {
-        title: "Doctor Appointments",
-        desc: "Track doctor serial numbers and consultation timings in real-time.",
-        badge: "Real-time",
-        icon: CalendarDays,
-        color: "text-blue-600 dark:text-blue-400",
-        bg: "bg-blue-500/10 border-blue-500/20",
       },
       {
         title: "Billing & Invoices",
@@ -227,6 +255,17 @@ const t = {
     footerText:
       "© Sheikh Pharma Digital Health Platform • All rights reserved",
 
+    // Doctor Directory
+    doctorDirectoryBadge: "Online Appointments",
+    doctorDirectoryTitle: "Our Specialist Doctors",
+    doctorDirectorySubtitle:
+      "Select an experienced specialist and book your consultation serial online.",
+    loadingDoctors: "Loading doctors...",
+    noDoctors: "No doctors currently listed. Please contact our helpline.",
+    bookSerialBtn: "Book Serial",
+    newSerialBtn: "+ Book New Serial",
+    quickBookHeroBtn: "Book Appointment",
+
     // Dashboard
     myDashboard: "Patient Dashboard",
     logout: "Sign Out",
@@ -236,7 +275,7 @@ const t = {
     statDue: "Total Due",
     tabRx: "Prescriptions",
     tabLab: "Lab Reports",
-    tabAppt: "Appointments",
+    tabAppt: "Appointments & Serials",
     tabBill: "Bills & Plans",
     empty: "No records found",
     nextVisit: "Next Visit",
@@ -244,13 +283,17 @@ const t = {
     paid: "Paid",
     due: "Due",
     treatmentPlan: "Treatment Plan",
-    serialNo: "Serial",
+    serialNo: "Serial No",
     diagnosis: "Diagnosis (Dx):",
     advice: "Doctor's Advice:",
     logoutTitle: "Sign out?",
     logoutDesc: "Are you sure you want to sign out from your patient portal?",
     logoutCancel: "Stay Logged In",
     logoutConfirm: "Yes, Sign Out",
+    myAppointmentsTitle: "Your Appointments & Queue Serials",
+    myAppointmentsDesc: "Track live serial status and print chamber tokens.",
+    noAppointmentsHint: "You currently have no booked serials. Click below to book a doctor appointment.",
+    printTokenTooltip: "Print Token Slip",
   },
 };
 
@@ -258,13 +301,11 @@ const t = {
 /*                               PHONE HELPERS                                */
 /* -------------------------------------------------------------------------- */
 function normalizeBDPhoneInput(raw: string): string {
-  // Convert Bengali numerals (০-৯) to standard Latin digits (0-9)
   const bn = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
   let s = String(raw ?? "");
   for (let i = 0; i < 10; i++) {
     s = s.replaceAll(bn[i], String(i));
   }
-  // Strip non-digit characters except leading plus
   let p = s.replace(/[^\d+]/g, "");
   if (p.startsWith("+880")) p = p.slice(4);
   else if (p.startsWith("880")) p = p.slice(3);
@@ -346,13 +387,8 @@ function PatientPage() {
   return (
     <div className="relative min-h-[100dvh] w-full overflow-hidden bg-background text-foreground font-sans flex flex-col justify-between selection:bg-primary/20">
       {/* ================= BACKGROUND GRAPHICS & AMBIENT GLOWS ================= */}
-      {/* Ambient Gradient Blob 1 (Top Left) */}
       <div className="pointer-events-none absolute -top-40 -left-40 h-[28rem] w-[28rem] rounded-full bg-primary/20 blur-[100px] animate-pulse [animation-duration:8s]" />
-
-      {/* Ambient Gradient Blob 2 (Bottom Right) */}
       <div className="pointer-events-none absolute -bottom-48 -right-48 h-[34rem] w-[34rem] rounded-full bg-teal-500/15 blur-[120px] animate-pulse [animation-duration:10s]" />
-
-      {/* Center Subtle Cyan Light Beam */}
       <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-cyan-500/10 blur-[110px]" />
 
       {/* Subtle Clinical Dot Matrix Grid */}
@@ -373,7 +409,7 @@ function PatientPage() {
         <rect width="100%" height="100%" fill="url(#medical-grid-dots)" />
       </svg>
 
-      {/* Floating Translucent Medical Icons in Background */}
+      {/* Translucent Medical Background Icons */}
       <div
         className="pointer-events-none absolute top-16 right-12 text-primary/[0.04] dark:text-primary/[0.07] rotate-12"
         aria-hidden="true"
@@ -385,12 +421,6 @@ function PatientPage() {
         aria-hidden="true"
       >
         <HeartPulse className="h-56 w-56" />
-      </div>
-      <div
-        className="pointer-events-none absolute top-1/2 right-1/4 text-cyan-500/[0.03] dark:text-cyan-500/[0.06] rotate-45"
-        aria-hidden="true"
-      >
-        <Stethoscope className="h-40 w-40" />
       </div>
 
       {token ? (
@@ -430,9 +460,20 @@ function Login({
   onLogin: (t: string) => void;
 }) {
   const login = useServerFn(loginPatientByPhone);
+  const fetchDoctors = useServerFn(getAvailableDoctors);
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const curr = t[lang];
+
+  // Doctors Query
+  const doctorsQ = useQuery({
+    queryKey: ["available-doctors"],
+    queryFn: () => fetchDoctors(),
+  });
+
+  // Booking Modal State
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
 
   const go = async () => {
     const clean = normalizeBDPhoneInput(phone);
@@ -451,10 +492,15 @@ function Login({
     }
   };
 
+  const handleOpenBooking = (docId?: string) => {
+    setSelectedDoctorId(docId || null);
+    setIsBookingOpen(true);
+  };
+
   return (
     <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between">
       {/* ================= TOP NAVIGATION BAR ================= */}
-      <header className="w-full border-b border-border/40 bg-card/60 backdrop-blur-md">
+      <header className="w-full border-b border-border/40 bg-card/60 backdrop-blur-md sticky top-0 z-20">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
@@ -480,8 +526,18 @@ function Login({
             </div>
           </div>
 
-          {/* Right Header: Helpline & Language Switcher */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Right Header: Fast Book Button, Helpline & Language Switcher */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenBooking()}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border-primary/30 text-primary hover:bg-primary/10 font-semibold text-xs cursor-pointer"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{curr.quickBookHeroBtn}</span>
+            </Button>
+
             <a
               href={`tel:${SHEIKH_PHARMA_DETAILS.phonesRaw[0]}`}
               className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-secondary/80 px-3 py-1 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
@@ -495,7 +551,7 @@ function Login({
       </header>
 
       {/* ================= MAIN CONTENT (PC SPLIT + MOBILE RESPONSIVE) ================= */}
-      <main className="mx-auto flex w-full max-w-7xl flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:py-14">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 lg:py-12 space-y-12">
         <div className="grid w-full items-center gap-10 lg:grid-cols-12 lg:gap-14">
           {/* ----------------- LEFT HERO COLUMN (DESKTOP) ----------------- */}
           <div className="hidden flex-col space-y-6 lg:col-span-7 lg:flex">
@@ -548,7 +604,6 @@ function Login({
                     strokeLinejoin="round"
                   />
                 </svg>
-                {/* Edge fade */}
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-card to-transparent" />
               </div>
             </div>
@@ -596,11 +651,9 @@ function Login({
             </div>
           </div>
 
-          {/* ----------------- RIGHT COLUMN (LOGIN CARD) ----------------- */}
+          {/* ----------------- RIGHT COLUMN (LOGIN & BOOKING CARD) ----------------- */}
           <div className="w-full max-w-md mx-auto lg:col-span-5">
-            {/* Card Shell with Glassmorphism */}
             <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/90 p-6 sm:p-8 shadow-2xl shadow-primary/10 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Top Accent Gradient Bar */}
               <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
 
               {/* Card Header & Brand Pill */}
@@ -638,9 +691,7 @@ function Login({
                     </span>
                   </label>
 
-                  {/* BD Phone Input Group */}
                   <div className="relative flex items-center rounded-xl border border-input bg-input/40 shadow-inner transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/25 focus-within:bg-card">
-                    {/* Country Code Prefix */}
                     <div className="flex items-center gap-1.5 border-r border-border/80 px-3.5 py-3 text-sm font-semibold text-foreground select-none bg-muted/40 rounded-l-xl">
                       <span className="text-base" role="img" aria-label="Bangladesh Flag">
                         🇧🇩
@@ -648,19 +699,16 @@ function Login({
                       <span>+880</span>
                     </div>
 
-                    {/* Tel Input Field */}
                     <Input
                       type="tel"
                       inputMode="tel"
                       placeholder={curr.phonePlaceholder}
                       value={phone}
-                      autoFocus
                       onChange={(e) => setPhone(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && go()}
                       className="h-12 border-0 bg-transparent px-3 text-base font-medium shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
                     />
 
-                    {/* Clear Button */}
                     {phone && (
                       <button
                         type="button"
@@ -679,7 +727,6 @@ function Login({
                   </p>
                 </div>
 
-                {/* Submit Action Button */}
                 <Button
                   className="w-full h-12 text-base font-bold shadow-lg shadow-primary/25 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
                   disabled={busy}
@@ -697,6 +744,27 @@ function Login({
                     </>
                   )}
                 </Button>
+
+                {/* Direct Serial Booking Shortcut Button */}
+                <div className="pt-2">
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-border/60" />
+                    <span className="flex-shrink mx-3 text-[11px] text-muted-foreground uppercase font-semibold">
+                      {lang === "bn" ? "অথবা" : "OR"}
+                    </span>
+                    <div className="flex-grow border-t border-border/60" />
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleOpenBooking()}
+                    className="w-full h-11 rounded-xl font-bold border-primary/30 text-primary hover:bg-primary/10 gap-2 cursor-pointer shadow-sm"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span>{curr.quickBookHeroBtn}</span>
+                  </Button>
+                </div>
 
                 {/* Security Trust Note */}
                 <div className="rounded-xl bg-secondary/50 p-3 text-center border border-border/50">
@@ -724,7 +792,7 @@ function Login({
               </div>
             </div>
 
-            {/* ----------------- MOBILE FEATURE CHIPS (VISIBLE ONLY ON MOBILE) ----------------- */}
+            {/* Mobile Feature Chips */}
             <div className="mt-8 space-y-3 lg:hidden">
               <div className="text-center">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -757,6 +825,56 @@ function Login({
             </div>
           </div>
         </div>
+
+        {/* ================= DOCTOR DIRECTORY SECTION ================= */}
+        <section className="w-full border-t border-border/50 pt-10">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary mb-2">
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  <span>{curr.doctorDirectoryBadge}</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                  {curr.doctorDirectoryTitle}
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-xl">
+                  {curr.doctorDirectorySubtitle}
+                </p>
+              </div>
+
+              <div className="text-xs text-muted-foreground hidden sm:block">
+                <span>{curr.brandName} • {curr.verifiedNetwork}</span>
+              </div>
+            </div>
+
+            {doctorsQ.isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">{curr.loadingDoctors}</span>
+              </div>
+            ) : (doctorsQ.data ?? []).length === 0 ? (
+              <div className="text-center py-10 rounded-2xl border border-dashed border-border/70 bg-card/60 p-6">
+                <Stethoscope className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm font-semibold text-foreground">{curr.noDoctors}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {curr.helpNeed} {SHEIKH_PHARMA_DETAILS.phonesRaw[0]}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(doctorsQ.data ?? []).map((doc) => (
+                  <DoctorCard
+                    key={doc.id}
+                    doctor={doc}
+                    lang={lang}
+                    onBook={(d) => handleOpenBooking(d.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       {/* ================= FOOTER ================= */}
@@ -766,6 +884,21 @@ function Login({
           <span>{curr.footerText}</span>
         </div>
       </footer>
+
+      {/* Doctor Serial Booking Modal */}
+      <DoctorBookingModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        doctors={doctorsQ.data ?? []}
+        initialDoctorId={selectedDoctorId}
+        patientPhone={phone}
+        lang={lang}
+        onBookingComplete={(res) => {
+          if (res?.token) {
+            onLogin(res.token);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -786,7 +919,9 @@ function Dashboard({
   onLangToggle: (l: Lang) => void;
   onLogout: () => void;
 }) {
+  const qc = useQueryClient();
   const fetchData = useServerFn(getPatientDashboard);
+  const fetchDoctors = useServerFn(getAvailableDoctors);
   const curr = t[lang];
 
   const q = useQuery({
@@ -794,6 +929,14 @@ function Dashboard({
     queryFn: () => fetchData({ data: { token } }),
     retry: false,
   });
+
+  const doctorsQ = useQuery({
+    queryKey: ["available-doctors"],
+    queryFn: () => fetchDoctors(),
+  });
+
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
 
   useEffect(() => {
     if (q.error && /log in/i.test(String((q.error as Error).message))) onLogout();
@@ -812,7 +955,7 @@ function Dashboard({
       <div className="p-8 text-center">
         <div className="mx-auto max-w-md rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
           <p className="font-semibold">{String((q.error as Error)?.message ?? "Error")}</p>
-          <Button variant="outline" className="mt-4" onClick={onLogout}>
+          <Button variant="outline" className="mt-4 cursor-pointer" onClick={onLogout}>
             {curr.logout}
           </Button>
         </div>
@@ -855,6 +998,11 @@ function Dashboard({
     },
   ];
 
+  const handleOpenBooking = (docId?: string) => {
+    setSelectedDoctorId(docId || null);
+    setIsBookingOpen(true);
+  };
+
   return (
     <div className="relative z-10 mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8">
       {/* Dashboard Top Header */}
@@ -882,8 +1030,17 @@ function Dashboard({
           </div>
         </div>
 
-        {/* Right Controls: Language Switcher + Custom Logout Modal */}
-        <div className="flex items-center gap-3">
+        {/* Right Controls: New Serial Button + Language Switcher + Logout Modal */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            size="sm"
+            onClick={() => handleOpenBooking()}
+            className="rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{curr.newSerialBtn}</span>
+          </Button>
+
           <LanguageToggle lang={lang} onToggle={onLangToggle} />
 
           <AlertDialog>
@@ -906,7 +1063,7 @@ function Dashboard({
                 <AlertDialogCancel>{curr.logoutCancel}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={onLogout}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
                 >
                   {curr.logoutConfirm}
                 </AlertDialogAction>
@@ -939,8 +1096,12 @@ function Dashboard({
       </div>
 
       {/* Tabs Navigation for Patient Records */}
-      <Tabs defaultValue="rx" className="w-full">
+      <Tabs defaultValue="appt" className="w-full">
         <TabsList className="grid w-full grid-cols-4 rounded-xl bg-muted/80 p-1 border border-border/80 shadow-inner">
+          <TabsTrigger value="appt" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
+            <CalendarDays className="h-4 w-4 hidden sm:inline" />
+            <span>{curr.tabAppt}</span>
+          </TabsTrigger>
           <TabsTrigger value="rx" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
             <FileText className="h-4 w-4 hidden sm:inline" />
             <span>{curr.tabRx}</span>
@@ -949,15 +1110,155 @@ function Dashboard({
             <FlaskConical className="h-4 w-4 hidden sm:inline" />
             <span>{curr.tabLab}</span>
           </TabsTrigger>
-          <TabsTrigger value="appt" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
-            <CalendarDays className="h-4 w-4 hidden sm:inline" />
-            <span>{curr.tabAppt}</span>
-          </TabsTrigger>
           <TabsTrigger value="bill" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
             <Receipt className="h-4 w-4 hidden sm:inline" />
             <span>{curr.tabBill}</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* APPOINTMENTS & SERIALS TAB */}
+        <TabsContent value="appt" className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                <span>{curr.myAppointmentsTitle}</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {curr.myAppointmentsDesc}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => handleOpenBooking()}
+              className="rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{curr.newSerialBtn}</span>
+            </Button>
+          </div>
+
+          {d.appointments.length === 0 ? (
+            <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-border/80 bg-card/60">
+              <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground/40 mb-2" />
+              <p className="text-sm font-semibold text-foreground">{curr.empty}</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {curr.noAppointmentsHint}
+              </p>
+              <Button
+                onClick={() => handleOpenBooking()}
+                className="mt-4 rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{curr.newSerialBtn}</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {d.appointments.map((a: any) => (
+                <Card key={a.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md overflow-hidden">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-base font-bold text-foreground">
+                            {a.doctor_name || "বিশেষজ্ঞ ডাক্তার"}
+                          </h4>
+                          {a.doctor_qualification && (
+                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                              ({a.doctor_qualification})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pt-0.5">
+                          <span className="flex items-center gap-1 font-medium text-foreground">
+                            <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                            <span>{formatDate(a.appt_date)}</span>
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{a.chamber_name || a.clinic || "শেখ ফার্মা চেম্বার"}</span>
+                          </span>
+                          {a.fee_amount != null && (
+                            <>
+                              <span>•</span>
+                              <span className="font-semibold text-foreground">ফি: ৳{a.fee_amount}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                        <div className="text-center rounded-xl bg-primary/10 border border-primary/25 px-3.5 py-1.5">
+                          <span className="text-[10px] text-muted-foreground font-semibold block uppercase">
+                            {curr.serialNo}
+                          </span>
+                          <span className="text-xl font-black text-primary">
+                            #{a.serial_no ?? "—"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "font-semibold text-xs py-1",
+                              a.status === "completed"
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                : a.status === "in_progress"
+                                ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                            )}
+                          >
+                            {a.status === "completed"
+                              ? lang === "bn"
+                                ? "সম্পন্ন"
+                                : "Completed"
+                              : a.status === "in_progress"
+                              ? lang === "bn"
+                                ? "চলমান"
+                                : "In Progress"
+                              : lang === "bn"
+                              ? "অপেক্ষমান"
+                              : "Waiting"}
+                          </Badge>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              printPatientToken(
+                                {
+                                  clinicName: "Sheikh Pharma",
+                                  doctorName: a.doctor_name,
+                                  doctorQualification: a.doctor_qualification,
+                                  serialNo: a.serial_no,
+                                  patientCode: a.patient_code,
+                                  fee: a.fee_amount,
+                                  patientName: a.patient_name || d.name,
+                                  phone: d.phone,
+                                  location: a.chamber_name || a.clinic,
+                                  date: a.appt_date,
+                                },
+                                "80mm"
+                              )
+                            }
+                            title={curr.printTokenTooltip}
+                            className="h-9 w-9 p-0 rounded-xl cursor-pointer hover:bg-muted"
+                          >
+                            <Printer className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         {/* PRESCRIPTIONS TAB */}
         <TabsContent value="rx" className="mt-4 space-y-3">
@@ -1094,29 +1395,6 @@ function Dashboard({
           ))}
         </TabsContent>
 
-        {/* APPOINTMENTS TAB */}
-        <TabsContent value="appt" className="mt-4 space-y-2">
-          {d.appointments.length === 0 && <Empty message={curr.empty} />}
-          {d.appointments.map((a: any) => (
-            <Card key={a.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md">
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <div className="font-bold text-foreground">
-                    {formatDate(a.appt_date)} {a.appt_time ?? ""}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {a.clinic}
-                    {a.serial_no ? ` · ${curr.serialNo} #${a.serial_no}` : ""}
-                  </div>
-                </div>
-                <Badge variant="outline" className="font-semibold">
-                  {a.status}
-                </Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-
         {/* BILLING & INVOICES TAB */}
         <TabsContent value="bill" className="mt-4 space-y-3">
           {d.bills.length === 0 && d.plans.length === 0 && (
@@ -1193,6 +1471,20 @@ function Dashboard({
           ))}
         </TabsContent>
       </Tabs>
+
+      {/* Doctor Serial Booking Modal inside Dashboard */}
+      <DoctorBookingModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        doctors={doctorsQ.data ?? []}
+        initialDoctorId={selectedDoctorId}
+        patientPhone={d.phone}
+        patientName={d.name}
+        lang={lang}
+        onBookingComplete={() => {
+          qc.invalidateQueries({ queryKey: ["patient-dashboard", token] });
+        }}
+      />
     </div>
   );
 }
