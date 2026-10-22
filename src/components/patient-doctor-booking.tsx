@@ -406,11 +406,11 @@ export function DoctorBookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden rounded-3xl border border-primary/20 bg-card shadow-2xl">
+      <DialogContent className="w-[95vw] sm:w-full max-w-lg p-0 overflow-hidden rounded-2xl sm:rounded-3xl border border-primary/20 bg-card shadow-2xl max-h-[92vh] flex flex-col">
         {/* Top Header Accent */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 shrink-0" />
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-track]:bg-transparent">
           {!successData ? (
             /* ================= BOOKING FORM ================= */
             <>
