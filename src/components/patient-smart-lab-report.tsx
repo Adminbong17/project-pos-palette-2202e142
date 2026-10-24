@@ -103,7 +103,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
   return (
     <div className="space-y-4 text-foreground animate-in fade-in duration-300">
       {/* ================= TOP ACTION BAR ================= */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-gradient-to-r from-teal-500/10 via-emerald-500/5 to-cyan-500/10 border border-teal-500/25">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-teal-500/10 via-emerald-500/5 to-cyan-500/10 border border-teal-500/25">
         <div className="flex items-center gap-2">
           <Badge className="bg-teal-600 text-white font-bold text-xs gap-1 py-1">
             <FlaskConical className="h-3.5 w-3.5" />
@@ -275,7 +275,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
 
             {/* Parameter Rows Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
+              <table className="w-full min-w-[540px] text-xs text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/60 text-muted-foreground bg-muted/30">
                     <th className="p-2.5 font-bold">প্যারামিটার</th>

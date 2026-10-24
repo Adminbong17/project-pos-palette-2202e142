@@ -163,7 +163,7 @@ const t = {
     loadingDoctors: "ডাক্তার তালিকা লোড হচ্ছে...",
     noDoctors: "বর্তমানে কোনো ডাক্তার তালিকাভুক্ত নেই। প্রয়োজনে হেল্পলাইনে কল করুন।",
     bookSerialBtn: "সিরিয়াল নিন",
-    newSerialBtn: "+ নতুন সিরিয়াল নিন",
+    newSerialBtn: "নতুন সিরিয়াল নিন",
     quickBookHeroBtn: "সরাসরি সিরিয়াল বুকিং",
 
     // Dashboard
@@ -175,7 +175,7 @@ const t = {
     statDue: "মোট বকেয়া",
     tabRx: "আমার প্রেসক্রিপশন",
     tabLab: "আমার রিপোর্ট",
-    tabAppt: "সিরিয়াল ও অ্যাপয়েন্টমেন্ট",
+    tabAppt: "সিরিয়াল ও বুকিং",
     tabBill: "বিল ও পেমেন্ট",
     empty: "কোনো রেকর্ড পাওয়া যায়নি",
     nextVisit: "পরবর্তী ভিজিট",
@@ -266,7 +266,7 @@ const t = {
     loadingDoctors: "Loading doctors...",
     noDoctors: "No doctors currently listed. Please contact our helpline.",
     bookSerialBtn: "Book Serial",
-    newSerialBtn: "+ Book New Serial",
+    newSerialBtn: "Book New Serial",
     quickBookHeroBtn: "Book Appointment",
 
     // Dashboard
@@ -278,7 +278,7 @@ const t = {
     statDue: "Total Due",
     tabRx: "My Prescription",
     tabLab: "My Reports",
-    tabAppt: "Appointments & Serials",
+    tabAppt: "Appointments",
     tabBill: "Bills & Plans",
     empty: "No records found",
     nextVisit: "Next Visit",
@@ -335,14 +335,14 @@ function LanguageToggle({
     <div
       role="group"
       aria-label="Language selector"
-      className="inline-flex items-center rounded-full bg-card/90 p-1 border border-border/80 shadow-sm backdrop-blur-md"
+      className="inline-flex items-center rounded-full bg-card/90 p-0.5 sm:p-1 border border-border/80 shadow-sm backdrop-blur-md shrink-0"
     >
-      <Languages className="ml-2 mr-1 h-3.5 w-3.5 text-muted-foreground" />
+      <Languages className="ml-1.5 mr-1 h-3 w-3 text-muted-foreground hidden xs:inline" />
       <button
         type="button"
         onClick={() => onToggle("bn")}
         className={cn(
-          "flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 cursor-pointer",
+          "flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs font-semibold rounded-full transition-all duration-200 cursor-pointer",
           lang === "bn"
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
@@ -354,7 +354,7 @@ function LanguageToggle({
         type="button"
         onClick={() => onToggle("en")}
         className={cn(
-          "flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 cursor-pointer",
+          "flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs font-semibold rounded-full transition-all duration-200 cursor-pointer",
           lang === "en"
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
@@ -1023,140 +1023,181 @@ function Dashboard({
   return (
     <div className="relative z-10 mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8">
       {/* Dashboard Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/80 bg-card/85 p-4 sm:p-5 shadow-lg backdrop-blur-md">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 overflow-hidden shadow-sm">
-            <img
-              src={SHEIKH_PHARMA_LOGO_BASE64}
-              alt="Sheikh Pharma"
-              className="h-10 w-10 object-cover rounded-full"
-            />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                {d.name || curr.myDashboard}
-              </h1>
-              <Badge variant="secondary" className="text-xs">
-                {curr.brandName}
-              </Badge>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-2xl border border-border/80 bg-card/85 p-3.5 sm:p-5 shadow-lg backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 overflow-hidden shadow-sm shrink-0">
+              <img
+                src={SHEIKH_PHARMA_LOGO_BASE64}
+                alt="Sheikh Pharma"
+                className="h-9 w-9 sm:h-10 sm:w-10 object-cover rounded-full"
+              />
             </div>
-            <p className="text-xs text-muted-foreground font-mono">
-              📞 {d.phone}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-base sm:text-xl font-bold tracking-tight text-foreground">
+                  {d.name || curr.myDashboard}
+                </h1>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 py-0">
+                  {curr.brandName}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground font-mono">
+                📞 {d.phone}
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile Right Controls: Language Switcher + Logout Icon Button */}
+          <div className="flex items-center gap-1.5 sm:hidden shrink-0">
+            <LanguageToggle lang={lang} onToggle={onLangToggle} />
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-colors"
+                  title={curr.logout}
+                  aria-label={curr.logout}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{curr.logoutTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>{curr.logoutDesc}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{curr.logoutCancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onLogout}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+                  >
+                    {curr.logoutConfirm}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
-        {/* Right Controls: New Serial Button + Language Switcher + Logout Modal */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Action Controls: New Serial Button + Desktop Language & Logout */}
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             size="sm"
             onClick={() => handleOpenBooking()}
-            className="rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer"
+            className="w-full sm:w-auto h-10 sm:h-9 rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer text-xs sm:text-sm"
           >
             <Plus className="h-4 w-4" />
             <span>{curr.newSerialBtn}</span>
           </Button>
 
-          <LanguageToggle lang={lang} onToggle={onLangToggle} />
+          {/* Desktop Only: Language & Logout with label */}
+          <div className="hidden sm:flex items-center gap-2">
+            <LanguageToggle lang={lang} onToggle={onLangToggle} />
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>{curr.logout}</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{curr.logoutTitle}</AlertDialogTitle>
-                <AlertDialogDescription>{curr.logoutDesc}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{curr.logoutCancel}</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={onLogout}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5 cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-colors"
                 >
-                  {curr.logoutConfirm}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <LogOut className="h-4 w-4" />
+                  <span>{curr.logout}</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{curr.logoutTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>{curr.logoutDesc}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{curr.logoutCancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onLogout}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+                  >
+                    {curr.logoutConfirm}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
       {/* Family Member / Patient UID Filter Bar */}
       {d.patients && d.patients.length > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl border border-border/80 bg-card/75 backdrop-blur-md shadow-sm">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5 mr-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 sm:p-3.5 rounded-2xl border border-border/80 bg-card/75 backdrop-blur-md shadow-sm">
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Users className="h-4 w-4 text-primary" />
               <span>{lang === "bn" ? "রোগী নির্বাচন (এক নম্বরে একাধিক রোগী):" : "Select Patient Profile:"}</span>
             </span>
 
-            <button
-              type="button"
-              onClick={() => setSelectedPatientUid("all")}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer",
-                selectedPatientUid === "all"
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-background text-foreground border-border hover:bg-muted"
-              )}
-            >
-              👥 {lang === "bn" ? "সকল রোগী" : "All Members"} ({d.patients.length})
-            </button>
-
-            {d.patients.map((p: any) => (
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
-                key={p.uid}
                 type="button"
-                onClick={() => setSelectedPatientUid(p.uid)}
+                onClick={() => setSelectedPatientUid("all")}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5",
-                  selectedPatientUid === p.uid
+                  "px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer",
+                  selectedPatientUid === "all"
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                     : "bg-background text-foreground border-border hover:bg-muted"
                 )}
               >
-                <span>👤 {p.name}</span>
-                <span className="font-mono text-[10px] opacity-80">({p.uid})</span>
+                👥 {lang === "bn" ? "সকল রোগী" : "All Members"} ({d.patients.length})
               </button>
-            ))}
+
+              {d.patients.map((p: any) => (
+                <button
+                  key={p.uid}
+                  type="button"
+                  onClick={() => setSelectedPatientUid(p.uid)}
+                  className={cn(
+                    "px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5",
+                    selectedPatientUid === p.uid
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span>👤 {p.name}</span>
+                  <span className="font-mono text-[10px] opacity-80">({p.uid})</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleOpenBooking()}
-            className="rounded-xl h-8 text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/5 cursor-pointer ml-auto"
+            className="w-full sm:w-auto rounded-xl h-8 text-xs font-bold gap-1 border-primary/30 text-primary hover:bg-primary/5 cursor-pointer mt-1 sm:mt-0"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>{lang === "bn" ? "+ নতুন রোগীর সিরিয়াল" : "+ New Patient Serial"}</span>
+            <span>{lang === "bn" ? "নতুন রোগীর সিরিয়াল" : "New Patient Serial"}</span>
           </Button>
         </div>
       )}
 
       {/* 4 Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
         {stats.map((s, idx) => (
           <Card
             key={idx}
             className="border-border/80 bg-card/85 shadow-sm backdrop-blur-md transition-all duration-200 hover:shadow-md"
           >
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-2">
-                <s.icon className={cn("h-5 w-5", s.color)} />
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                <s.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", s.color)} />
               </div>
-              <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              <div className="text-lg sm:text-2xl font-bold tracking-tight text-foreground truncate">
                 {s.value}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
+              <div className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
                 {s.label}
               </div>
             </CardContent>
@@ -1164,24 +1205,36 @@ function Dashboard({
         ))}
       </div>
 
-      {/* Tabs Navigation for Patient Records */}
+      {/* Tabs Navigation for Patient Records - Mobile Responsive 2x2 Grid / Desktop 4 Columns */}
       <Tabs defaultValue="appt" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 rounded-xl bg-muted/80 p-1 border border-border/80 shadow-inner">
-          <TabsTrigger value="appt" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
-            <CalendarDays className="h-4 w-4 hidden sm:inline" />
-            <span>{curr.tabAppt}</span>
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto p-1.5 gap-1.5 sm:gap-2 rounded-2xl bg-muted/80 border border-border/80 shadow-inner">
+          <TabsTrigger
+            value="appt"
+            className="h-11 sm:h-10 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all cursor-pointer whitespace-normal text-center"
+          >
+            <CalendarDays className="h-4 w-4 shrink-0 text-blue-500 data-[state=active]:text-inherit" />
+            <span className="truncate">{curr.tabAppt}</span>
           </TabsTrigger>
-          <TabsTrigger value="rx" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
-            <FileText className="h-4 w-4 hidden sm:inline" />
-            <span>{curr.tabRx}</span>
+          <TabsTrigger
+            value="rx"
+            className="h-11 sm:h-10 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all cursor-pointer whitespace-normal text-center"
+          >
+            <FileText className="h-4 w-4 shrink-0 text-emerald-500 data-[state=active]:text-inherit" />
+            <span className="truncate">{curr.tabRx}</span>
           </TabsTrigger>
-          <TabsTrigger value="lab" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
-            <FlaskConical className="h-4 w-4 hidden sm:inline" />
-            <span>{curr.tabLab}</span>
+          <TabsTrigger
+            value="lab"
+            className="h-11 sm:h-10 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all cursor-pointer whitespace-normal text-center"
+          >
+            <FlaskConical className="h-4 w-4 shrink-0 text-cyan-500 data-[state=active]:text-inherit" />
+            <span className="truncate">{curr.tabLab}</span>
           </TabsTrigger>
-          <TabsTrigger value="bill" className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer">
-            <Receipt className="h-4 w-4 hidden sm:inline" />
-            <span>{curr.tabBill}</span>
+          <TabsTrigger
+            value="bill"
+            className="h-11 sm:h-10 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all cursor-pointer whitespace-normal text-center"
+          >
+            <Receipt className="h-4 w-4 shrink-0 text-teal-500 data-[state=active]:text-inherit" />
+            <span className="truncate">{curr.tabBill}</span>
           </TabsTrigger>
         </TabsList>
 
