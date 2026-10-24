@@ -93,10 +93,10 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
 
     const [rx, labs, appts, sales, plans] = await Promise.all([
       db.from("prescriptions")
-        .select("id, rx_no, rx_date, patient_name, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
+        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
         .ilike("patient_phone", like).order("rx_date", { ascending: false }).limit(100),
       db.from("lab_reports")
-        .select("id, test_name, department, patient_name, sample_no, reported_at_text, comment, rows, created_at, business_id")
+        .select("id, test_name, department, patient_name, patient_code, age, gender, sample_no, reported_at_text, comment, rows, created_at, business_id")
         .ilike("phone_no", like).order("created_at", { ascending: false }).limit(100),
       db.from("rx_appointments")
         .select("id, appt_date, appt_time, serial_no, status, patient_name, fee_amount, business_id, doctor_id, chamber_id, patient_type, patient_code")

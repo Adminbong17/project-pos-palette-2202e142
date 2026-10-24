@@ -56,6 +56,8 @@ import {
   DoctorCard,
   DoctorBookingModal,
 } from "@/components/patient-doctor-booking";
+import { PatientSmartPrescription } from "@/components/patient-smart-prescription";
+import { PatientSmartLabReport } from "@/components/patient-smart-lab-report";
 import { downloadTokenAsJpg } from "@/lib/token-jpg";
 import { SHEIKH_PHARMA_DETAILS } from "@/lib/sheikh-pharma-letterhead";
 import { SHEIKH_PHARMA_LOGO_BASE64 } from "@/lib/sheikh-pharma-logo.base64";
@@ -171,8 +173,8 @@ const t = {
     statReports: "ল্যাব রিপোর্ট",
     statAppointments: "আসন্ন সিরিয়াল",
     statDue: "মোট বকেয়া",
-    tabRx: "প্রেসক্রিপশন",
-    tabLab: "ল্যাব রিপোর্ট",
+    tabRx: "আমার প্রেসক্রিপশন",
+    tabLab: "আমার রিপোর্ট",
     tabAppt: "সিরিয়াল ও অ্যাপয়েন্টমেন্ট",
     tabBill: "বিল ও পেমেন্ট",
     empty: "কোনো রেকর্ড পাওয়া যায়নি",
@@ -274,8 +276,8 @@ const t = {
     statReports: "Lab Reports",
     statAppointments: "Upcoming Visits",
     statDue: "Total Due",
-    tabRx: "Prescriptions",
-    tabLab: "Lab Reports",
+    tabRx: "My Prescription",
+    tabLab: "My Reports",
     tabAppt: "Appointments & Serials",
     tabBill: "Bills & Plans",
     empty: "No records found",
@@ -1343,164 +1345,19 @@ function Dashboard({
           )}
         </TabsContent>
 
-        {/* PRESCRIPTIONS TAB */}
-        <TabsContent value="rx" className="mt-4 space-y-3">
+        {/* PRESCRIPTIONS TAB (আমার প্রেসক্রিপশন - সহজ ভাষায় বিশ্লেষণ) */}
+        <TabsContent value="rx" className="mt-4 space-y-4">
           {filteredPrescriptions.length === 0 && <Empty message={curr.empty} />}
           {filteredPrescriptions.map((r: any) => (
-            <Card key={r.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md">
-              <CardContent className="space-y-3 p-4 sm:p-5">
-                <div className="flex flex-wrap justify-between gap-2 border-b border-border/60 pb-3">
-                  <div>
-                    <div className="text-base font-bold text-foreground">
-                      {r.doctor_name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.doctor_qualification} · {r.clinic}
-                    </div>
-                    {/* Patient Name & UID */}
-                    <div className="flex items-center gap-2 text-xs pt-1">
-                      {r.patient_name && (
-                        <span className="font-semibold text-foreground">
-                          রোগী: {r.patient_name}
-                        </span>
-                      )}
-                      {r.patient_code && (
-                        <Badge variant="secondary" className="font-mono text-[10px] text-primary border-primary/20">
-                          UID: {r.patient_code}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right text-sm">
-                    <div className="font-semibold text-foreground">
-                      {formatDate(r.rx_date)}
-                    </div>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      #{r.rx_no}
-                    </div>
-                  </div>
-                </div>
-
-                {r.diagnosis && (
-                  <div className="rounded-lg bg-secondary/50 p-2.5 text-sm">
-                    <span className="font-semibold text-foreground">{curr.diagnosis} </span>
-                    <span className="text-muted-foreground">{r.diagnosis}</span>
-                  </div>
-                )}
-
-                {r.lines.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {curr.tabRx}
-                    </div>
-                    <ol className="list-decimal space-y-1 pl-5 text-sm">
-                      {r.lines.map((l: any, i: number) => (
-                        <li key={i}>
-                          <span className="font-semibold text-foreground">
-                            {l.medicine_name}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            —{" "}
-                            {[l.dose || l.frequency, l.duration, l.instructions]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {r.advice && (
-                  <div className="text-sm pt-1">
-                    <span className="font-semibold text-foreground">{curr.advice} </span>
-                    <span className="whitespace-pre-line text-muted-foreground">{r.advice}</span>
-                  </div>
-                )}
-
-                {r.next_visit && (
-                  <div className="pt-1">
-                    <Badge variant="secondary" className="gap-1 font-medium">
-                      <span>{curr.nextVisit}:</span>
-                      <span>{r.next_visit}</span>
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PatientSmartPrescription key={r.id} prescription={r} />
           ))}
         </TabsContent>
 
-        {/* LAB REPORTS TAB */}
-        <TabsContent value="lab" className="mt-4 space-y-3">
+        {/* LAB REPORTS TAB (আমার রিপোর্ট - সহজ ভাষায় বিশ্লেষণ) */}
+        <TabsContent value="lab" className="mt-4 space-y-4">
           {filteredLabReports.length === 0 && <Empty message={curr.empty} />}
           {filteredLabReports.map((r: any) => (
-            <Card key={r.id} className="border-border/80 bg-card/90 shadow-sm backdrop-blur-md">
-              <CardContent className="space-y-3 p-4 sm:p-5">
-                <div className="flex flex-wrap justify-between gap-2 border-b border-border/60 pb-3">
-                  <div>
-                    <div className="text-base font-bold text-foreground">
-                      {r.test_name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.department} · {r.clinic}
-                    </div>
-                    {/* Patient Name & UID */}
-                    <div className="flex items-center gap-2 text-xs pt-1">
-                      {r.patient_name && (
-                        <span className="font-semibold text-foreground">
-                          রোগী: {r.patient_name}
-                        </span>
-                      )}
-                      {r.patient_code && (
-                        <Badge variant="secondary" className="font-mono text-[10px] text-primary border-primary/20">
-                          UID: {r.patient_code}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm font-semibold text-foreground">
-                    {formatDate(r.created_at)}
-                  </div>
-                </div>
-
-                {Array.isArray(r.rows) && r.rows.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border/60 text-left text-xs font-bold text-muted-foreground uppercase">
-                          <th className="py-2">Test / Parameter</th>
-                          <th className="py-2">Result</th>
-                          <th className="py-2">Reference Range</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40">
-                        {r.rows.map((row: any, i: number) => (
-                          <tr key={i}>
-                            <td className="py-2">
-                              {row.name ?? row.test ?? row.label ?? ""}
-                            </td>
-                            <td className="py-2 font-semibold text-foreground">
-                              {row.result ?? row.value ?? ""} {row.unit ?? ""}
-                            </td>
-                            <td className="py-2 text-xs text-muted-foreground">
-                              {row.ref ?? row.range ?? row.reference ?? ""}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {r.comment && (
-                  <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg">
-                    {r.comment}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <PatientSmartLabReport key={r.id} report={r} />
           ))}
         </TabsContent>
 
