@@ -13,6 +13,23 @@ export type SuperAdminDashboardMetrics = {
   totalRevenueBDT: number;
   pendingDoctorRequests: number;
   pendingBusinessRequests: number;
+  pendingDoctorsItems: Array<{
+    id: string;
+    user_id: string;
+    email: string;
+    full_name: string | null;
+    phone: string | null;
+    qualification: string | null;
+    requested_role: string;
+    created_at: string;
+  }>;
+  pendingBusinessItems: Array<{
+    id: string;
+    user_id: string;
+    name: string;
+    location_name: string;
+    created_at: string;
+  }>;
   bkashConfig: {
     enabled: boolean;
     environment: "live" | "sandbox";
@@ -120,15 +137,18 @@ export const getSuperAdminMasterMetrics = createServerFn({ method: "POST" })
     });
 
     // 6. Pending requests
-    const { count: pendingDoctors } = await supabaseAdmin
-      .from("access_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    const { count: pendingBiz } = await supabaseAdmin
-      .from("business_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
+    const [{ data: pendingDoctorsList, count: pendingDoctors }, { data: pendingBizList, count: pendingBiz }] = await Promise.all([
+      supabaseAdmin
+        .from("access_requests")
+        .select("id, user_id, email, full_name, phone, qualification, requested_role, created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("business_requests")
+        .select("id, user_id, name, location_name, created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
+    ]);
 
     // 7. bKash settings
     const { data: bkashRow } = await supabaseAdmin
@@ -162,6 +182,8 @@ export const getSuperAdminMasterMetrics = createServerFn({ method: "POST" })
       totalRevenueBDT: totalBDT,
       pendingDoctorRequests: pendingDoctors ?? 0,
       pendingBusinessRequests: pendingBiz ?? 0,
+      pendingDoctorsItems: (pendingDoctorsList ?? []) as any[],
+      pendingBusinessItems: (pendingBizList ?? []) as any[],
       bkashConfig: {
         enabled: !!bkashRow?.enabled,
         environment: (bkashRow?.environment as "live" | "sandbox") || "live",

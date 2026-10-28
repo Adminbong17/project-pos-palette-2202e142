@@ -45,6 +45,13 @@ import {
   type SuperAdminDashboardMetrics,
 } from "@/lib/super-admin-dashboard.functions";
 import { backupRunNow } from "@/lib/backups.functions";
+import {
+  approveAccessRequestServer,
+  rejectAccessRequestServer,
+  approveBusinessRequestServer,
+  rejectBusinessRequestServer,
+  purgeOrResolvePendingRequestsServer,
+} from "@/lib/admin-requests.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -230,6 +237,62 @@ function AdminHubPage() {
     },
   });
 
+  // Direct Quick Approvals from Dashboard
+  const approveDoctorFn = useServerFn(approveAccessRequestServer);
+  const rejectDoctorFn = useServerFn(rejectAccessRequestServer);
+  const approveBizFn = useServerFn(approveBusinessRequestServer);
+  const rejectBizFn = useServerFn(rejectBusinessRequestServer);
+  const purgeRequestsFn = useServerFn(purgeOrResolvePendingRequestsServer);
+
+  const approveDoctorMut = useMutation({
+    mutationFn: (id: string) => approveDoctorFn({ data: { id, role: "Doctor" } }),
+    onSuccess: () => {
+      toast.success("ডাক্তার আবেদন অনুমোদিত হয়েছে!");
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "অনুমোদন ব্যর্থ"),
+  });
+
+  const rejectDoctorMut = useMutation({
+    mutationFn: (id: string) => rejectDoctorFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("ডাক্তার আবেদন বাতিল করা হয়েছে");
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "বাতিল ব্যর্থ"),
+  });
+
+  const approveBizMut = useMutation({
+    mutationFn: (id: string) => approveBizFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("ব্যবসা আবেদন অনুমোদিত ও প্রতিষ্ঠান তৈরি হয়েছে!");
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "অনুমোদন ব্যর্থ"),
+  });
+
+  const rejectBizMut = useMutation({
+    mutationFn: (id: string) => rejectBizFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("ব্যবসা আবেদন বাতিল করা হয়েছে");
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "বাতিল ব্যর্থ"),
+  });
+
+  const autoResolveMut = useMutation({
+    mutationFn: (action: "approve_all" | "reject_all") => purgeRequestsFn({ data: { action } }),
+    onSuccess: (_, action) => {
+      toast.success(
+        action === "approve_all"
+          ? "সকল অপেক্ষমান আবেদন অনুমোদিত হয়েছে!"
+          : "সকল আবেদন খারিজ/ক্লিন করা হয়েছে!",
+      );
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "ব্যর্থ"),
+  });
+
   if (roleLoading || superLoading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
@@ -330,46 +393,124 @@ function AdminHubPage() {
       {/* ================= PENDING APPROVALS HUB ================= */}
       {m && (
         m.pendingDoctorRequests > 0 || m.pendingBusinessRequests > 0 ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 shadow-sm animate-pulse [animation-duration:4s]">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-amber-950 font-bold">
-                <AlertTriangle className="h-5 w-5" />
-              </span>
-              <div>
-                <h3 className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                  জরুরি অনুমোদন অপেক্ষমান রয়েছে!
-                </h3>
-                <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-0.5">
-                  বর্তমানে {m.pendingDoctorRequests} জন নতুন ডাক্তার এবং {m.pendingBusinessRequests}টি নতুন ব্যবসা অ্যাকাউন্ট অনুমোদনের অপেক্ষায় আছে।
-                </p>
+          <div className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-amber-950 font-bold shadow-xs">
+                  <AlertTriangle className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                    <span>জরুরি অনুমোদন অপেক্ষমান রয়েছে!</span>
+                    <Badge className="bg-amber-600 text-white font-mono text-xs">
+                      {m.pendingDoctorRequests + m.pendingBusinessRequests} Pending
+                    </Badge>
+                  </h3>
+                  <p className="text-xs text-amber-900/90 dark:text-amber-200/90 mt-0.5">
+                    বর্তমানে {m.pendingDoctorRequests} জন নতুন ডাক্তার এবং {m.pendingBusinessRequests}টি নতুন ব্যবসা অনুমোদনের অপেক্ষায় আছে। নিচে সরাসরি অনুমোদন বা বাতিল করুন:
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => autoResolveMut.mutate("approve_all")}
+                  disabled={autoResolveMut.isPending}
+                  className="h-8.5 rounded-xl border-amber-600/40 bg-amber-600/10 text-amber-900 dark:text-amber-200 hover:bg-amber-600/20 text-xs font-bold cursor-pointer"
+                >
+                  সবগুলো এক ক্লিকে অনুমোদন
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => autoResolveMut.mutate("reject_all")}
+                  disabled={autoResolveMut.isPending}
+                  className="h-8.5 rounded-xl text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 text-xs cursor-pointer"
+                  title="Clear / Dismiss test pending requests"
+                >
+                  ক্লিন / ডিসমিস
+                </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {m.pendingDoctorRequests > 0 && (
-                <Button
-                  asChild
-                  size="sm"
-                  className="h-9 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm text-xs"
-                >
-                  <Link to="/admin/doctors">
-                    <span>ডাক্তার আবেদন দেখুন ({m.pendingDoctorRequests})</span>
-                  </Link>
-                </Button>
-              )}
-              {m.pendingBusinessRequests > 0 && (
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="h-9 rounded-xl font-bold border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/20 cursor-pointer text-xs"
-                >
-                  <Link to="/admin/business-requests">
-                    <span>ব্যবসা আবেদন ({m.pendingBusinessRequests})</span>
-                  </Link>
-                </Button>
-              )}
-            </div>
+            {/* Direct Doctor Requests List */}
+            {m.pendingDoctorsItems && m.pendingDoctorsItems.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <Stethoscope className="h-3.5 w-3.5" /> ডাক্তার / স্টাফ আবেদন ({m.pendingDoctorsItems.length})
+                </h4>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {m.pendingDoctorsItems.map((doc) => (
+                    <div key={doc.id} className="rounded-xl border border-amber-500/30 bg-card p-3 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs text-foreground truncate">{doc.full_name || doc.email}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">{doc.email} · {doc.requested_role}</div>
+                        {doc.qualification && <div className="text-[10px] text-muted-foreground truncate">{doc.qualification}</div>}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => approveDoctorMut.mutate(doc.id)}
+                          disabled={approveDoctorMut.isPending}
+                          className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer"
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> অনুমোদন
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => rejectDoctorMut.mutate(doc.id)}
+                          disabled={rejectDoctorMut.isPending}
+                          className="h-7 px-2 rounded-lg text-destructive hover:bg-destructive/10 text-[11px] cursor-pointer"
+                        >
+                          বাতিল
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Direct Business Requests List */}
+            {m.pendingBusinessItems && m.pendingBusinessItems.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" /> নতুন ফার্মেসি / ব্যবসা আবেদন ({m.pendingBusinessItems.length})
+                </h4>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {m.pendingBusinessItems.map((biz) => (
+                    <div key={biz.id} className="rounded-xl border border-amber-500/30 bg-card p-3 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs text-foreground truncate">{biz.name}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">Location: {biz.location_name}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => approveBizMut.mutate(biz.id)}
+                          disabled={approveBizMut.isPending}
+                          className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer"
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> অনুমোদন
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => rejectBizMut.mutate(biz.id)}
+                          disabled={rejectBizMut.isPending}
+                          className="h-7 px-2 rounded-lg text-destructive hover:bg-destructive/10 text-[11px] cursor-pointer"
+                        >
+                          বাতিল
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 shadow-xs">

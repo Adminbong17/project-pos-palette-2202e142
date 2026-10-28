@@ -6,6 +6,11 @@ import { toast } from "sonner";
 import { Check, X, Stethoscope, ClipboardCheck, Search, Users, MapPin, ArrowRightLeft } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { moveDoctorToOwnBusiness } from "@/lib/admin-businesses.functions";
+import {
+  listAllRequests,
+  approveAccessRequestServer,
+  rejectAccessRequestServer,
+} from "@/lib/admin-requests.functions";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -89,16 +94,26 @@ function AdminDoctorsPage() {
   const [pendingSearch, setPendingSearch] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
 
+  const fetchAllReqs = useServerFn(listAllRequests);
+  const approveReqFn = useServerFn(approveAccessRequestServer);
+  const rejectReqFn = useServerFn(rejectAccessRequestServer);
+
   const requests = useQuery({
     queryKey: ["access-requests"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("access_requests")
-        .select("id, user_id, email, full_name, phone, qualification, requested_role, status, created_at, admin_notes")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return (data ?? []) as RequestRow[];
+      try {
+        const res = await fetchAllReqs();
+        return (res?.accessRequests ?? []) as RequestRow[];
+      } catch (e: any) {
+        console.warn("Falling back to client query:", e);
+        const { data, error } = await supabase
+          .from("access_requests")
+          .select("id, user_id, email, full_name, phone, qualification, requested_role, status, created_at, admin_notes")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return (data ?? []) as RequestRow[];
+      }
     },
   });
 
@@ -179,61 +194,84 @@ function AdminDoctorsPage() {
       businessName?: string;
       clinicType?: "general" | "dental";
     }) => {
-      if (args.mode === "clinic") {
-        // Clinic: a new clinic business with a Clinic Admin owner. The clinic
-        // adds its own doctors and their assistants, and takes serials.
-        const { error } = await supabase.rpc("approve_access_request_clinic", {
+      try {
+        await approveReqFn({
+          data: {
+            id: args.id,
+            role: args.role,
+            sections: args.sections,
+            mode: args.mode ?? "existing",
+            businessName: args.businessName,
+            clinicType: args.clinicType ?? "general",
+            businessId: businessId,
+          },
+        });
+      } catch (err: any) {
+        console.warn("Server approve failed, trying RPC fallback:", err);
+        if (args.mode === "clinic") {
+          const { error } = await supabase.rpc("approve_access_request_clinic", {
+            _id: args.id,
+            _clinic_name: args.businessName || undefined,
+            _sections: args.sections ?? undefined,
+            _notes: undefined,
+            _clinic_type: args.clinicType ?? "general",
+          } as any);
+          if (error) throw error;
+          return;
+        }
+        if (args.mode === "own") {
+          const { error } = await supabase.rpc("approve_access_request_new_business", {
+            _id: args.id,
+            _business_name: args.businessName || undefined,
+            _sections: args.sections ?? undefined,
+            _notes: undefined,
+          });
+          if (error) throw error;
+          return;
+        }
+        if (!businessId) throw new Error("No business selected");
+        const { error } = await supabase.rpc("approve_access_request", {
           _id: args.id,
-          _clinic_name: args.businessName || undefined,
-          _sections: args.sections ?? undefined,
-          _notes: undefined,
-          _clinic_type: args.clinicType ?? "general",
-        } as any);
-        if (error) throw error;
-        return;
-      }
-      if (args.mode === "own") {
-        // Separate POS: the person becomes owner/Admin of a brand-new business,
-        // with no link to this business's data.
-        const { error } = await supabase.rpc("approve_access_request_new_business", {
-          _id: args.id,
-          _business_name: args.businessName || undefined,
+          _business_id: businessId,
+          _role: args.role,
           _sections: args.sections ?? undefined,
           _notes: undefined,
         });
         if (error) throw error;
-        return;
       }
-      if (!businessId) throw new Error("No business selected");
-      const { error } = await supabase.rpc("approve_access_request", {
-        _id: args.id,
-        _business_id: businessId,
-        _role: args.role,
-        _sections: args.sections ?? undefined,
-        _notes: undefined,
-      });
-      if (error) throw error;
     },
 
     onSuccess: () => {
-      toast.success("Approved");
+      toast.success("Approved successfully!");
       qc.invalidateQueries({ queryKey: ["access-requests"] });
       qc.invalidateQueries({ queryKey: ["business-members", businessId] });
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Could not approve"),
   });
 
   const reject = useMutation({
     mutationFn: async (args: { id: string; notes: string | null }) => {
-      const { error } = await supabase.rpc("reject_access_request", {
-        _id: args.id,
-        _notes: args.notes ?? undefined,
-      });
-      if (error) throw error;
+      try {
+        await rejectReqFn({
+          data: {
+            id: args.id,
+            notes: args.notes || undefined,
+          },
+        });
+      } catch (err: any) {
+        console.warn("Server reject failed, trying RPC fallback:", err);
+        const { error } = await supabase.rpc("reject_access_request", {
+          _id: args.id,
+          _notes: args.notes ?? undefined,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Rejected");
       qc.invalidateQueries({ queryKey: ["access-requests"] });
+      qc.invalidateQueries({ queryKey: ["super-admin-master-metrics"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Could not reject"),
   });
