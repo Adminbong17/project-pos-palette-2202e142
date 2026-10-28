@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "./use-current-business";
+import { useIsSuperAdmin } from "./use-super-admin";
 
 function normalizeRole(role: string | null) {
   if (!role) return null;
@@ -10,6 +11,7 @@ function normalizeRole(role: string | null) {
 }
 
 export function useCurrentRole() {
+  const { isSuperAdmin } = useIsSuperAdmin();
   const { data: business, isLoading: bizLoading } = useCurrentBusiness();
   const q = useQuery({
     queryKey: ["current-role", business?.id],
@@ -25,12 +27,12 @@ export function useCurrentRole() {
     },
   });
   return {
-    role: q.data ?? null,
+    role: isSuperAdmin ? "Admin" : (q.data ?? null),
     isLoading: bizLoading || q.isLoading,
-    isSalesman: q.data === "Salesman",
-    isAdmin: q.data === "Admin",
-    isDoctor: q.data === "Doctor",
-    isAssistant: q.data === "Assistant",
-    isClinicAdmin: q.data === "Clinic Admin",
+    isSalesman: !isSuperAdmin && q.data === "Salesman",
+    isAdmin: isSuperAdmin || q.data === "Admin",
+    isDoctor: !isSuperAdmin && q.data === "Doctor",
+    isAssistant: !isSuperAdmin && q.data === "Assistant",
+    isClinicAdmin: !isSuperAdmin && q.data === "Clinic Admin",
   };
 }

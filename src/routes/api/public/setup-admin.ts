@@ -18,10 +18,27 @@ async function setupSuperAdmin() {
 
   const existingUsers = usersData?.users ?? [];
 
+  // Primary business on platform
+  const { data: primaryBiz } = await supabaseAdmin
+    .from("businesses")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+
+  // Admin role on platform
+  const { data: adminRole } = await supabaseAdmin
+    .from("roles")
+    .select("id")
+    .eq("name", "Admin")
+    .limit(1)
+    .maybeSingle();
+
   for (const acc of accounts) {
     const existing = existingUsers.find(
       (u) => u.email?.toLowerCase() === acc.email.toLowerCase()
     );
+
+    let uid: string | null = null;
 
     if (!existing) {
       const { data: created, error: createErr } =
@@ -39,19 +56,12 @@ async function setupSuperAdmin() {
 
       if (createErr) {
         results.push({ email: acc.email, status: "error", error: createErr.message });
-      } else {
-        if (created.user?.id) {
-          await supabaseAdmin.from("profiles").upsert({
-            id: created.user.id,
-            email: acc.email,
-            first_name: acc.name,
-            last_name: "Super Admin",
-            username: acc.email.split("@")[0],
-          });
-        }
-        results.push({ email: acc.email, status: "created", id: created.user?.id });
+        continue;
       }
+      uid = created.user?.id ?? null;
+      results.push({ email: acc.email, status: "created", id: uid });
     } else {
+      uid = existing.id;
       const { error: updateErr } =
         await supabaseAdmin.auth.admin.updateUserById(existing.id, {
           password: acc.pass,
@@ -65,15 +75,35 @@ async function setupSuperAdmin() {
 
       if (updateErr) {
         results.push({ email: acc.email, status: "error", error: updateErr.message });
-      } else {
-        await supabaseAdmin.from("profiles").upsert({
-          id: existing.id,
-          email: acc.email,
-          first_name: acc.name,
-          last_name: "Super Admin",
-          username: acc.email.split("@")[0],
+        continue;
+      }
+      results.push({ email: acc.email, status: "updated", id: uid });
+    }
+
+    if (uid) {
+      await supabaseAdmin.from("profiles").upsert({
+        id: uid,
+        email: acc.email,
+        first_name: acc.name,
+        last_name: "Super Admin",
+        username: acc.email.split("@")[0],
+        current_business_id: primaryBiz?.id ?? null,
+      });
+
+      if (primaryBiz?.id) {
+        await supabaseAdmin.from("business_users").upsert({
+          business_id: primaryBiz.id,
+          user_id: uid,
+          is_active: true,
         });
-        results.push({ email: acc.email, status: "updated", id: existing.id });
+
+        if (adminRole?.id) {
+          await supabaseAdmin.from("user_roles").upsert({
+            business_id: primaryBiz.id,
+            user_id: uid,
+            role_id: adminRole.id,
+          });
+        }
       }
     }
   }
@@ -89,7 +119,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Super admin accounts verified and configured.",
+            message: "Super admin accounts verified and configured with full access.",
             results,
           });
         } catch (e: any) {
@@ -102,7 +132,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Super admin accounts verified and configured.",
+            message: "Super admin accounts verified and configured with full access.",
             results,
           });
         } catch (e: any) {

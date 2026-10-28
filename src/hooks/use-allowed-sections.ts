@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "./use-current-business";
 import { useCurrentRole } from "./use-current-role";
+import { useIsSuperAdmin } from "./use-super-admin";
 
 /**
  * One entry per page — every key is unique, so an admin can hand out a single
@@ -128,6 +129,7 @@ function withAlways(list: string[]) {
 }
 
 export function useAllowedSections() {
+  const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const { data: business } = useCurrentBusiness();
   const { isAdmin, isDoctor, isAssistant, isClinicAdmin, isLoading: roleLoading } = useCurrentRole();
   const clinicalOnlyRole = isDoctor || isAssistant || isClinicAdmin;
@@ -174,6 +176,14 @@ export function useAllowedSections() {
     raw && clinicalOnlyRole && !hasExplicitGrant
       ? (isClinicAdmin ? DEFAULT_CLINIC : DEFAULT_DOCTOR)
       : raw;
+
+  if (isSuperAdmin) {
+    return {
+      isAdmin: true,
+      isLoading: superLoading,
+      sections: null,
+    };
+  }
 
   return {
     isAdmin,

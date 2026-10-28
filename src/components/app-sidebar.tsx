@@ -180,7 +180,7 @@ export function AppSidebar() {
   // means "no limit configured" (super admin / legacy accounts).
   const base = isLoading
     ? []
-    : allowed === null
+    : (isSuperAdmin || allowed === null)
       ? sections
       : sections
           .map((sec) => ({
@@ -189,7 +189,7 @@ export function AppSidebar() {
           }))
           .filter((sec) => sec.items.length > 0);
 
-  const scoped = rxMode || isDoctor
+  const scoped = (rxMode && !isSuperAdmin) || isDoctor
     ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
     : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
   // Same destination can be listed under multiple permission keys — show it once.
@@ -205,7 +205,7 @@ export function AppSidebar() {
       // only shows when it was explicitly granted (or clinic mode is on).
       .filter((it: any) =>
         ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
-          ? clinicMode || allowed !== null
+          ? clinicMode || allowed !== null || isSuperAdmin
           : true,
       ),
 

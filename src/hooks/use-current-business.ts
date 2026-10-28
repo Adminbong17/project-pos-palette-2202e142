@@ -52,6 +52,15 @@ export function useCurrentBusiness() {
           .maybeSingle();
         bizId = bu?.business_id ?? null;
       }
+      if (!bizId) {
+        // Fallback: pick the first available business on platform (e.g. Sheikh Pharma)
+        const { data: firstBiz } = await supabase
+          .from("businesses")
+          .select("id")
+          .limit(1)
+          .maybeSingle();
+        bizId = firstBiz?.id ?? null;
+      }
       if (!bizId) return null;
 
       const { data: biz } = await supabase

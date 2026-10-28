@@ -39,13 +39,12 @@ function AuthedLayout() {
   const qc = useQueryClient();
   const rxMode = isRxMode();
   const canUsePos = !rxMode && (allowed === null || allowed.includes("pos"));
-  const homePath =
-    allowed === null
-      ? isSuperAdmin
-        ? "/admin"
-        : rxMode
-          ? "/rx-dashboard"
-          : "/dashboard"
+  const homePath = isSuperAdmin
+    ? "/admin"
+    : allowed === null
+      ? rxMode
+        ? "/rx-dashboard"
+        : "/dashboard"
       : sectionHomePath(allowed);
   const isHome = pathname === homePath;
 
@@ -59,7 +58,7 @@ function AuthedLayout() {
   }
 
   // Module grants apply to business admins too — only `null` means unlimited.
-  if (!roleLoading && !sectionsLoading && !isPathAllowed(pathname, allowed)) {
+  if (!isSuperAdmin && !roleLoading && !sectionsLoading && !isPathAllowed(pathname, allowed)) {
     return <Navigate to={homePath as any} replace />;
   }
 
