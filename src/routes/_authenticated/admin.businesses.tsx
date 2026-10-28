@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Building2, Search, Save, ArrowRightLeft, Users, Trash2 } from "lucide-react";
+import { Building2, Search, Save, ArrowRightLeft, Users, Trash2, Sparkles, AlertTriangle } from "lucide-react";
 
 import { ALL_SECTIONS, expandSections, PRESETS } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -13,6 +13,8 @@ import {
   setBusinessSections,
   moveDoctorToOwnBusiness,
   deleteBusiness,
+  removeMemberFromBusiness,
+  purgeGhostAccounts,
   type BizRow,
   type BizMember,
 } from "@/lib/admin-businesses.functions";
@@ -20,6 +22,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/admin/businesses")({
   head: () => ({
@@ -58,6 +71,8 @@ function AdminBusinessesPage() {
   const saveBusiness = useServerFn(setBusinessSections);
   const moveDoctor = useServerFn(moveDoctorToOwnBusiness);
   const removeBiz = useServerFn(deleteBusiness);
+  const removeMember = useServerFn(removeMemberFromBusiness);
+  const purgeGhosts = useServerFn(purgeGhostAccounts);
 
   const q = useQuery({
     queryKey: ["admin-businesses"],
@@ -104,6 +119,25 @@ function AdminBusinessesPage() {
     onError: (e: any) => toast.error(e?.message ?? "Could not delete this business"),
   });
 
+  const removeMemberMut = useMutation({
+    mutationFn: (v: { business_id: string; user_id: string; deleteAccount?: boolean }) =>
+      removeMember({ data: v }),
+    onSuccess: () => {
+      toast.success("Member removed from business");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not remove member"),
+  });
+
+  const purgeMut = useMutation({
+    mutationFn: () => purgeGhosts({ data: undefined as any }),
+    onSuccess: (res: any) => {
+      toast.success(res?.message || "Cleaned ghost accounts and duplicate memberships");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not clean ghost accounts"),
+  });
+
   const rows = useMemo(() => {
     const all = q.data ?? [];
     const needle = search.trim().toLowerCase();
@@ -129,12 +163,28 @@ function AdminBusinessesPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold">Businesses &amp; Modules</h1>
-        <p className="text-sm text-muted-foreground">
-          Every business on the platform. Tick or untick modules for each member at any time — users
-          can strictly and only access the modules marked for them.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Businesses &amp; Modules</h1>
+          <p className="text-sm text-muted-foreground">
+            Every business on the platform. Tick or untick modules for each member at any time — users
+            can strictly and only access the modules marked for them.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 shadow-xs cursor-pointer"
+          disabled={purgeMut.isPending}
+          onClick={() => {
+            if (window.confirm("Scan database and delete any duplicate ghost accounts or duplicate memberships?")) {
+              purgeMut.mutate();
+            }
+          }}
+        >
+          <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+          {purgeMut.isPending ? "Cleaning…" : "Purge Ghost Accounts"}
+        </Button>
       </div>
 
       <div className="relative max-w-sm">
@@ -160,12 +210,21 @@ function AdminBusinessesPage() {
           <BusinessCard
             key={b.id}
             biz={b}
-            busy={memberMut.isPending || bizMut.isPending || moveMut.isPending || deleteMut.isPending}
+            busy={
+              memberMut.isPending ||
+              bizMut.isPending ||
+              moveMut.isPending ||
+              deleteMut.isPending ||
+              removeMemberMut.isPending
+            }
             onSaveMember={(user_id, sections) =>
               memberMut.mutate({ business_id: b.id, user_id, sections })
             }
             onSaveAll={(sections) => bizMut.mutate({ business_id: b.id, sections })}
             onMoveDoctor={(user_id) => moveMut.mutate({ user_id })}
+            onRemoveMember={(user_id, deleteAccount) =>
+              removeMemberMut.mutate({ business_id: b.id, user_id, deleteAccount })
+            }
             onDelete={() => {
               if (
                 window.confirm(
@@ -194,6 +253,7 @@ function BusinessCard({
   onSaveMember,
   onSaveAll,
   onMoveDoctor,
+  onRemoveMember,
   onDelete,
 }: {
   biz: BizRow;
@@ -201,6 +261,7 @@ function BusinessCard({
   onSaveMember: (userId: string, sections: string[] | null) => void;
   onSaveAll: (sections: string[] | null) => void;
   onMoveDoctor: (userId: string) => void;
+  onRemoveMember: (userId: string, deleteAccount?: boolean) => void;
   onDelete: () => void;
 }) {
   const options = useSectionOptions();
@@ -230,7 +291,7 @@ function BusinessCard({
             disabled={busy}
             onClick={onDelete}
           >
-            <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+            <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Business
           </Button>
         </CardTitle>
       </CardHeader>
@@ -348,10 +409,12 @@ function BusinessCard({
               <MemberRow
                 key={m.user_id}
                 member={m}
+                bizName={biz.name}
                 busy={busy}
                 options={options}
                 onSave={(sections) => onSaveMember(m.user_id, sections)}
                 onMove={() => onMoveDoctor(m.user_id)}
+                onRemove={(deleteAccount) => onRemoveMember(m.user_id, deleteAccount)}
               />
             ))
           )}
@@ -363,22 +426,36 @@ function BusinessCard({
 
 function MemberRow({
   member,
+  bizName,
   busy,
   options,
   onSave,
   onMove,
+  onRemove,
 }: {
   member: BizMember;
+  bizName: string;
   busy: boolean;
   options: { key: string; label: string }[];
   onSave: (sections: string[] | null) => void;
   onMove: () => void;
+  onRemove: (deleteAccount?: boolean) => void;
 }) {
   const isFullInitial = member.sections === null;
-  // If full access, default all checkboxes checked for clear visibility!
   const [picked, setPicked] = useState<string[]>(
     isFullInitial ? options.map((o) => o.key) : (expandSections(member.sections) ?? []),
   );
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [deleteAccountToo, setDeleteAccountToo] = useState(false);
+
+  // Sync picked whenever member.sections updates from server
+  useEffect(() => {
+    if (member.sections === null) {
+      setPicked(options.map((o) => o.key));
+    } else {
+      setPicked(expandSections(member.sections) ?? []);
+    }
+  }, [member.sections, options]);
 
   const currentExpanded = isFullInitial ? options.map((o) => o.key) : (expandSections(member.sections) ?? []);
   const dirty =
@@ -436,7 +513,7 @@ function MemberRow({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs text-destructive hover:bg-destructive/10"
+            className="h-7 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
             disabled={busy}
             onClick={() => {
               setPicked([]);
@@ -445,6 +522,56 @@ function MemberRow({
           >
             Lock (0 modules)
           </Button>
+
+          {/* Remove Member / Delete Ghost Account button */}
+          <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                disabled={busy}
+              >
+                <Trash2 className="mr-1 h-3 w-3" /> Remove
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="size-5 text-destructive" />
+                  Remove {member.name || member.email}?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <p>
+                    Are you sure you want to remove <strong>{member.email}</strong> from <strong>{bizName}</strong>?
+                    They will immediately lose access to this business.
+                  </p>
+                  <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-2 border-t border-border/50">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-input"
+                      checked={deleteAccountToo}
+                      onChange={(e) => setDeleteAccountToo(e.target.checked)}
+                    />
+                    <span>Also permanently delete this user account from the platform</span>
+                  </label>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setConfirmRemove(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    onRemove(deleteAccountToo);
+                    setConfirmRemove(false);
+                  }}
+                >
+                  Confirm Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           {member.role === "Doctor" && (
             <Button
               size="sm"

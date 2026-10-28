@@ -310,3 +310,125 @@ export const deleteBusiness = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+/** Remove a member from a business, with optional account deletion. */
+export const removeMemberFromBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { business_id: string; user_id: string; deleteAccount?: boolean }) => {
+    if (!data?.business_id || !data?.user_id) throw new Error("business_id and user_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Remove user_roles for this business
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id);
+
+    // Remove business_users for this business
+    await supabaseAdmin
+      .from("business_users")
+      .delete()
+      .eq("business_id", data.business_id)
+      .eq("user_id", data.user_id);
+
+    if (data.deleteAccount) {
+      if (data.user_id === context.userId) {
+        throw new Error("You cannot delete your own super admin account");
+      }
+      // Reassign business ownership if they own any business
+      await supabaseAdmin
+        .from("businesses")
+        .update({ owner_id: context.userId } as never)
+        .eq("owner_id", data.user_id);
+
+      await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+      await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    }
+
+    return { ok: true };
+  });
+
+/**
+ * Scan the database and purge duplicate / ghost auth accounts and duplicate business memberships.
+ */
+export const purgeGhostAccounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const report: string[] = [];
+
+    // 1. Fetch all auth users
+    const authUsers: any[] = [];
+    for (let page = 1; page <= 40; page++) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) break;
+      authUsers.push(...(data.users ?? []));
+      if ((data.users ?? []).length < 200) break;
+    }
+
+    // 2. Find duplicate emails in auth users
+    const usersByEmail = new Map<string, any[]>();
+    for (const u of authUsers) {
+      const email = String(u.email ?? "").toLowerCase().trim();
+      if (!email) continue;
+      const list = usersByEmail.get(email) ?? [];
+      list.push(u);
+      usersByEmail.set(email, list);
+    }
+
+    for (const [email, list] of usersByEmail.entries()) {
+      if (list.length > 1) {
+        // Sort to keep the active one
+        const sorted = [...list].sort((a, b) => {
+          const aTime = new Date(a.last_sign_in_at || a.created_at || 0).getTime();
+          const bTime = new Date(b.last_sign_in_at || b.created_at || 0).getTime();
+          return bTime - aTime;
+        });
+        const primary = sorted[0];
+
+        for (let i = 1; i < sorted.length; i++) {
+          const dup = sorted[i];
+          try {
+            await supabaseAdmin.from("business_users").update({ user_id: primary.id }).eq("user_id", dup.id);
+            await supabaseAdmin.from("user_roles").update({ user_id: primary.id }).eq("user_id", dup.id);
+            await supabaseAdmin.from("businesses").update({ owner_id: primary.id }).eq("owner_id", dup.id);
+            await supabaseAdmin.from("profiles").delete().eq("id", dup.id);
+            await supabaseAdmin.auth.admin.deleteUser(dup.id);
+            report.push(`Deleted duplicate auth account for ${email} (ID: ${dup.id})`);
+          } catch (e: any) {
+            console.error("Purge duplicate user error:", e);
+          }
+        }
+      }
+    }
+
+    // 3. Remove duplicate business_users rows (same business_id and user_id)
+    const { data: allBU } = await supabaseAdmin.from("business_users").select("id, business_id, user_id");
+    const seenBU = new Set<string>();
+    let buCleaned = 0;
+    for (const bu of allBU ?? []) {
+      const key = `${bu.business_id}:${bu.user_id}`;
+      if (seenBU.has(key)) {
+        await supabaseAdmin.from("business_users").delete().eq("id", bu.id);
+        buCleaned++;
+      } else {
+        seenBU.add(key);
+      }
+    }
+    if (buCleaned > 0) {
+      report.push(`Cleaned ${buCleaned} duplicate business_users records`);
+    }
+
+    return {
+      ok: true,
+      report,
+      message: report.length ? report.join("; ") : "No ghost accounts or duplicates found.",
+    };
+  });
