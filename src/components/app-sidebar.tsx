@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
-  LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
+  ShieldCheck, LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
   Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History, FlaskConical, Stamp,
 } from "lucide-react";
@@ -25,6 +25,43 @@ const LAB_CHILDREN = [
 
 
 
+
+
+export const SUPER_ADMIN_SECTIONS = [
+  {
+    label: "Super Admin Hub",
+    items: [
+      { to: "/admin", label: "Master Dashboard", icon: LayoutDashboard, enabled: true },
+      { to: "/admin/businesses", label: "Businesses & Modules", icon: Building2, enabled: true },
+      { to: "/admin/business-requests", label: "Business Requests", icon: ClipboardList, enabled: true },
+      { to: "/admin/users", label: "All Users & Logins", icon: UserCog, enabled: true },
+    ],
+  },
+  {
+    label: "Doctors & Clinic",
+    items: [
+      { to: "/admin/doctors", label: "Doctors & Approvals", icon: Stethoscope, enabled: true },
+      { to: "/admin/prescriptions", label: "Admin Prescription", icon: FileText, enabled: true },
+      { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true },
+    ],
+  },
+  {
+    label: "Billing & Gateways",
+    items: [
+      { to: "/admin/bkash", label: "bKash Gateway", icon: Wallet, enabled: true },
+      { to: "/admin/credit-purchases", label: "Credit Purchases", icon: Receipt, enabled: true },
+      { to: "/admin/rx-credit-links", label: "Credit Links", icon: Wallet, enabled: true },
+      { to: "/admin/rx-billing", label: "Billing Plans", icon: CalendarClock, enabled: true },
+    ],
+  },
+  {
+    label: "Infrastructure & Security",
+    items: [
+      { to: "/admin/sms", label: "SMS Gateway", icon: MessageSquare, enabled: true },
+      { to: "/admin/backups", label: "Backups & Restore", icon: FolderArchive, enabled: true },
+    ],
+  },
+];
 
 const sections = [
   {
@@ -173,6 +210,64 @@ export function AppSidebar() {
   const { isSuperAdmin } = useIsSuperAdmin();
   // Clinic doctors see their pool status (read-only), independent doctors buy credits.
   const doctorPaths = DOCTOR_PATHS;
+
+  // Dedicated, uncluttered Super Admin Navigation
+  if (isSuperAdmin) {
+    return (
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2.5 px-3 py-3 border-b border-border/40">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold shadow-md shadow-primary/20">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="leading-tight">
+              <div className="text-sm font-bold text-foreground">Super Admin</div>
+              <div className="text-[10px] text-muted-foreground font-mono">Platform Control</div>
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          {SUPER_ADMIN_SECTIONS.map((sec) => (
+            <SidebarGroup key={sec.label}>
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                {sec.label}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {sec.items.map((item) => {
+                    const active = pathname === item.to || (item.to !== "/admin" && pathname.startsWith(item.to));
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          className="nav-box h-auto"
+                          style={{ ["--nav-hue" as any]: navHue(item.to) }}
+                        >
+                          <Link to={item.to as any}>
+                            <span className="nav-box-icon">
+                              <item.icon className="h-4 w-4" />
+                            </span>
+                            <span className="truncate font-medium">{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="px-3 py-2 flex items-center justify-between border-t border-border/40 text-xs text-muted-foreground">
+            <span>Theme</span>
+            <ThemeToggle />
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
 
 
   // A business admin is NOT unrestricted: when the super admin picked a module

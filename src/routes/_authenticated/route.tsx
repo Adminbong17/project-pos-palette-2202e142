@@ -100,7 +100,7 @@ function AuthedLayout() {
               </button>
             )}
             <div className="flex-1" />
-            {business && (
+            {!isSuperAdmin && business && (
               <div className="hidden sm:flex items-center gap-2 text-right text-[11px] leading-tight">
                 <img
                   src="/favicon.png"
@@ -108,6 +108,11 @@ function AuthedLayout() {
                   className="h-5 w-5 rounded object-cover opacity-90"
                 />
                 <span className="font-medium text-foreground">{business.name}</span>
+              </div>
+            )}
+            {isSuperAdmin && (
+              <div className="hidden sm:flex items-center gap-2 text-right text-[11px] leading-tight px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20">
+                <span className="font-semibold text-primary">SaaS Super Admin</span>
               </div>
             )}
             {isSuperAdmin && (
@@ -120,7 +125,7 @@ function AuthedLayout() {
                 <span>Admin Hub</span>
               </button>
             )}
-            {canUsePos && (
+            {canUsePos && !isSuperAdmin && (
               <button
                 onClick={() => navigate({ to: "/pos" })}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
