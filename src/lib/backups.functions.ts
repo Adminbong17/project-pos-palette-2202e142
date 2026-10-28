@@ -1,19 +1,19 @@
+import { checkIsSuperAdmin } from "@/lib/super-admin-auth";
 // Super-admin backup controls. All heavy lifting lives in backup.server.ts
 // and is imported inside the handlers so it never reaches the client bundle.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertSuperAdmin(supabase: any, userId: string) {
-  const { data, error } = await supabase.rpc("is_super_admin", { _user_id: userId });
-  if (error) throw error;
-  if (!data) throw new Error("Only the super admin can manage backups");
+async function assertSuperAdmin(context: any) {
+  const isSuper = await checkIsSuperAdmin(context);
+  if (!isSuper) throw new Error("Only the super admin can manage backups");
 }
 
 export const backupRunNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { business_id?: string } | undefined) => d ?? {})
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { runFullBackup } = await import("./backup.server");
     return runFullBackup(data.business_id);
   });
@@ -22,7 +22,7 @@ export const backupRestore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { run_id: string; tables?: string[] | null; user_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { rehydrateFromVault } = await import("./backup.server");
     await rehydrateFromVault(data.run_id);
     const { data: result, error } = await (context.supabase as any).rpc("backup_restore", {
@@ -37,7 +37,7 @@ export const backupRestore = createServerFn({ method: "POST" })
 export const backupPurgeNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { purgeExpiredBackups } = await import("./backup.server");
     return { purged: await purgeExpiredBackups() };
   });
@@ -45,7 +45,7 @@ export const backupPurgeNow = createServerFn({ method: "POST" })
 export const backupGetSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { data, error } = await (context.supabase as any).rpc("backup_settings");
     if (error) throw error;
     const { cron_secret: _omit, ...safe } = (data ?? {}) as any;
@@ -57,7 +57,7 @@ export const backupSaveSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { app_base_url?: string; retention_days?: number; vault_threshold_mb?: number }) => d)
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { error } = await (context.supabase as any).rpc("backup_settings_update", {
       _app_base_url: data.app_base_url ?? null,
       _retention_days: data.retention_days ?? null,
@@ -72,7 +72,7 @@ export const backupDownload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { run_id: string }) => d)
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context);
     const { rehydrateFromVault } = await import("./backup.server");
     await rehydrateFromVault(data.run_id);
     const { data: row, error } = await (context.supabase as any)

@@ -1,3 +1,4 @@
+import { isSuperAdminEmail } from "@/lib/super-admin-auth";
 import { createFileRoute } from "@tanstack/react-router";
 import { fmtDateTime } from "@/lib/format-date";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +35,7 @@ function Page() {
     queryKey: ["me-email"],
     queryFn: async () => (await supabase.auth.getUser()).data.user,
   });
-  const isAdmin = me?.email?.toLowerCase() === "admin@bongbangla.top";
+  const isAdmin = isSuperAdminEmail(me?.email);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["business-requests-all"],

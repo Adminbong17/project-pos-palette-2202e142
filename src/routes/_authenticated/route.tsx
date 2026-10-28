@@ -8,7 +8,7 @@ import { useAllowedSections, isPathAllowed, sectionHomePath } from "@/hooks/use-
 import { isRxMode, isRxPathAllowed, isPatientHost } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
-import { LogOut, ArrowLeft, ShoppingCart } from "lucide-react";
+import { LogOut, ArrowLeft, ShoppingCart, ShieldCheck } from "lucide-react";
 import { LogoutConfirm } from "@/components/logout-confirm";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,9 +41,11 @@ function AuthedLayout() {
   const canUsePos = !rxMode && (allowed === null || allowed.includes("pos"));
   const homePath =
     allowed === null
-      ? rxMode
-        ? "/rx-dashboard"
-        : "/dashboard"
+      ? isSuperAdmin
+        ? "/admin"
+        : rxMode
+          ? "/rx-dashboard"
+          : "/dashboard"
       : sectionHomePath(allowed);
   const isHome = pathname === homePath;
 
@@ -108,6 +110,16 @@ function AuthedLayout() {
                 />
                 <span className="font-medium text-foreground">{business.name}</span>
               </div>
+            )}
+            {isSuperAdmin && (
+              <button
+                onClick={() => navigate({ to: "/admin" as any })}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20 shadow-xs cursor-pointer"
+                title="Super Admin Master Dashboard"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                <span>Admin Hub</span>
+              </button>
             )}
             {canUsePos && (
               <button

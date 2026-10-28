@@ -1,3 +1,4 @@
+import { checkIsSuperAdmin } from "@/lib/super-admin-auth";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -9,11 +10,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listCreditPurchases = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: isSuperAdmin, error: roleError } = await context.supabase.rpc("is_super_admin", {
-      _user_id: context.userId,
-    });
-    if (roleError) throw new Error(roleError.message);
-    if (!isSuperAdmin) throw new Error("Only the platform admin can do this");
+    const isSuper = await checkIsSuperAdmin(context);
+    if (!isSuper) throw new Error("Only the platform admin can do this");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
