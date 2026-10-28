@@ -1,13 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertSuperAdmin } from "@/lib/super-admin-auth";
 
 /** Every doctor on the platform (all businesses/clinics) + billing accounts, month counts and bills. */
 export const listRxBillingAll = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
-      throw new Error("Only the platform super admin can do this");
-    }
+    await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: businesses }, { data: roles }, { data: userRoles }, { data: members }] =
@@ -127,9 +126,7 @@ export const saveRxBillingAccount = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }) => {
-    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
-      throw new Error("Only the platform super admin can do this");
-    }
+    await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let membershipQuery = supabaseAdmin
       .from("business_users")
@@ -179,9 +176,7 @@ export const grantRxCredits = createServerFn({ method: "POST" })
     return { account_id: input.account_id, delta: Number(input.delta) || 0 };
   })
   .handler(async ({ data, context }) => {
-    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
-      throw new Error("Only the platform super admin can do this");
-    }
+    await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: acc, error: accErr } = await supabaseAdmin
@@ -217,9 +212,7 @@ export const patchRxBill = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }) => {
-    if (String(context.claims?.email ?? "").toLowerCase() !== "admin@bongbangla.top") {
-      throw new Error("Only the platform super admin can do this");
-    }
+    await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("rx_bills")

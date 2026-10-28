@@ -1,11 +1,16 @@
 // Archive controls + live reads of archived (vault) data.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertSuperAdmin as checkSuperAdmin } from "@/lib/super-admin-auth";
 
 type Grp = "sales" | "prescriptions" | "lab_reports" | "appointments" | "expenses";
 const GROUPS: Grp[] = ["sales", "prescriptions", "lab_reports", "appointments", "expenses"];
 
-async function assertSuperAdmin(supabase: any, userId: string) {
+async function assertSuperAdmin(supabase: any, userId: string, context?: any) {
+  if (context) {
+    await checkSuperAdmin(context);
+    return;
+  }
   const { data } = await supabase.rpc("is_super_admin", { _user_id: userId });
   if (!data) throw new Error("Only the super admin can manage archives");
 }
@@ -36,7 +41,7 @@ export const getArchivedRows = createServerFn({ method: "POST" })
 export const archiveList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context.supabase, context.userId, context);
     const { data, error } = await (context.supabase as any)
       .from("archive_chunks")
       .select("id, business_id, grp, period_month, row_count, bytes, status, created_at, businesses(name)")
@@ -50,7 +55,7 @@ export const archiveRunNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { force?: boolean } | undefined) => d ?? {})
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context.supabase, context.userId);
+    await assertSuperAdmin(context.supabase, context.userId, context);
     const { runArchive } = await import("./archive.server");
     return runArchive({ force: !!data.force });
   });

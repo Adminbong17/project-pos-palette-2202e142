@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fmtDateTime } from "@/lib/format-date";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+import { isSuperAdminEmail } from "@/lib/super-admin-auth";
 import { FoldableList } from "@/components/foldable-list";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,11 +59,12 @@ function Page() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmDisable, setConfirmDisable] = useState<{ id: string; disabled: boolean } | null>(null);
 
+  const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
   const me = useQuery({
     queryKey: ["me-email"],
     queryFn: async () => (await supabase.auth.getUser()).data.user,
   });
-  const isSuper = me.data?.email?.toLowerCase() === "admin@bongbangla.top";
+  const isSuper = isSuperAdmin || isSuperAdminEmail(me.data?.email);
 
   const users = useQuery({
     queryKey: ["super-admin-users"],
@@ -110,7 +113,7 @@ function Page() {
     );
   }, [users.data, search]);
 
-  if (me.isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (superLoading || (me.isLoading && !isSuper)) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
   if (!isSuper)
     return <div className="p-8 text-sm text-muted-foreground">Only the super admin can access this page.</div>;
 
