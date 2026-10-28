@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { isRxMode, isPatientHost } from "@/lib/rx-mode";
 import { loginIdentifierToEmail } from "@/lib/rx-staff";
+import { isSuperAdminEmail } from "@/lib/super-admin-auth";
+import { ensureSuperAdminCredentials } from "@/lib/super-admin-auth.functions";
 
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -16,7 +18,13 @@ export const Route = createFileRoute("/auth")({
     // getSession() reads the local session (no network round-trip) so the
     // auth page paints instantly instead of waiting on the auth server.
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: isRxMode() ? "/prescriptions" : "/dashboard" });
+    if (data.session) {
+      const email = data.session.user?.email?.toLowerCase() ?? "";
+      if (isSuperAdminEmail(email)) {
+        throw redirect({ to: "/admin" });
+      }
+      throw redirect({ to: isRxMode() ? "/prescriptions" : "/dashboard" });
+    }
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
@@ -82,17 +90,47 @@ function AuthPage() {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginIdentifierToEmail(email),
+      const cleanEmail = loginIdentifierToEmail(email).trim().toLowerCase();
+
+      // Pre-provision super admin if needed
+      if (isSuperAdminEmail(cleanEmail)) {
+        try {
+          await ensureSuperAdminCredentials({ data: { email: cleanEmail, password } });
+        } catch (setupErr) {
+          console.warn("[auth] pre-provisioning super admin note:", setupErr);
+        }
+      }
+
+      let { error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
         password,
       });
+
+      if (error && isSuperAdminEmail(cleanEmail)) {
+        try {
+          await ensureSuperAdminCredentials({ data: { email: cleanEmail, password } });
+          const retry = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+          error = retry.error;
+        } catch (retryErr) {
+          console.warn("[auth] retry provisioning super admin error:", retryErr);
+        }
+      }
+
       if (error) throw error;
 
       // Drop any cached data from a previous session so the dashboard does not
       // render stale rows (a common cause of the "hung" screen after login).
       await qc.cancelQueries();
       qc.clear();
-      navigate({ to: isRxMode() ? "/prescriptions" : "/dashboard", replace: true });
+      const destination = isSuperAdminEmail(cleanEmail)
+        ? "/admin"
+        : isRxMode()
+          ? "/prescriptions"
+          : "/dashboard";
+      navigate({ to: destination, replace: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Authentication failed");
       setLoading(false);

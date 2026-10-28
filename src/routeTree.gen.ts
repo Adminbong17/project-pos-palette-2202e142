@@ -99,6 +99,7 @@ import { Route as AuthenticatedSettingsLocationsRouteImport } from './routes/_au
 import { Route as AuthenticatedSettingsTaxRatesRouteImport } from './routes/_authenticated/settings.tax-rates'
 import { Route as AuthenticatedSettingsUnitsRouteImport } from './routes/_authenticated/settings.units'
 import { Route as AuthenticatedSettingsUsersRouteImport } from './routes/_authenticated/settings.users'
+import { Route as ApiPublicSetupAdminRouteImport } from './routes/api/public/setup-admin'
 import { Route as AuthenticatedPurchasesIdEditRouteImport } from './routes/_authenticated/purchases.$id.edit'
 import { Route as AuthenticatedSalesIdEditRouteImport } from './routes/_authenticated/sales_.$id.edit'
 import { Route as ApiPublicBkashCallbackRouteImport } from './routes/api/public/bkash/callback'
@@ -603,6 +604,11 @@ const AuthenticatedSettingsUsersRoute =
     path: '/users',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const ApiPublicSetupAdminRoute = ApiPublicSetupAdminRouteImport.update({
+  id: '/api/public/setup-admin',
+  path: '/api/public/setup-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedPurchasesIdEditRoute =
   AuthenticatedPurchasesIdEditRouteImport.update({
     id: '/edit',
@@ -707,6 +713,7 @@ export interface FileRoutesByFullPath {
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/api/public/setup-admin': typeof ApiPublicSetupAdminRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/crm/': typeof AuthenticatedCrmIndexRoute
   '/hrm/': typeof AuthenticatedHrmIndexRoute
@@ -794,6 +801,7 @@ export interface FileRoutesByTo {
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/api/public/setup-admin': typeof ApiPublicSetupAdminRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/crm': typeof AuthenticatedCrmIndexRoute
   '/hrm': typeof AuthenticatedHrmIndexRoute
@@ -891,6 +899,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/_authenticated/settings/units': typeof AuthenticatedSettingsUnitsRoute
   '/_authenticated/settings/users': typeof AuthenticatedSettingsUsersRoute
+  '/api/public/setup-admin': typeof ApiPublicSetupAdminRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/crm/': typeof AuthenticatedCrmIndexRoute
   '/_authenticated/hrm/': typeof AuthenticatedHrmIndexRoute
@@ -988,6 +997,7 @@ export interface FileRouteTypes {
     | '/settings/tax-rates'
     | '/settings/units'
     | '/settings/users'
+    | '/api/public/setup-admin'
     | '/admin/'
     | '/crm/'
     | '/hrm/'
@@ -1075,6 +1085,7 @@ export interface FileRouteTypes {
     | '/settings/tax-rates'
     | '/settings/units'
     | '/settings/users'
+    | '/api/public/setup-admin'
     | '/admin'
     | '/crm'
     | '/hrm'
@@ -1171,6 +1182,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/tax-rates'
     | '/_authenticated/settings/units'
     | '/_authenticated/settings/users'
+    | '/api/public/setup-admin'
     | '/_authenticated/admin/'
     | '/_authenticated/crm/'
     | '/_authenticated/hrm/'
@@ -1194,6 +1206,7 @@ export interface RootRouteChildren {
   RxRoute: typeof RxRoute
   RxPayTokenRoute: typeof RxPayTokenRoute
   ScanSessionIdRoute: typeof ScanSessionIdRoute
+  ApiPublicSetupAdminRoute: typeof ApiPublicSetupAdminRoute
   ApiPublicBkashCallbackRoute: typeof ApiPublicBkashCallbackRoute
   ApiPublicCronBackupRoute: typeof ApiPublicCronBackupRoute
 }
@@ -1830,6 +1843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsUsersRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/api/public/setup-admin': {
+      id: '/api/public/setup-admin'
+      path: '/api/public/setup-admin'
+      fullPath: '/api/public/setup-admin'
+      preLoaderRoute: typeof ApiPublicSetupAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/purchases/$id/edit': {
       id: '/_authenticated/purchases/$id/edit'
       path: '/edit'
@@ -2158,6 +2178,7 @@ const rootRouteChildren: RootRouteChildren = {
   RxRoute: RxRoute,
   RxPayTokenRoute: RxPayTokenRoute,
   ScanSessionIdRoute: ScanSessionIdRoute,
+  ApiPublicSetupAdminRoute: ApiPublicSetupAdminRoute,
   ApiPublicBkashCallbackRoute: ApiPublicBkashCallbackRoute,
   ApiPublicCronBackupRoute: ApiPublicCronBackupRoute,
 }
