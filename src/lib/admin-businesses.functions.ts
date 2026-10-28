@@ -42,11 +42,23 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
     const roleById = new Map((roles ?? []).map((r: any) => [r.id, String(r.name ?? "").split("#")[0]]));
 
     return (businesses ?? []).map((b: any) => {
-      // Removed / revoked members (is_active = false) and members whose account
-      // no longer exists must not show up in the super-admin views.
-      const rows = (members ?? []).filter(
-        (m: any) => m.business_id === b.id && m.is_active !== false && profileById.has(m.user_id),
-      );
+      // Deduplicate members by user_id and email so duplicate rows never appear for the same member.
+      const seenUserIds = new Set<string>();
+      const seenEmails = new Set<string>();
+      const rows = (members ?? []).filter((m: any) => {
+        if (m.business_id !== b.id || m.is_active === false) return false;
+        if (!profileById.has(m.user_id)) return false;
+        if (seenUserIds.has(m.user_id)) return false;
+        seenUserIds.add(m.user_id);
+        const p: any = profileById.get(m.user_id);
+        const email = String(p?.email ?? "").toLowerCase().trim();
+        if (email && email !== "—") {
+          if (seenEmails.has(email)) return false;
+          seenEmails.add(email);
+        }
+        return true;
+      });
+
       const memberList: BizMember[] = rows.map((m: any) => {
         const p: any = profileById.get(m.user_id) ?? {};
         const ur: any = (userRoles ?? []).find(

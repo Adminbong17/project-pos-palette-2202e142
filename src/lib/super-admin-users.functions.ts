@@ -41,6 +41,27 @@ export const listAllUsers = createServerFn({ method: "POST" })
       if ((data.users ?? []).length < 200) break;
     }
 
+    // Deduplicate auth users by email so multiple ghost/duplicate IDs for the same email don't duplicate rows
+    const usersByEmail = new Map<string, any>();
+    for (const u of authUsers) {
+      const email = String(u.email ?? "").toLowerCase().trim();
+      if (!email) {
+        usersByEmail.set(u.id, u);
+        continue;
+      }
+      const existing = usersByEmail.get(email);
+      if (!existing) {
+        usersByEmail.set(email, u);
+      } else {
+        const existingTime = new Date(existing.last_sign_in_at || existing.created_at || 0).getTime();
+        const currentTime = new Date(u.last_sign_in_at || u.created_at || 0).getTime();
+        if (currentTime > existingTime) {
+          usersByEmail.set(email, u);
+        }
+      }
+    }
+    const distinctAuthUsers = Array.from(usersByEmail.values());
+
     const [{ data: profiles }, { data: members }, { data: businesses }, { data: roles }, { data: userRoles }] =
       await Promise.all([
         supabaseAdmin.from("profiles").select("id, email, username, first_name, last_name, doctor_name"),
@@ -86,7 +107,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
       membershipsByUser.set(m.user_id, list);
     }
 
-    return authUsers
+    return distinctAuthUsers
       .map((u) => {
         const p: any = profileById.get(u.id) ?? {};
         const name =

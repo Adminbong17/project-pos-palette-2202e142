@@ -17,27 +17,65 @@ async function setupSuperAdmin() {
 
   const existingUsers = usersData?.users ?? [];
 
-  // Remove super admin flag from admin@bongbangla.top if present
-  const bongbanglaUser = existingUsers.find(
+  // 1. Detect and clean up duplicate accounts for admin@bongbangla.top
+  const bongbanglaUsers = existingUsers.filter(
     (u) => u.email?.toLowerCase() === "admin@bongbangla.top"
   );
-  if (bongbanglaUser && bongbanglaUser.user_metadata?.is_super_admin) {
-    await supabaseAdmin.auth.admin.updateUserById(bongbanglaUser.id, {
+
+  let primaryBongbanglaId: string | null = null;
+  if (bongbanglaUsers.length > 0) {
+    // Sort to keep the account with the most recent sign-in or creation
+    const sorted = [...bongbanglaUsers].sort((a, b) => {
+      const aTime = new Date(a.last_sign_in_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.last_sign_in_at || b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+
+    const primary = sorted[0];
+    primaryBongbanglaId = primary.id;
+
+    // Ensure is_super_admin: false on the store admin
+    await supabaseAdmin.auth.admin.updateUserById(primary.id, {
       user_metadata: {
-        ...(bongbanglaUser.user_metadata ?? {}),
+        ...(primary.user_metadata ?? {}),
         is_super_admin: false,
       },
     });
+    results.push({ email: primary.email, status: "primary_bongbangla_retained", id: primary.id });
+
+    // Remove duplicate/ghost auth accounts if more than one exists
+    for (let i = 1; i < sorted.length; i++) {
+      const dup = sorted[i];
+      try {
+        await supabaseAdmin
+          .from("business_users")
+          .update({ user_id: primary.id })
+          .eq("user_id", dup.id);
+        await supabaseAdmin
+          .from("user_roles")
+          .update({ user_id: primary.id })
+          .eq("user_id", dup.id);
+        await supabaseAdmin
+          .from("businesses")
+          .update({ owner_id: primary.id })
+          .eq("owner_id", dup.id);
+        await supabaseAdmin.from("profiles").delete().eq("id", dup.id);
+        await supabaseAdmin.auth.admin.deleteUser(dup.id);
+        results.push({ email: dup.email, status: "duplicate_auth_deleted", id: dup.id });
+      } catch (err: any) {
+        console.error("Error deleting duplicate user:", err);
+      }
+    }
   }
 
-  // Primary business on platform
+  // 2. Primary business on platform
   const { data: primaryBiz } = await supabaseAdmin
     .from("businesses")
-    .select("id")
+    .select("id, name")
     .limit(1)
     .maybeSingle();
 
-  // Admin role on platform
+  // 3. Admin role on platform
   const { data: adminRole } = await supabaseAdmin
     .from("roles")
     .select("id")
@@ -45,6 +83,39 @@ async function setupSuperAdmin() {
     .limit(1)
     .maybeSingle();
 
+  // 4. Deduplicate business_users table (ensure no user has multiple rows in the same business)
+  const { data: allBU } = await supabaseAdmin
+    .from("business_users")
+    .select("id, business_id, user_id, is_active");
+
+  const seenBU = new Map<string, string>();
+  const buToDelete: string[] = [];
+  for (const bu of allBU ?? []) {
+    const key = `${bu.business_id}:${bu.user_id}`;
+    if (seenBU.has(key)) {
+      buToDelete.push(bu.id);
+    } else {
+      seenBU.set(key, bu.id);
+    }
+  }
+  if (buToDelete.length > 0) {
+    for (const id of buToDelete) {
+      await supabaseAdmin.from("business_users").delete().eq("id", id);
+    }
+    results.push({ status: "cleaned_duplicate_business_users", count: buToDelete.length });
+  }
+
+  // 5. Restore full access for admin@bongbangla.top in their store so they are not Locked
+  if (primaryBongbanglaId && primaryBiz?.id) {
+    await supabaseAdmin
+      .from("user_roles")
+      .update({ allowed_sections: null }) // null = full store access
+      .eq("user_id", primaryBongbanglaId)
+      .eq("business_id", primaryBiz.id);
+    results.push({ email: "admin@bongbangla.top", status: "unlocked_full_store_access" });
+  }
+
+  // 6. Ensure Sole Super Admin (Mehedi) is provisioned
   for (const acc of accounts) {
     const existing = existingUsers.find(
       (u) => u.email?.toLowerCase() === acc.email.toLowerCase()
@@ -131,7 +202,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Sole Super Admin (mehedi2001mzs17@gmail.com) verified and configured.",
+            message: "Database deduplication and Sole Super Admin verified.",
             results,
           });
         } catch (e: any) {
@@ -144,7 +215,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Sole Super Admin (mehedi2001mzs17@gmail.com) verified and configured.",
+            message: "Database deduplication and Sole Super Admin verified.",
             results,
           });
         } catch (e: any) {
