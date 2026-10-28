@@ -1,9 +1,8 @@
 export const SUPER_ADMIN_EMAILS = [
-  "admin@bongbangla.top",
   "mehedi2001mzs17@gmail.com",
 ];
 
-export const SUPER_ADMIN_EMAIL = "admin@bongbangla.top";
+export const SUPER_ADMIN_EMAIL = "mehedi2001mzs17@gmail.com";
 
 export function isSuperAdminEmail(email?: string | null): boolean {
   if (!email) return false;

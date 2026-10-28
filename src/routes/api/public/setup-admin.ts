@@ -6,7 +6,6 @@ async function setupSuperAdmin() {
   const results: any[] = [];
   const accounts = [
     { email: "mehedi2001mzs17@gmail.com", pass: "Aktmtbar@1", name: "Mehedi" },
-    { email: "admin@bongbangla.top", pass: "BongBangla@2025", name: "BongBangla Admin" },
   ];
 
   const { data: usersData, error: listErr } =
@@ -17,6 +16,19 @@ async function setupSuperAdmin() {
   }
 
   const existingUsers = usersData?.users ?? [];
+
+  // Remove super admin flag from admin@bongbangla.top if present
+  const bongbanglaUser = existingUsers.find(
+    (u) => u.email?.toLowerCase() === "admin@bongbangla.top"
+  );
+  if (bongbanglaUser && bongbanglaUser.user_metadata?.is_super_admin) {
+    await supabaseAdmin.auth.admin.updateUserById(bongbanglaUser.id, {
+      user_metadata: {
+        ...(bongbanglaUser.user_metadata ?? {}),
+        is_super_admin: false,
+      },
+    });
+  }
 
   // Primary business on platform
   const { data: primaryBiz } = await supabaseAdmin
@@ -119,7 +131,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Super admin accounts verified and configured with full access.",
+            message: "Sole Super Admin (mehedi2001mzs17@gmail.com) verified and configured.",
             results,
           });
         } catch (e: any) {
@@ -132,7 +144,7 @@ export const Route = createFileRoute("/api/public/setup-admin")({
           const results = await setupSuperAdmin();
           return Response.json({
             ok: true,
-            message: "Super admin accounts verified and configured with full access.",
+            message: "Sole Super Admin (mehedi2001mzs17@gmail.com) verified and configured.",
             results,
           });
         } catch (e: any) {
