@@ -414,6 +414,7 @@ function UserModulesModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const queryClient = useQueryClient();
   const saveMember = useServerFn(setMemberSections);
   const memberships = user.business_memberships ?? [];
   const [selectedBizId, setSelectedBizId] = useState<string>(
@@ -450,6 +451,9 @@ function UserModulesModal({
         },
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allowed-sections"] });
+      queryClient.invalidateQueries({ queryKey: ["super-admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["current-role"] });
       toast.success("Permissions strictly saved for this user");
       onSaved();
       onClose();

@@ -64,7 +64,7 @@ function AuthedLayout() {
     navigate({ to: target as any });
   }
 
-  if (!roleLoading && !sectionsLoading && rxMode && !isRxPathAllowed(pathname)) {
+  if (!roleLoading && !sectionsLoading && allowed === null && rxMode && !isRxPathAllowed(pathname)) {
     return <Navigate to={homePath as any} replace />;
   }
 

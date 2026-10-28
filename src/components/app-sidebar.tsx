@@ -117,13 +117,13 @@ const sections = [
       { to: "/clinic-services", label: "Products & Services", icon: Package, enabled: true, key: "clinic-services" },
       { to: "/clinic-sales", label: "Clinic Sales", icon: ShoppingCart, enabled: true, key: "clinic-sales" },
       { to: "/clinic-plans", label: "Treatment Plans (EMI)", icon: CalendarClock, enabled: true, key: "clinic-plans" },
-      { to: "/lab-reports", label: "Lab", icon: FlaskConical, enabled: true, key: "lab-reports", children: LAB_CHILDREN },
+      { to: "/lab-reports", label: "Lab Reports", icon: FlaskConical, enabled: true, key: "lab-reports", children: LAB_CHILDREN },
       { to: "/rx-dashboard", label: "Doctor Dashboard", icon: LayoutDashboard, enabled: true, key: "rx-dashboard" },
       { to: "/prescriptions", label: "Prescriptions", icon: FileText, enabled: true, key: "rx-write" },
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-appointments" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "rx-staff" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "rx-lists" },
-      { to: "/rx-billing", label: "Bill Page", icon: Wallet, enabled: true, key: "rx-billing" },
+      { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "rx-billing" },
       { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "rx-credit-history" },
 
     ],
@@ -152,7 +152,7 @@ const sections = [
       { to: "/settings/users", label: "Users & Roles", icon: UserCog, enabled: true, key: "settings" },
       { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "settings" },
       // Clinic users need Settings too (clinic name, address, SMS number).
-      { to: "/settings/business", label: "Settings", icon: Settings, enabled: true, key: "biz-settings" },
+      { to: "/settings/business", label: "Business Settings", icon: Settings, enabled: true, key: "biz-settings" },
 
     ],
   },
@@ -270,43 +270,46 @@ export function AppSidebar() {
   }
 
 
-  // A business admin is NOT unrestricted: when the super admin picked a module
-  // list for that account, only those modules may appear. `allowed === null`
-  // means "no limit configured" (super admin / legacy accounts).
-  const base = isLoading
-    ? []
-    : (isSuperAdmin || allowed === null)
-      ? sections
-      : sections
-          .map((sec) => ({
-            ...sec,
-            items: sec.items.filter((it: any) => allowed.includes(it.key)),
-          }))
-          .filter((sec) => sec.items.length > 0);
+  // Visible items based on strictly marked module grants
+  let candidateSections: typeof sections;
 
-  const scoped = (rxMode && !isSuperAdmin) || isDoctor
-    ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
-    : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
-  // Same destination can be listed under multiple permission keys — show it once.
-  const modeScoped = scoped.map((sec) => ({
-    ...sec,
-    // Platform-wide admin tools belong to the super admin only; a business
-    // owner is an admin of their own business, not of the whole platform.
-    items: sec.items.filter((it: any) => (it.superOnly ? isSuperAdmin : true))
-      // A doctor sees only their own clinical pages — no clinic admin pages,
-      // no business settings, even inside a clinic business.
-      .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
-      // Clinic-admin pages now have their own permission key each, so a page
-      // only shows when it was explicitly granted (or clinic mode is on).
-      .filter((it: any) =>
-        ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
-          ? clinicMode || allowed !== null || isSuperAdmin
-          : true,
-      ),
+  if (Array.isArray(allowed)) {
+    // When the Super Admin has explicitly granted a set of modules (even empty []),
+    // we STRICTLY display ONLY the allowed modules that were marked.
+    // No secondary domain or doctor filter should ever hide what the admin explicitly marked!
+    candidateSections = sections
+      .map((sec) => ({
+        ...sec,
+        items: sec.items.filter((it: any) => allowed.includes(it.key) && (!it.superOnly || isSuperAdmin)),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  } else {
+    // Unrestricted / legacy accounts (allowed === null):
+    const base = sections.map((sec) => ({
+      ...sec,
+      items: sec.items.filter((it: any) => !it.superOnly || isSuperAdmin),
+    }));
 
-  }));
+    const scoped = (rxMode && !isSuperAdmin) || isDoctor
+      ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
+      : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
 
-  const visibleSections = modeScoped
+    candidateSections = scoped
+      .map((sec) => ({
+        ...sec,
+        items: sec.items
+          .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
+          .filter((it: any) =>
+            ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
+              ? clinicMode || isSuperAdmin
+              : true,
+          ),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }
+
+  // Deduplicate items by destination path so the same page never renders twice
+  const visibleSections = candidateSections
     .map((sec) => {
       const seen = new Set<string>();
       return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };

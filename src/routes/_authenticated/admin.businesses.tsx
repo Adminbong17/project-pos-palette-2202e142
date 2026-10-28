@@ -80,7 +80,10 @@ function AdminBusinessesPage() {
     queryFn: async () => (await list({})) as BizRow[],
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-businesses"] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["admin-businesses"] });
+    qc.invalidateQueries({ queryKey: ["allowed-sections"] });
+  };
 
   const memberMut = useMutation({
     mutationFn: (v: { business_id: string; user_id: string; sections: string[] | null }) =>
