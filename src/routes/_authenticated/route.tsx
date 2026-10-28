@@ -150,7 +150,7 @@ function AuthedLayout() {
                 <span>Admin Hub</span>
               </button>
             )}
-            {canUsePos && !isSuperAdmin && (
+            {(canUsePos || isSuperAdmin) && (
               <button
                 onClick={() => navigate({ to: "/pos" })}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"

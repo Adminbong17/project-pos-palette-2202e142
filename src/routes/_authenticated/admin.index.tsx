@@ -327,49 +327,75 @@ function AdminHubPage() {
         </div>
       </div>
 
-      {/* ================= PENDING APPROVALS ALERT (IF ANY) ================= */}
-      {m && (m.pendingDoctorRequests > 0 || m.pendingBusinessRequests > 0) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 shadow-sm animate-pulse [animation-duration:4s]">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-amber-950 font-bold">
-              <AlertTriangle className="h-5 w-5" />
-            </span>
-            <div>
-              <h3 className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                জরুরি অনুমোদন অপেক্ষমান রয়েছে!
-              </h3>
-              <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-0.5">
-                বর্তমানে {m.pendingDoctorRequests} জন নতুন ডাক্তার এবং {m.pendingBusinessRequests}টি নতুন ব্যবসা অ্যাকাউন্ট অনুমোদনের অপেক্ষায় আছে।
-              </p>
+      {/* ================= PENDING APPROVALS HUB ================= */}
+      {m && (
+        m.pendingDoctorRequests > 0 || m.pendingBusinessRequests > 0 ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 shadow-sm animate-pulse [animation-duration:4s]">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-amber-950 font-bold">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                  জরুরি অনুমোদন অপেক্ষমান রয়েছে!
+                </h3>
+                <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-0.5">
+                  বর্তমানে {m.pendingDoctorRequests} জন নতুন ডাক্তার এবং {m.pendingBusinessRequests}টি নতুন ব্যবসা অ্যাকাউন্ট অনুমোদনের অপেক্ষায় আছে।
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {m.pendingDoctorRequests > 0 && (
+                <Button
+                  asChild
+                  size="sm"
+                  className="h-9 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm text-xs"
+                >
+                  <Link to="/admin/doctors">
+                    <span>ডাক্তার আবেদন দেখুন ({m.pendingDoctorRequests})</span>
+                  </Link>
+                </Button>
+              )}
+              {m.pendingBusinessRequests > 0 && (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-xl font-bold border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/20 cursor-pointer text-xs"
+                >
+                  <Link to="/admin/business-requests">
+                    <span>ব্যবসা আবেদন ({m.pendingBusinessRequests})</span>
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            {m.pendingDoctorRequests > 0 && (
-              <Button
-                asChild
-                size="sm"
-                className="h-9 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm text-xs"
-              >
-                <Link to="/admin/doctors">
-                  <span>ডাক্তার আবেদন দেখুন ({m.pendingDoctorRequests})</span>
-                </Link>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+              <div>
+                <span className="text-xs font-semibold text-foreground">
+                  অনুমোদন স্থিতি: সব আবেদন হালনাগাদ (০ অপেক্ষমান)
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  নতুন কোনো ডাক্তার বা ফার্মেসি অ্যাকাউন্ট অনুমোদনের অপেক্ষায় নেই।
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button asChild size="sm" variant="ghost" className="h-7 text-xs rounded-lg px-2.5 hover:bg-emerald-500/10">
+                <Link to="/admin/doctors">ডাক্তার তালিকা ও আবেদন</Link>
               </Button>
-            )}
-            {m.pendingBusinessRequests > 0 && (
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="h-9 rounded-xl font-bold border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/20 cursor-pointer text-xs"
-              >
-                <Link to="/admin/business-requests">
-                  <span>ব্যবসা আবেদন ({m.pendingBusinessRequests})</span>
-                </Link>
+              <Button asChild size="sm" variant="ghost" className="h-7 text-xs rounded-lg px-2.5 hover:bg-emerald-500/10">
+                <Link to="/admin/business-requests">ব্যবসা আবেদন তালিকা</Link>
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* ================= 6 EXECUTIVE KPI CARDS ================= */}
