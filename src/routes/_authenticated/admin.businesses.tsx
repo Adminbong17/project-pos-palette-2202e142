@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Building2, Search, Save, ArrowRightLeft, Users, Trash2 } from "lucide-react";
 
-import { ALL_SECTIONS, expandSections } from "@/hooks/use-allowed-sections";
+import { ALL_SECTIONS, expandSections, PRESETS } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import {
   listBusinessesWithMembers,
@@ -71,7 +71,7 @@ function AdminBusinessesPage() {
     mutationFn: (v: { business_id: string; user_id: string; sections: string[] | null }) =>
       saveMember({ data: v }),
     onSuccess: () => {
-      toast.success("Modules saved");
+      toast.success("Modules saved strictly for this member");
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save"),
@@ -80,7 +80,7 @@ function AdminBusinessesPage() {
   const bizMut = useMutation({
     mutationFn: (v: { business_id: string; sections: string[] | null }) => saveBusiness({ data: v }),
     onSuccess: () => {
-      toast.success("Modules applied to every member");
+      toast.success("Modules applied to every member of the business");
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save"),
@@ -132,8 +132,8 @@ function AdminBusinessesPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold">Businesses &amp; Modules</h1>
         <p className="text-sm text-muted-foreground">
-          Every business on the platform. Tick or untick modules for each member at any time — this
-          is where you add a module after approval.
+          Every business on the platform. Tick or untick modules for each member at any time — users
+          can strictly and only access the modules marked for them.
         </p>
       </div>
 
@@ -155,7 +155,6 @@ function AdminBusinessesPage() {
         </p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No businesses match.</p>
-
       ) : (
         rows.map((b) => (
           <BusinessCard
@@ -208,20 +207,20 @@ function BusinessCard({
   const [bulk, setBulk] = useState<string[]>([]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border border-border/70 shadow-sm">
+      <CardHeader className="bg-muted/30 pb-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Building2 className="h-4 w-4 text-primary" />
-          {biz.name}
+          <span className="font-bold">{biz.name}</span>
           <Badge variant="outline" className="text-[10px]">
             {KIND_LABEL[biz.kind] ?? biz.kind}
           </Badge>
           <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
-            <Users className="h-3.5 w-3.5" /> {biz.members.length}
+            <Users className="h-3.5 w-3.5" /> {biz.members.length} {biz.members.length === 1 ? "member" : "members"}
           </span>
           {biz.owner_email && (
             <span className="text-xs font-normal text-muted-foreground">
-              owner: {biz.owner_email}
+              owner: <span className="font-mono">{biz.owner_email}</span>
             </span>
           )}
           <Button
@@ -235,17 +234,69 @@ function BusinessCard({
           </Button>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border border-dashed border-border/60 p-2">
-          <p className="mb-1 text-[11px] font-medium uppercase text-muted-foreground">
-            Give these modules to every member
-          </p>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-4">
+      <CardContent className="space-y-5 pt-4">
+        {/* Bulk Modules Assignment */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                GIVE THESE MODULES TO EVERY MEMBER
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Mark the checkboxes to grant exact access, or use presets for instant setup ({bulk.length} of {options.length} selected).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] px-2"
+                onClick={() => setBulk(options.map((o) => o.key))}
+              >
+                Select All
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] px-2"
+                onClick={() => setBulk([])}
+              >
+                Clear All
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] px-2"
+                onClick={() => setBulk(PRESETS.POS_STANDARD.filter((k) => options.some((o) => o.key === k)))}
+              >
+                POS Standard
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] px-2"
+                onClick={() => setBulk(PRESETS.DOCTOR_CLINIC.filter((k) => options.some((o) => o.key === k)))}
+              >
+                Doctor / Clinic
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 rounded-lg bg-background p-2.5 border border-border/50">
             {options.map((s) => (
-              <label key={s.key} className="flex items-center gap-1.5 text-xs">
+              <label
+                key={s.key}
+                className={`flex items-center gap-2 rounded px-2 py-1 text-xs cursor-pointer select-none transition-colors ${
+                  bulk.includes(s.key) ? "bg-primary/10 font-medium text-foreground" : "hover:bg-muted/50 text-muted-foreground"
+                }`}
+              >
                 <input
                   type="checkbox"
-                  className="size-3.5"
+                  className="size-3.5 rounded border-input text-primary focus:ring-1 focus:ring-primary"
                   checked={bulk.includes(s.key)}
                   onChange={(e) =>
                     setBulk((prev) =>
@@ -255,34 +306,56 @@ function BusinessCard({
                     )
                   }
                 />
-                {s.label}
+                <span className="truncate">{s.label}</span>
               </label>
             ))}
           </div>
-          <Button
-            size="sm"
-            className="mt-2 h-8 text-xs"
-            disabled={busy || bulk.length === 0}
-            onClick={() => onSaveAll(bulk)}
-          >
-            <Save className="mr-1 h-3.5 w-3.5" /> Apply to all members
-          </Button>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              size="sm"
+              className="h-8 text-xs font-semibold"
+              disabled={busy}
+              onClick={() => onSaveAll(bulk)}
+            >
+              <Save className="mr-1.5 h-3.5 w-3.5" /> Apply ({bulk.length} modules) to all members
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm("Give unlimited full access (no module restrictions) to all members?")) {
+                  onSaveAll(null);
+                }
+              }}
+            >
+              Give Full Access (All modules)
+            </Button>
+          </div>
         </div>
 
-        {biz.members.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No members yet.</p>
-        ) : (
-          biz.members.map((m) => (
-            <MemberRow
-              key={m.user_id}
-              member={m}
-              busy={busy}
-              options={options}
-              onSave={(sections) => onSaveMember(m.user_id, sections)}
-              onMove={() => onMoveDoctor(m.user_id)}
-            />
-          ))
-        )}
+        {/* Individual Members */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Individual Members &amp; Overrides
+          </p>
+          {biz.members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No members in this business yet.</p>
+          ) : (
+            biz.members.map((m) => (
+              <MemberRow
+                key={m.user_id}
+                member={m}
+                busy={busy}
+                options={options}
+                onSave={(sections) => onSaveMember(m.user_id, sections)}
+                onMove={() => onMoveDoctor(m.user_id)}
+              />
+            ))
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -301,15 +374,23 @@ function MemberRow({
   onSave: (sections: string[] | null) => void;
   onMove: () => void;
 }) {
-  const [picked, setPicked] = useState<string[]>(expandSections(member.sections) ?? []);
-  const full = member.sections === null;
-  const dirty = JSON.stringify(picked) !== JSON.stringify(expandSections(member.sections) ?? []);
+  const isFullInitial = member.sections === null;
+  // If full access, default all checkboxes checked for clear visibility!
+  const [picked, setPicked] = useState<string[]>(
+    isFullInitial ? options.map((o) => o.key) : (expandSections(member.sections) ?? []),
+  );
+
+  const currentExpanded = isFullInitial ? options.map((o) => o.key) : (expandSections(member.sections) ?? []);
+  const dirty =
+    (isFullInitial && picked.length !== options.length) ||
+    (!isFullInitial &&
+      (picked.length !== currentExpanded.length || picked.some((k) => !currentExpanded.includes(k))));
 
   return (
-    <div className="rounded-lg border border-border/60 p-3">
+    <div className="rounded-lg border border-border/80 bg-card p-3.5 space-y-2.5 transition-all">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold">{member.name}</span>
-        <span className="text-xs text-muted-foreground">{member.email}</span>
+        <span className="text-xs font-mono text-muted-foreground">{member.email}</span>
         {member.role && (
           <Badge variant="outline" className="text-[10px]">
             {member.role}
@@ -320,27 +401,55 @@ function MemberRow({
             Inactive
           </Badge>
         )}
-        {full && <span className="text-[11px] text-muted-foreground">full access (no limit)</span>}
-        <div className="ml-auto flex items-center gap-1.5">
+        {member.sections === null ? (
+          <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+            Full Access (Unrestricted)
+          </Badge>
+        ) : member.sections.length === 0 ? (
+          <Badge variant="destructive" className="text-[10px]">
+            Locked (0 Modules)
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+            {member.sections.length} of {options.length} Modules Allowed
+          </Badge>
+        )}
+
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {dirty && (
-            <Button size="sm" className="h-8 text-xs" disabled={busy} onClick={() => onSave(picked)}>
-              <Save className="mr-1 h-3.5 w-3.5" /> Save
+            <Button size="sm" className="h-7 text-xs font-semibold" disabled={busy} onClick={() => onSave(picked)}>
+              <Save className="mr-1 h-3 w-3" /> Save ({picked.length})
             </Button>
           )}
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-xs"
+            className="h-7 text-xs"
             disabled={busy}
-            onClick={() => onSave(null)}
+            onClick={() => {
+              setPicked(options.map((o) => o.key));
+              onSave(null);
+            }}
           >
             Full access
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs text-destructive hover:bg-destructive/10"
+            disabled={busy}
+            onClick={() => {
+              setPicked([]);
+              onSave([]);
+            }}
+          >
+            Lock (0 modules)
           </Button>
           {member.role === "Doctor" && (
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-xs"
+              className="h-7 text-xs"
               disabled={busy}
               onClick={() => {
                 if (
@@ -351,18 +460,56 @@ function MemberRow({
                   onMove();
               }}
             >
-              <ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Own business
+              <ArrowRightLeft className="mr-1 h-3 w-3" /> Own business
             </Button>
           )}
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-4">
+      {/* Preset helpers for fast marking */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+        <span className="text-[11px] text-muted-foreground mr-1">Presets:</span>
+        <button
+          type="button"
+          onClick={() => setPicked(options.map((o) => o.key))}
+          className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          Select All
+        </button>
+        <button
+          type="button"
+          onClick={() => setPicked([])}
+          className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          Clear All
+        </button>
+        <button
+          type="button"
+          onClick={() => setPicked(PRESETS.POS_STANDARD.filter((k) => options.some((o) => o.key === k)))}
+          className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          POS Standard
+        </button>
+        <button
+          type="button"
+          onClick={() => setPicked(PRESETS.DOCTOR_CLINIC.filter((k) => options.some((o) => o.key === k)))}
+          className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          Doctor / Clinic
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-4 rounded-md bg-muted/20 p-2 border border-border/40">
         {options.map((s) => (
-          <label key={s.key} className="flex items-center gap-1.5 text-xs">
+          <label
+            key={s.key}
+            className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs cursor-pointer select-none transition-colors ${
+              picked.includes(s.key) ? "bg-primary/10 font-medium text-foreground" : "hover:bg-muted/40 text-muted-foreground"
+            }`}
+          >
             <input
               type="checkbox"
-              className="size-3.5"
+              className="size-3.5 rounded border-input text-primary focus:ring-1 focus:ring-primary"
               checked={picked.includes(s.key)}
               onChange={(e) =>
                 setPicked((prev) =>
@@ -372,7 +519,7 @@ function MemberRow({
                 )
               }
             />
-            {s.label}
+            <span className="truncate">{s.label}</span>
           </label>
         ))}
       </div>

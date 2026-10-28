@@ -48,23 +48,6 @@ function AuthedLayout() {
       : sectionHomePath(allowed);
   const isHome = pathname === homePath;
 
-  if (!roleLoading && !sectionsLoading && rxMode && !isRxPathAllowed(pathname)) {
-    return <Navigate to={homePath as any} replace />;
-  }
-
-  // Platform-wide admin pages belong to the super admin only.
-  if (!superLoading && !isSuperAdmin && pathname.startsWith("/admin")) {
-    return <Navigate to={homePath as any} replace />;
-  }
-
-  // Module grants apply to business admins too — only `null` means unlimited.
-  if (!isSuperAdmin && !roleLoading && !sectionsLoading && !isPathAllowed(pathname, allowed)) {
-    return <Navigate to={homePath as any} replace />;
-  }
-
-
-
-
   async function signOut() {
     await qc.cancelQueries();
     qc.clear();
@@ -81,6 +64,48 @@ function AuthedLayout() {
     navigate({ to: target as any });
   }
 
+  if (!roleLoading && !sectionsLoading && rxMode && !isRxPathAllowed(pathname)) {
+    return <Navigate to={homePath as any} replace />;
+  }
+
+  // Platform-wide admin pages belong to the super admin only.
+  if (!superLoading && !isSuperAdmin && pathname.startsWith("/admin")) {
+    return <Navigate to={homePath as any} replace />;
+  }
+
+  // Strictly enforce marked module grants — only `null` means unlimited.
+  if (!isSuperAdmin && !roleLoading && !sectionsLoading) {
+    if (Array.isArray(allowed) && allowed.length === 0) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-background">
+          <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">No Access Granted</h2>
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                Your account does not have permission to access any modules. Please contact the platform
+                Super Admin to assign modules to your account.
+              </p>
+            </div>
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={signOut}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (!isPathAllowed(pathname, allowed)) {
+      return <Navigate to={homePath as any} replace />;
+    }
+  }
 
   return (
     <SidebarProvider>

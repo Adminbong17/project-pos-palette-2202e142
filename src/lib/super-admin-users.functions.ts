@@ -3,6 +3,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { assertSuperAdmin } from "@/lib/super-admin-auth";
 
+export type UserBizMembership = {
+  business_id: string;
+  business_name: string;
+  sections: string[] | null;
+  role: string | null;
+};
+
 export type SuperAdminUser = {
   id: string;
   email: string;
@@ -16,6 +23,7 @@ export type SuperAdminUser = {
   businesses: string[];
   roles: string[];
   disabled: boolean;
+  business_memberships: UserBizMembership[];
 };
 
 export const listAllUsers = createServerFn({ method: "POST" })
@@ -39,7 +47,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
         supabaseAdmin.from("businesses").select("id, name"),
         supabaseAdmin.from("roles").select("id, name"),
-        supabaseAdmin.from("user_roles").select("user_id, role_id, business_id"),
+        supabaseAdmin.from("user_roles").select("user_id, role_id, business_id, allowed_sections"),
       ]);
 
     const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p]));
@@ -59,6 +67,23 @@ export const listAllUsers = createServerFn({ method: "POST" })
       const n = roleName.get(ur.role_id);
       if (n) set.add(String(n).split("#")[0]);
       rolesByUser.set(ur.user_id, set);
+    }
+
+    const membershipsByUser = new Map<string, UserBizMembership[]>();
+    for (const m of members ?? []) {
+      if ((m as any).is_active === false) continue;
+      const ur = (userRoles ?? []).find(
+        (r: any) => r.user_id === m.user_id && r.business_id === m.business_id,
+      );
+      const list = membershipsByUser.get(m.user_id) ?? [];
+      const roleStr = ur?.role_id ? (roleName.get(ur.role_id) ?? null) : null;
+      list.push({
+        business_id: m.business_id,
+        business_name: bizName.get(m.business_id) ?? m.business_id,
+        sections: (ur?.allowed_sections as string[] | null) ?? null,
+        role: roleStr ? String(roleStr).split("#")[0] : null,
+      });
+      membershipsByUser.set(m.user_id, list);
     }
 
     return authUsers
@@ -84,6 +109,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
           businesses: [...(bizByUser.get(u.id) ?? [])],
           roles: [...(rolesByUser.get(u.id) ?? [])],
           disabled: !!(u.banned_until && new Date(u.banned_until as string).getTime() > Date.now()),
+          business_memberships: membershipsByUser.get(u.id) ?? [],
         };
       })
       .sort((a, b) => a.email.localeCompare(b.email));

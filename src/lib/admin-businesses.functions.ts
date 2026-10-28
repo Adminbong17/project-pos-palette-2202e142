@@ -78,7 +78,7 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
     });
   });
 
-/** Replace the module list of one member (null = full access). */
+/** Replace the module list of one member (null = full access, [] = no access, string[] = exact modules). */
 export const setMemberSections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { business_id: string; user_id: string; sections: string[] | null }) => {
@@ -88,12 +88,70 @@ export const setMemberSections = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+
+    // Clean up sections list: null = full access; array = strictly that set
+    const cleanedSections = Array.isArray(data.sections)
+      ? Array.from(new Set(data.sections.filter((s): s is string => typeof s === "string" && s.trim().length > 0)))
+      : null;
+
+    // Check if user_role row exists
+    const { data: existing } = await supabaseAdmin
       .from("user_roles")
-      .update({ allowed_sections: data.sections })
+      .select("id")
       .eq("business_id", data.business_id)
-      .eq("user_id", data.user_id);
-    if (error) throw new Error(error.message);
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from("user_roles")
+        .update({ allowed_sections: cleanedSections })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      // Find role for this business
+      const { data: role } = await supabaseAdmin
+        .from("roles")
+        .select("id")
+        .eq("business_id", data.business_id)
+        .order("is_default", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let roleId = role?.id;
+      if (!roleId) {
+        const { data: newRole, error: roleErr } = await supabaseAdmin
+          .from("roles")
+          .insert({
+            business_id: data.business_id,
+            name: "Member",
+            is_default: true,
+          })
+          .select("id")
+          .single();
+        if (roleErr) throw new Error(roleErr.message);
+        roleId = newRole.id;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("user_roles")
+        .insert({
+          business_id: data.business_id,
+          user_id: data.user_id,
+          role_id: roleId,
+          allowed_sections: cleanedSections,
+        });
+      if (error) throw new Error(error.message);
+    }
+
+    // Ensure user is in business_users if not already active
+    await supabaseAdmin
+      .from("business_users")
+      .upsert(
+        { business_id: data.business_id, user_id: data.user_id, is_active: true },
+        { onConflict: "business_id,user_id" },
+      );
+
     return { ok: true };
   });
 
@@ -107,11 +165,73 @@ export const setBusinessSections = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+
+    const cleanedSections = Array.isArray(data.sections)
+      ? Array.from(new Set(data.sections.filter((s): s is string => typeof s === "string" && s.trim().length > 0)))
+      : null;
+
+    // 1. Update all existing user_roles for this business
+    await supabaseAdmin
       .from("user_roles")
-      .update({ allowed_sections: data.sections })
+      .update({ allowed_sections: cleanedSections })
       .eq("business_id", data.business_id);
-    if (error) throw new Error(error.message);
+
+    // 2. Fetch all members in business_users for this business
+    const { data: members } = await supabaseAdmin
+      .from("business_users")
+      .select("user_id")
+      .eq("business_id", data.business_id)
+      .eq("is_active", true);
+
+    const { data: existingRoles } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("business_id", data.business_id);
+
+    const existingUserIds = new Set((existingRoles ?? []).map((r) => r.user_id));
+    const missingMembers = (members ?? []).filter((m) => !existingUserIds.has(m.user_id));
+
+    if (missingMembers.length > 0) {
+      const { data: role } = await supabaseAdmin
+        .from("roles")
+        .select("id")
+        .eq("business_id", data.business_id)
+        .order("is_default", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let roleId = role?.id;
+      if (!roleId) {
+        const { data: newRole } = await supabaseAdmin
+          .from("roles")
+          .insert({
+            business_id: data.business_id,
+            name: "Member",
+            is_default: true,
+          })
+          .select("id")
+          .single();
+        roleId = newRole?.id;
+      }
+
+      if (roleId) {
+        const rowsToInsert = missingMembers.map((m) => ({
+          business_id: data.business_id,
+          user_id: m.user_id,
+          role_id: roleId!,
+          allowed_sections: cleanedSections,
+        }));
+        await supabaseAdmin.from("user_roles").insert(rowsToInsert);
+      }
+    }
+
+    // 3. Update the default role allowed_sections as well
+    await supabaseAdmin
+      .from("roles")
+      .update({ allowed_sections: cleanedSections })
+      .eq("business_id", data.business_id)
+      .eq("is_default", true);
+
     return { ok: true };
   });
 
