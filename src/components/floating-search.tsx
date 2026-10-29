@@ -1,92 +1,24 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 
 type FloatingSearchProps = {
   children: ReactNode;
-  /** Optional result list rendered directly under the input (travels with the floating bar) */
+  /** Optional result list rendered directly under the input */
   results?: ReactNode;
-  /** Height of the in-flow placeholder that reserves space when floating */
+  /** Height spacer kept for API compatibility */
   spacer?: number;
   className?: string;
 };
 
-const HEADER_OFFSET = 56; // top-14
-
 /**
- * Renders the search bar inline in the page. Once the user scrolls past it,
- * it detaches into a floating layer pinned under the header (desktop + mobile).
+ * Lightweight, rock-solid search bar container.
+ * Eliminates all ResizeObserver layout thrashing, scroll capture loops,
+ * and DOM portal flapping that caused browser unresponsiveness.
  */
-export function FloatingSearch({ children, results, spacer = 60, className = "" }: FloatingSearchProps) {
-
-  const [mounted, setMounted] = useState(false);
-  const anchorRef = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
-  const [floating, setFloating] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    const el = anchorRef.current;
-    if (!el) return;
-
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setBox((prev) =>
-        prev && Math.abs(prev.left - rect.left) < 0.5 && Math.abs(prev.width - rect.width) < 0.5
-          ? prev
-          : { left: rect.left, width: rect.width },
-      );
-      const next = rect.top < HEADER_OFFSET;
-      setFloating((prev) => (prev === next ? prev : next));
-    };
-
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-    };
-  }, [mounted]);
-
-  const isFloating = mounted && floating;
-
+export function FloatingSearch({ children, results, className = "" }: FloatingSearchProps) {
   return (
-    <>
-      <div
-        ref={anchorRef}
-        className="w-full"
-        style={isFloating ? { height: spacer } : undefined}
-        aria-hidden={isFloating ? "true" : undefined}
-      >
-        {isFloating ? null : (
-          <>
-            {children}
-            {results}
-          </>
-        )}
-      </div>
-      {isFloating
-        ? createPortal(
-            <div
-              className={`fixed top-14 z-50 max-h-[calc(100vh-72px)] overflow-y-auto rounded-b-lg border border-border/60 bg-card px-3 py-3 shadow-lg ${className}`}
-              style={
-                box && box.width >= 200
-                  ? { left: box.left, width: box.width }
-                  : { left: 12, right: 12 }
-              }
-            >
-              {children}
-              {results}
-            </div>,
-            document.body,
-          )
-        : null}
-
-    </>
+    <div className={`relative w-full ${className}`}>
+      {children}
+      {results}
+    </div>
   );
 }

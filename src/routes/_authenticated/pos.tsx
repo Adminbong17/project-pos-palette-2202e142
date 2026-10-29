@@ -181,12 +181,16 @@ function PosScreen() {
         .from("business_locations")
         .select("id, name, landmark, city, state, country, zip_code, mobile, alternate_number, email")
         .eq("business_id", business!.id);
-      const list = data ?? [];
-      if (list.length && !locationId) setLocationId(list[0].id);
-      return list;
+      return data ?? [];
     },
     enabled: !!business,
   });
+
+  useEffect(() => {
+    if (!locationId && locations.length > 0) {
+      setLocationId(locations[0].id);
+    }
+  }, [locationId, locations]);
 
   const currentLocation = locations.find((l: any) => l.id === locationId) as any;
   const locAddress =
@@ -239,7 +243,9 @@ function PosScreen() {
     queryFn: async () => {
       const PAGE = 1000;
       const all: any[] = [];
-      for (let from = 0; ; from += PAGE) {
+      let pageCount = 0;
+      for (let from = 0; pageCount < 50; from += PAGE) {
+        pageCount++;
         const { data, error } = await supabase
           .from("products")
           .select(`
