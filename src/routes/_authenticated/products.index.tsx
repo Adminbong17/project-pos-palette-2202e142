@@ -1,6 +1,6 @@
 import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Pencil, Trash2, Plus, Package, Upload, Search, ScanLine, Check, QrCode } from "lucide-react";
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/products/")({
   component: ProductsList,
 });
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 30;
 
 function ProductsList() {
   const { data: business } = useCurrentBusiness();
@@ -25,9 +25,22 @@ function ProductsList() {
   const [qrWidth, setQrWidth] = useState<"58" | "80">("80");
   const [qrCopies, setQrCopies] = useState(1);
   useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput.trim()), 250);
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  const { data: totalProductCount } = useQuery({
+    queryKey: ["products-total-count", business?.id],
+    enabled: !!business?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", business!.id);
+      return count ?? null;
+    },
+  });
 
   const {
     data,
@@ -38,18 +51,19 @@ function ProductsList() {
   } = useInfiniteQuery({
     queryKey: ["products", business?.id, search],
     enabled: !!business,
-    staleTime: 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    placeholderData: (prev) => prev,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const from = (pageParam as number) * PAGE_SIZE;
       let q = supabase
         .from("products")
-        .select("id, name, sku, barcode, type, is_inactive, enable_stock, image, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(default_purchase_price, mrp, variation_location_details(qty_available))")
+        .select("id, name, sku, barcode, type, is_inactive, enable_stock, default_purchase_price, default_sell_price, mrp, category:categories!products_category_id_fkey(name), brand:brands(name), unit:units(short_name), variations(default_purchase_price, mrp, variation_location_details(qty_available))")
         .eq("business_id", business!.id);
       if (search) {
         const esc = search.replace(/[%,()]/g, " ");
-        q = q.or(`name.ilike.%${esc}%,sku.ilike.%${esc}%`);
+        q = q.or(`name.ilike.%${esc}%,sku.ilike.%${esc}%,barcode.ilike.%${esc}%`);
       }
       const { data, error } = await q
         .order("name", { ascending: true })
@@ -66,15 +80,18 @@ function ProductsList() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    }, { rootMargin: "400px" });
+    if (!el || !hasNextPage || isFetchingNextPage || isLoading) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage && !isLoading) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "150px" },
+    );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, isLoading, fetchNextPage]);
 
 
   const del = useMutation({
@@ -301,7 +318,14 @@ function ProductsList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="font-display text-lg font-semibold">All Products</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-lg font-semibold">All Products</h2>
+          {typeof totalProductCount === "number" && (
+            <span className="rounded-full bg-muted/80 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {totalProductCount.toLocaleString()} items
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <FloatingSearch spacer={40} className="max-w-[calc(100vw-24px)]">
             <div className="relative">
@@ -310,7 +334,7 @@ function ProductsList() {
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search name or SKU…"
+                placeholder="Search name, SKU, or barcode…"
                 className="h-9 w-full rounded-lg border border-border bg-input pl-8 pr-3 text-sm"
               />
             </div>
@@ -463,11 +487,27 @@ function ProductsList() {
             );})}
           </tbody>
         </FoldTable>
-        <div ref={sentinelRef} className="h-8" />
-        {isFetchingNextPage && (
-          <div className="p-3 text-center text-xs text-muted-foreground">Loading more…</div>
-        )}
       </div>
+
+      {hasNextPage && (
+        <div className="flex flex-col items-center justify-center gap-2 py-3">
+          <button
+            type="button"
+            disabled={isFetchingNextPage}
+            onClick={() => fetchNextPage()}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-2 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50 shadow-xs"
+          >
+            {isFetchingNextPage ? "Loading more products…" : `Load More Products (${PAGE_SIZE} more)`}
+          </button>
+          <div ref={sentinelRef} className="h-4 w-full" />
+        </div>
+      )}
+
+      {!hasNextPage && rows.length > 0 && (
+        <div className="text-center text-xs text-muted-foreground py-3">
+          Showing all {rows.length} products
+        </div>
+      )}
 
       <BarcodeScanner
         open={scanForId !== null}

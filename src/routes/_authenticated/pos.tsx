@@ -233,9 +233,9 @@ function PosScreen() {
 
   // Products with variations and inventory
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["pos-products", business?.id, locationId],
-    staleTime: 5 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    queryKey: ["pos-products", business?.id],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const PAGE = 1000;
       const all: any[] = [];

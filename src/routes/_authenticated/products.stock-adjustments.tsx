@@ -356,6 +356,8 @@ function AdjustmentForm({ editRow, onClose, onSaved }: { editRow?: any | null; o
 
   const { data: products = [] } = useQuery({
     queryKey: ["products-with-variations", business?.id],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     queryFn: async () => {
       return fetchAll<any>(() =>
         supabase
