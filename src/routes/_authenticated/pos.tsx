@@ -1136,150 +1136,179 @@ function PosScreen() {
               )}
             </div>
           ) : (
-            /* Default Pharmacy POS Workspace (Clean & Fast when no search) */
-            <div className="space-y-4">
-              {/* Ready Status Banner */}
-              <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                      Fast Pharmacy POS Ready
+            /* Pharmacy Sale Cart Product Rows (Replaced the placeholder banners) */
+            <div className="flex-1 flex flex-col min-h-0 space-y-3">
+              {cart.length === 0 ? (
+                /* Empty Cart State */
+                <div className="flex-1 flex flex-col items-center justify-center py-20 text-center text-muted-foreground space-y-3 bg-muted/10 rounded-2xl border border-dashed border-border/70 p-8">
+                  <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary grid place-items-center text-3xl shadow-inner">
+                    💊
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-foreground">কার্ট সম্পূর্ণ খালি (Cart is Empty)</h3>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                      উপরের সার্চবারে মেডিসিনের নাম, SKU লিখুন অথবা বারকোড স্ক্যানার দিয়ে স্ক্যান করলে সাথে সাথে কার্ট রো-তে যোগ হবে।
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs">
+                    <span className="px-2.5 py-1 rounded-lg bg-card border border-border/80 shadow-2xs font-medium">
+                      <kbd className="font-mono font-bold text-primary mr-1">F2</kbd> Focus Search
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-card border border-border/80 shadow-2xs font-medium">
+                      <kbd className="font-mono font-bold text-primary mr-1">Enter</kbd> Add Top Match
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-card border border-border/80 shadow-2xs font-medium">
+                      <kbd className="font-mono font-bold text-primary mr-1">F4</kbd> Finalize Sale
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-card border border-border/80 shadow-2xs font-medium">
+                      <kbd className="font-mono font-bold text-primary mr-1">F8</kbd> Hold Draft
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Type medicine name/SKU in the search box above or scan with a barcode reader to add directly to sale cart.
-                  </p>
                 </div>
-                <div className="hidden sm:flex items-center gap-2 text-xs">
-                  <kbd className="px-2 py-1 rounded bg-background border font-mono font-bold text-xs shadow-2xs">F2</kbd>
-                  <span className="text-muted-foreground">Search</span>
-                </div>
-              </div>
-
-              {/* Quick Actions Grid: Held Drafts & Recent Sales */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Held Drafts Box */}
-                <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
+              ) : (
+                /* Cart Product Rows Table */
+                <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs flex flex-col">
+                  {/* Table Header Bar */}
+                  <div className="p-3 bg-muted/40 border-b border-border/60 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <FolderArchive className="h-4 w-4 text-amber-500" />
+                      <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
                       <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                        Held Drafts ({heldDrafts.length})
+                        Added Cart Products ({cart.length} items · {cart.reduce((a, b) => a + b.quantity, 0)} units)
                       </h3>
                     </div>
-                    {heldDrafts.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDraftsModalOpen(true)}
-                        className="h-6 text-[11px] text-amber-600 hover:text-amber-700 cursor-pointer"
-                      >
-                        View all
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearCart}
+                      className="h-7 px-2.5 text-xs text-destructive hover:bg-destructive/10 cursor-pointer gap-1"
+                      title="Clear all products from cart"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Clear All</span>
+                    </Button>
                   </div>
 
-                  {heldDrafts.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-2">No held orders. Press [F8] to hold an active cart.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {heldDrafts.slice(0, 3).map((d: any) => (
-                        <div
-                          key={d.id}
-                          className="flex items-center justify-between p-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-foreground font-mono">{d.invoice_no}</span>
-                            <span className="text-muted-foreground ml-2">৳{Number(d.final_total || 0).toFixed(2)}</span>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => resumeDraft(d)}
-                            className="h-7 px-2 text-[11px] font-semibold text-amber-700 border-amber-500/40 cursor-pointer"
-                          >
-                            Resume
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {/* Responsive Table of Cart Products */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/30 border-b border-border/60 text-muted-foreground font-semibold">
+                        <tr>
+                          <th className="p-3 w-10 text-center">#</th>
+                          <th className="p-3 min-w-[200px]">Medicine / Item</th>
+                          <th className="p-3 w-28 text-right">Unit Price</th>
+                          <th className="p-3 w-36 text-center">Quantity</th>
+                          <th className="p-3 w-32 text-right">Total (৳)</th>
+                          <th className="p-3 w-14 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {cart.map((l, i) => {
+                          const itemDiscount = l.quantity * l.original_price - l.total_amount;
+                          return (
+                            <tr
+                              key={l.variation_id}
+                              className="hover:bg-muted/40 transition-colors group"
+                            >
+                              <td className="p-3 text-center text-muted-foreground font-mono font-medium">
+                                {i + 1}
+                              </td>
+                              <td className="p-3">
+                                <div className="font-bold text-foreground text-sm leading-tight">
+                                  {l.name}
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono mt-0.5">
+                                  <span>SKU: {l.sub_sku}</span>
+                                  {itemDiscount > 0.0001 && (
+                                    <span className="text-emerald-600 bg-emerald-500/10 px-1.5 py-0.2 rounded font-sans font-semibold text-[10px]">
+                                      Discount: -৳{itemDiscount.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-right">
+                                <span className="font-semibold text-foreground">
+                                  ৳{l.unit_price > 0 ? l.unit_price.toFixed(2) : l.original_price.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQty(l.variation_id, l.quantity - 1)}
+                                    className="h-7 w-7 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs cursor-pointer shadow-2xs active:scale-95"
+                                  >
+                                    <Minus className="h-3.5 w-3.5" />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={l.quantity === 0 ? "" : l.quantity}
+                                    onChange={(e) =>
+                                      updateQty(
+                                        l.variation_id,
+                                        e.target.value === "" ? 0 : Number(e.target.value)
+                                      )
+                                    }
+                                    className="w-14 h-7 text-center rounded-lg border border-border bg-input text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQty(l.variation_id, l.quantity + 1)}
+                                    className="h-7 w-7 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs cursor-pointer shadow-2xs active:scale-95"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="font-bold text-primary text-xs">৳</span>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    value={l.total_amount === 0 ? "" : l.total_amount}
+                                    onChange={(e) =>
+                                      updateTotal(
+                                        l.variation_id,
+                                        e.target.value === "" ? 0 : Number(e.target.value)
+                                      )
+                                    }
+                                    className="w-24 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
+                                  />
+                                </div>
+                              </td>
+                              <td className="p-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeLine(l.variation_id)}
+                                  className="h-7 w-7 grid place-items-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer mx-auto"
+                                  title="Remove item"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-muted/30 border-t border-border/80 font-bold">
+                        <tr>
+                          <td colSpan={3} className="p-3 text-right text-muted-foreground">
+                            Total Units ({cart.reduce((a, b) => a + b.quantity, 0)} pcs):
+                          </td>
+                          <td className="p-3 text-center font-mono">
+                            {cart.reduce((a, b) => a + b.quantity, 0)}
+                          </td>
+                          <td className="p-3 text-right font-mono text-sm text-primary">
+                            ৳{subtotal.toFixed(2)}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </div>
-
-                {/* Recent Invoices Box */}
-                <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                        Recent Sales ({recentSales.length})
-                      </h3>
-                    </div>
-                    {recentSales.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRecentSalesModalOpen(true)}
-                        className="h-6 text-[11px] text-blue-600 hover:text-blue-700 cursor-pointer"
-                      >
-                        View all
-                      </Button>
-                    )}
-                  </div>
-
-                  {recentSales.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-2">Completed sales will appear here for instant reprint.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {recentSales.slice(0, 3).map((s: any) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center justify-between p-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-foreground font-mono">{s.invoice_no}</span>
-                            <span className="text-muted-foreground ml-2">৳{Number(s.final_total || 0).toFixed(2)}</span>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => triggerReprintSale(s.id)}
-                            className="h-7 px-2 text-[11px] font-semibold text-blue-700 border-blue-500/40 gap-1 cursor-pointer"
-                          >
-                            <Printer className="h-3 w-3" /> Reprint
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Keyboard Shortcuts Reference */}
-              <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-2.5 shadow-2xs">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Quick Keyboard Navigation
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
-                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F2</kbd>
-                    <span className="text-muted-foreground">Focus Search</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
-                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">Enter</kbd>
-                    <span className="text-muted-foreground">Add Top Match</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
-                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F4</kbd>
-                    <span className="text-muted-foreground">Finalize Sale</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
-                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F8</kbd>
-                    <span className="text-muted-foreground">Hold Draft</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
