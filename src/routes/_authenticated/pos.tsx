@@ -1330,269 +1330,201 @@ function PosScreen() {
         </div>
       </div>
 
-      {/* RIGHT: CART & BILLING PANEL */}
-      <div className="w-full lg:w-[420px] flex flex-col bg-card border-l border-border/60">
+      {/* RIGHT: BILLING & PAYMENT PANEL */}
+      <div className="w-full lg:w-[380px] xl:w-[400px] flex flex-col bg-card border-l border-border/60">
         {/* Customer Select & Quick Add */}
         <div className="p-3.5 border-b border-border/60 space-y-2 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4 text-primary" />
-              <h2 className="font-semibold text-sm">Sale Cart ({cart.length})</h2>
+              <CreditCard className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold text-sm">Payment & Checkout</h2>
             </div>
             {cart.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearCart}
-                className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 cursor-pointer"
-                title="Clear entire cart"
-              >
-                <Trash2 className="h-3 w-3 mr-1" /> Clear
-              </Button>
+              <Badge variant="outline" className="text-[11px] font-mono font-bold bg-primary/10 text-primary border-primary/30">
+                {cart.length} item{cart.length === 1 ? "" : "s"}
+              </Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <select
-              className="flex-1 h-9 rounded-xl border border-border bg-input px-3 text-xs font-medium"
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-            >
-              <option value="">Walk-in customer</option>
-              {contacts.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.mobile ? `(${c.mobile})` : ""}
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCustomerModalOpen(true)}
-              className="h-9 px-2.5 rounded-xl border-dashed border-primary/50 text-primary hover:bg-primary/10 text-xs font-semibold shrink-0 cursor-pointer"
-              title="Add New Customer"
-            >
-              <UserPlus className="h-3.5 w-3.5 mr-1" /> New
-            </Button>
-          </div>
-        </div>
-
-        {/* Cart Item Rows */}
-        <div ref={cartScrollRef} className="flex-1 overflow-y-auto p-2.5 space-y-2">
-          {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground space-y-2">
-              <div className="h-12 w-12 rounded-2xl bg-muted/60 grid place-items-center text-xl">🛒</div>
-              <p className="text-xs font-semibold">Your cart is empty</p>
-              <p className="text-[11px] max-w-[200px]">Click any medicine from the catalog or scan barcode to add.</p>
-            </div>
-          ) : (
-            cart.map((l, i) => (
-              <div
-                key={l.variation_id}
-                ref={i === cart.length - 1 ? lastLineRef : undefined}
-                className="rounded-xl bg-background border border-border/70 p-3 shadow-2xs space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold leading-tight text-foreground truncate">{l.name}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{l.sub_sku}</div>
-                  </div>
-                  <button
-                    onClick={() => removeLine(l.variation_id)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => updateQty(l.variation_id, l.quantity - 1)}
-                      className="h-6 w-6 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <input
-                      type="number"
-                      value={l.quantity === 0 ? "" : l.quantity}
-                      onChange={(e) => updateQty(l.variation_id, e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="w-12 h-6 text-center rounded-lg border border-border bg-input text-xs font-bold font-mono"
-                    />
-                    <button
-                      onClick={() => updateQty(l.variation_id, l.quantity + 1)}
-                      className="h-6 w-6 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] text-muted-foreground">@ ৳{l.unit_price > 0 ? l.unit_price.toFixed(2) : l.original_price.toFixed(2)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <span className="text-[11px] font-bold text-primary">৳</span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={l.total_amount === 0 ? "" : l.total_amount}
-                      onChange={(e) => updateTotal(l.variation_id, e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="w-20 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-bold font-mono focus:border-primary outline-none"
-                    />
-                  </div>
-                </div>
-
-                {l.quantity * l.original_price - l.total_amount > 0.0001 && (
-                  <div className="flex justify-between text-[10px] font-medium text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                    <span>Item Discount</span>
-                    <span>-৳{(l.quantity * l.original_price - l.total_amount).toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Calculation & Payment Controls */}
-        <div className="p-3.5 border-t border-border/60 bg-muted/20 space-y-2.5 text-xs">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-mono font-semibold">৳{subtotal.toFixed(2)}</span>
-          </div>
-
-          {lineDiscount > 0.0001 && (
-            <div className="flex justify-between text-emerald-600 font-medium">
-              <span>Item Discount (auto)</span>
-              <span>-৳{lineDiscount.toFixed(2)}</span>
-            </div>
-          )}
-
-          {/* Extra Discount Controls */}
-          <div className="flex justify-between items-center gap-2">
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-muted-foreground">Select Customer (গ্রাহক)</label>
             <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Extra Discount</span>
-              <div className="flex rounded-lg border border-border overflow-hidden bg-background text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setDiscountType("flat")}
-                  className={`px-2 py-0.5 font-bold ${discountType === "flat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  ৳
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDiscountType("percent")}
-                  className={`px-2 py-0.5 font-bold ${discountType === "percent" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  %
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                step="any"
-                value={discount === 0 ? "" : discount}
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                placeholder="0"
-                className="w-20 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-mono font-semibold"
-              />
-              <span className="text-muted-foreground text-[10px]">{discountType === "percent" ? "%" : "৳"}</span>
-            </div>
-          </div>
-
-          {/* Grand Total */}
-          <div className="flex justify-between items-center text-sm font-bold border-t border-border/60 pt-2 text-foreground">
-            <span>Grand Total</span>
-            <span className="text-lg font-extrabold text-primary font-mono">৳{total.toFixed(2)}</span>
-          </div>
-
-          {/* Payment Method Selector */}
-          <div className="space-y-1.5 pt-1">
-            <label className="text-[11px] font-medium text-muted-foreground">Payment Method</label>
-            <div className="grid grid-cols-2 gap-2">
               <select
-                className="h-9 rounded-xl border border-border bg-input px-2.5 text-xs font-semibold"
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="flex-1 h-9 rounded-xl border border-border bg-input px-3 text-xs font-medium"
+                value={contactId}
+                onChange={(e) => setContactId(e.target.value)}
               >
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
+                <option value="">Walk-in customer (খুচরা ক্রেতা)</option>
+                {contacts.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.mobile ? `(${c.mobile})` : ""}
                   </option>
                 ))}
               </select>
-
-              <input
-                type="number"
-                step="any"
-                placeholder={`Paid (৳${total.toFixed(2)})`}
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                className="h-9 rounded-xl border border-border bg-input px-3 text-xs font-bold font-mono focus:border-primary outline-none"
-              />
-            </div>
-
-            {/* Quick Cash Buttons */}
-            <div className="flex items-center gap-1 pt-1 overflow-x-auto no-scrollbar">
-              <button
-                type="button"
-                onClick={() => setAmountPaid(total > 0 ? String(total) : "")}
-                className="px-2 py-1 rounded-md border border-primary/40 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 shrink-0"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCustomerModalOpen(true)}
+                className="h-9 px-2.5 rounded-xl border-dashed border-primary/50 text-primary hover:bg-primary/10 text-xs font-semibold shrink-0 cursor-pointer"
+                title="Add New Customer"
               >
-                Exact (৳{total.toFixed(2)})
-              </button>
-              {[50, 100, 500, 1000].map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setAmountPaid(String(num))}
-                  className="px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-[10px] font-semibold shrink-0"
-                >
-                  ৳{num}
-                </button>
-              ))}
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> New
+              </Button>
             </div>
           </div>
+        </div>
 
-          {/* Change / Due display */}
-          {amountPaid && (
-            <div
-              className={`flex justify-between items-center p-2 rounded-xl text-xs font-bold ${
-                change >= 0 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"
-              }`}
-            >
-              <span>{change >= 0 ? "Change to return (ফেরত)" : "Due amount (বকেয়া)"}</span>
-              <span className="text-sm font-extrabold font-mono">৳{Math.abs(change).toFixed(2)}</span>
+        {/* Calculation & Payment Controls */}
+        <div className="p-4 space-y-3.5 text-xs flex-1 flex flex-col justify-between overflow-y-auto">
+          <div className="space-y-3">
+            {/* Quick Bill Summary Box */}
+            <div className="rounded-xl border border-border/70 bg-background/80 p-3 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Total Quantity</span>
+                <span className="font-mono font-bold text-foreground">{cart.reduce((a, b) => a + b.quantity, 0)} units</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-mono font-bold text-foreground">৳{subtotal.toFixed(2)}</span>
+              </div>
+              {lineDiscount > 0.0001 && (
+                <div className="flex justify-between items-center text-xs text-emerald-600 font-medium">
+                  <span>Item Discount (auto)</span>
+                  <span>-৳{lineDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              {/* Extra Discount Controls */}
+              <div className="flex justify-between items-center gap-2 pt-1 border-t border-border/40">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground text-xs">Extra Discount</span>
+                  <div className="flex rounded-lg border border-border overflow-hidden bg-background text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType("flat")}
+                      className={`px-2 py-0.5 font-bold ${discountType === "flat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      ৳
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType("percent")}
+                      className={`px-2 py-0.5 font-bold ${discountType === "percent" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      %
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    step="any"
+                    value={discount === 0 ? "" : discount}
+                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-20 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-mono font-semibold"
+                  />
+                  <span className="text-muted-foreground text-[10px]">{discountType === "percent" ? "%" : "৳"}</span>
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Grand Total Big Display */}
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 flex justify-between items-center">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Net Payable</span>
+                <div className="text-[11px] text-muted-foreground">সর্বমোট প্রদেয়</div>
+              </div>
+              <span className="text-2xl font-black text-primary font-mono tracking-tight">৳{total.toFixed(2)}</span>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-medium text-muted-foreground">Payment Method (পরিশোধ পদ্ধতি)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="h-9 rounded-xl border border-border bg-input px-2.5 text-xs font-semibold"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  step="any"
+                  placeholder={`Paid (৳${total.toFixed(2)})`}
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(e.target.value)}
+                  className="h-9 rounded-xl border border-border bg-input px-3 text-xs font-bold font-mono focus:border-primary outline-none"
+                />
+              </div>
+
+              {/* Quick Cash Tender Buttons */}
+              <div className="flex items-center gap-1 pt-1 overflow-x-auto no-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setAmountPaid(total > 0 ? String(total) : "")}
+                  className="px-2 py-1 rounded-md border border-primary/40 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 shrink-0 cursor-pointer"
+                >
+                  Exact (৳{total.toFixed(2)})
+                </button>
+                {[50, 100, 500, 1000].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setAmountPaid(String(num))}
+                    className="px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-[10px] font-semibold shrink-0 cursor-pointer"
+                  >
+                    ৳{num}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Change / Due display */}
+            {amountPaid && (
+              <div
+                className={`flex justify-between items-center p-2.5 rounded-xl text-xs font-bold ${
+                  change >= 0 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30" : "bg-destructive/10 text-destructive border border-destructive/30"
+                }`}
+              >
+                <span>{change >= 0 ? "Change to return (ফেরত)" : "Due amount (বকেয়া)"}</span>
+                <span className="text-sm font-extrabold font-mono">৳{Math.abs(change).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
 
           {/* Action Buttons: Hold Draft vs Finalize Sale */}
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => save.mutate(true)}
-              disabled={save.isPending || cart.length === 0}
-              className="h-11 rounded-xl font-bold border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/10 cursor-pointer text-xs"
-              title="Hold this sale as Draft (F8)"
-            >
-              <FolderArchive className="h-4 w-4 mr-1 text-amber-600" />
-              <span>Hold Draft (F8)</span>
-            </Button>
+          <div className="space-y-2 pt-2 border-t border-border/60">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save.mutate(true)}
+                disabled={save.isPending || cart.length === 0}
+                className="h-11 rounded-xl font-bold border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/10 cursor-pointer text-xs"
+                title="Hold this sale as Draft (F8)"
+              >
+                <FolderArchive className="h-4 w-4 mr-1 text-amber-600" />
+                <span>Hold Draft (F8)</span>
+              </Button>
 
-            <Button
-              type="button"
-              onClick={() => save.mutate(false)}
-              disabled={save.isPending || cart.length === 0}
-              className="h-11 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 shadow-md shadow-primary/20 cursor-pointer text-xs"
-              title="Finalize Sale & Print Receipt (F4)"
-            >
-              <Check className="h-4 w-4 mr-1" />
-              <span>{save.isPending ? "Finalizing…" : "Finalize (F4)"}</span>
-            </Button>
+              <Button
+                type="button"
+                onClick={() => save.mutate(false)}
+                disabled={save.isPending || cart.length === 0}
+                className="h-11 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 shadow-md shadow-primary/20 cursor-pointer text-xs"
+                title="Finalize Sale & Print Receipt (F4)"
+              >
+                <Check className="h-4 w-4 mr-1" />
+                <span>{save.isPending ? "Finalizing…" : "Finalize (F4)"}</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
