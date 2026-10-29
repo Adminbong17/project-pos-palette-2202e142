@@ -1,4 +1,3 @@
-import { FloatingSearch } from "@/components/floating-search";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -802,62 +801,43 @@ function PosScreen() {
 
           {/* Search Bar & Scanners */}
           <div className="relative space-y-2 sm:space-y-0 sm:flex sm:gap-2">
-            <FloatingSearch
-              spacer={44}
-              results={
-                search.trim() ? (
-                  <div className="mt-1 max-h-80 overflow-auto rounded-xl border border-border bg-popover shadow-xl">
-                    {filteredItems.length === 0 ? (
-                      <div className="px-4 py-3 text-xs text-muted-foreground">No matches found for "{search}"</div>
-                    ) : (
-                      filteredItems.slice(0, 20).map((i) => (
-                        <button
-                          key={i.variation_id}
-                          onClick={() => {
-                            addToCart(i);
-                            setSearch("");
-                          }}
-                          className="w-full text-left px-3.5 py-2.5 hover:bg-muted/60 flex items-center gap-3 border-b border-border/40 last:border-0 transition-colors"
-                        >
-                          <div className="h-10 w-10 rounded-lg bg-muted/60 grid place-items-center text-sm shrink-0 border border-border/50">
-                            {i.image ? <img src={i.image} alt="" className="h-full w-full object-cover rounded-lg" /> : "💊"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold text-foreground truncate">
-                              {i.name}
-                              {i.variant_label ? ` — ${i.variant_label}` : ""}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-mono">
-                              SKU: {i.sub_sku} ·{" "}
-                              <span className={i.stock > 0 ? "text-emerald-600 font-semibold" : "text-destructive font-semibold"}>
-                                {i.stock > 0 ? `Stock: ${i.stock}` : "Out of stock"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-base font-bold text-primary">৳{i.price.toFixed(2)}</div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                ) : null
-              }
-            >
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  ref={searchInputRef}
-                  placeholder="Search medicine name, SKU, or barcode (F2)…"
-                  className="w-full h-10 rounded-xl border border-border bg-input pl-9 pr-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {search && (
-                  <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </FloatingSearch>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                placeholder="Search medicine name, SKU, or barcode (F2)…"
+                className="w-full h-10 rounded-xl border border-border bg-input pl-9 pr-9 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (filteredItems.length > 0) {
+                      const top = filteredItems[0];
+                      addToCart(top);
+                      if (top.stock <= 0) {
+                        toast.warning(`${top.name} is out of stock!`);
+                      } else {
+                        toast.success(`Added ${top.name}`);
+                      }
+                      setSearch("");
+                    }
+                  } else if (e.key === "Escape") {
+                    setSearch("");
+                  }
+                }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
             <div className="flex gap-1.5 shrink-0">
               <Button
@@ -896,17 +876,17 @@ function PosScreen() {
             </div>
           </div>
 
-          {/* Category Filter Pills */}
+          {/* Category Filter Pills (Quick filter for search) */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar text-xs">
             <button
               onClick={() => setSelectedCategory("all")}
-              className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all ${
+              className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === "all"
                   ? "bg-primary text-primary-foreground border-primary shadow-xs"
                   : "bg-card text-muted-foreground border-border hover:bg-muted"
               }`}
             >
-              All Items ({allItems.length})
+              All Categories ({allItems.length})
             </button>
             {categories.map((c: any) => {
               const count = allItems.filter((i) => i.category_id === c.id).length;
@@ -914,7 +894,7 @@ function PosScreen() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all ${
+                  className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === c.id
                       ? "bg-primary text-primary-foreground border-primary shadow-xs"
                       : "bg-card text-muted-foreground border-border hover:bg-muted"
@@ -927,97 +907,270 @@ function PosScreen() {
           </div>
         </div>
 
-        {/* Product Cards Grid */}
+        {/* Main Content Area: Search Results or Fast Pharmacy Dashboard */}
         <div className="flex-1 overflow-y-auto p-4">
           {productsLoading ? (
             <div className="flex items-center justify-center py-24 text-muted-foreground gap-2">
               <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span>Loading medicines & catalog…</span>
             </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-20 space-y-3">
-              <div className="h-12 w-12 rounded-2xl bg-muted/60 grid place-items-center mx-auto text-xl">📦</div>
-              <p className="text-sm font-semibold text-foreground">No products found</p>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                No items match your search or selected category. Clear filters or add new products in Products.
-              </p>
-              {(search || selectedCategory !== "all") && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedCategory("all");
-                  }}
-                  className="rounded-lg h-8 text-xs font-medium"
-                >
-                  Clear Filters
-                </Button>
+          ) : search.trim() || selectedCategory !== "all" ? (
+            /* Search Results Mode */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>
+                  Found <strong className="text-foreground">{filteredItems.length}</strong> matching medicine{filteredItems.length === 1 ? "" : "s"}
+                </span>
+                <span className="text-[11px]">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-muted border font-mono font-bold text-[10px]">Enter</kbd> to add top match
+                </span>
+              </div>
+
+              {filteredItems.length === 0 ? (
+                <div className="text-center py-16 space-y-3 bg-muted/20 rounded-2xl border border-dashed border-border/70 p-6">
+                  <div className="h-12 w-12 rounded-2xl bg-muted/60 grid place-items-center mx-auto text-xl">🔍</div>
+                  <p className="text-sm font-semibold text-foreground">No medicine found for "{search}"</p>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    Check spelling or search by SKU, generic name, or barcode.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSearch("");
+                      setSelectedCategory("all");
+                    }}
+                    className="rounded-lg h-8 text-xs font-medium cursor-pointer"
+                  >
+                    Clear Filter & Search
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-2xs divide-y divide-border/60">
+                  {filteredItems.slice(0, 50).map((item, idx) => {
+                    const inCart = cart.find((c) => c.variation_id === item.variation_id);
+                    const isOutOfStock = item.stock <= 0;
+                    return (
+                      <div
+                        key={item.variation_id}
+                        onClick={() => {
+                          addToCart(item);
+                          if (isOutOfStock) toast.warning(`${item.name} is out of stock!`);
+                        }}
+                        className={`p-3 flex items-center justify-between gap-3 hover:bg-muted/50 cursor-pointer transition-colors ${
+                          idx === 0 ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-10 w-10 rounded-xl bg-muted/70 grid place-items-center text-sm shrink-0 border border-border/50">
+                            {item.image ? (
+                              <img src={item.image} alt="" className="h-full w-full object-cover rounded-xl" />
+                            ) : (
+                              "💊"
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs sm:text-sm text-foreground truncate">
+                                {item.name}
+                                {item.variant_label ? ` — ${item.variant_label}` : ""}
+                              </span>
+                              {idx === 0 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold shrink-0">
+                                  Top Match (Enter)
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                              <span className="font-mono">SKU: {item.sub_sku}</span>
+                              {item.barcode && <span className="font-mono">· Barcode: {item.barcode}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                              item.stock > 10
+                                ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
+                                : item.stock > 0
+                                  ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
+                                  : "border-destructive/40 text-destructive bg-destructive/10"
+                            }`}
+                          >
+                            {item.stock > 0 ? `${item.stock} in stock` : "0 stock"}
+                          </Badge>
+
+                          <div className="text-right min-w-[70px]">
+                            <div className="text-sm font-bold text-primary">৳{item.price.toFixed(2)}</div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant={inCart ? "default" : "outline"}
+                            className="h-8 px-2.5 rounded-lg text-xs font-semibold gap-1 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(item);
+                              if (isOutOfStock) toast.warning(`${item.name} is out of stock!`);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>{inCart ? `Add (${inCart.quantity})` : "Add"}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-              {filteredItems.map((item) => {
-                const inCart = cart.find((c) => c.variation_id === item.variation_id);
-                const isOutOfStock = item.stock <= 0;
-                return (
-                  <button
-                    key={item.variation_id}
-                    onClick={() => {
-                      addToCart(item);
-                      if (isOutOfStock) toast.warning(`${item.name} is out of stock!`);
-                    }}
-                    className={`group relative text-left rounded-2xl border p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-md cursor-pointer ${
-                      inCart
-                        ? "border-primary/60 bg-primary/5 shadow-xs"
-                        : "border-border/80 bg-card hover:border-primary/40 hover:-translate-y-0.5"
-                    }`}
-                  >
-                    {inCart && (
-                      <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground shadow-sm animate-in zoom-in-75">
-                        {inCart.quantity}
-                      </span>
-                    )}
+            /* Default Pharmacy POS Workspace (Clean & Fast when no search) */
+            <div className="space-y-4">
+              {/* Ready Status Banner */}
+              <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Fast Pharmacy POS Ready
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Type medicine name/SKU in the search box above or scan with a barcode reader to add directly to sale cart.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 text-xs">
+                  <kbd className="px-2 py-1 rounded bg-background border font-mono font-bold text-xs shadow-2xs">F2</kbd>
+                  <span className="text-muted-foreground">Search</span>
+                </div>
+              </div>
 
-                    <div>
-                      <div className="flex items-start justify-between gap-1 mb-1.5">
-                        <div className="h-9 w-9 rounded-xl bg-muted/70 grid place-items-center text-sm shrink-0 border border-border/40">
-                          {item.image ? (
-                            <img src={item.image} alt="" className="h-full w-full object-cover rounded-xl" />
-                          ) : (
-                            "💊"
-                          )}
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-semibold px-1.5 py-0 rounded-md ${
-                            item.stock > 10
-                              ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
-                              : item.stock > 0
-                                ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
-                                : "border-destructive/40 text-destructive bg-destructive/10"
-                          }`}
-                        >
-                          {item.stock > 0 ? `${item.stock} in stock` : "0 stock"}
-                        </Badge>
-                      </div>
-
-                      <h3 className="font-semibold text-xs leading-snug text-foreground line-clamp-2">
-                        {item.name}
-                        {item.variant_label ? ` — ${item.variant_label}` : ""}
+              {/* Quick Actions Grid: Held Drafts & Recent Sales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Held Drafts Box */}
+                <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FolderArchive className="h-4 w-4 text-amber-500" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Held Drafts ({heldDrafts.length})
                       </h3>
-                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate">{item.sub_sku}</p>
                     </div>
+                    {heldDrafts.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDraftsModalOpen(true)}
+                        className="h-6 text-[11px] text-amber-600 hover:text-amber-700 cursor-pointer"
+                      >
+                        View all
+                      </Button>
+                    )}
+                  </div>
 
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/40">
-                      <span className="text-sm font-bold text-primary">৳{item.price.toFixed(2)}</span>
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                        <Plus className="h-3.5 w-3.5" />
-                      </span>
+                  {heldDrafts.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">No held orders. Press [F8] to hold an active cart.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {heldDrafts.slice(0, 3).map((d: any) => (
+                        <div
+                          key={d.id}
+                          className="flex items-center justify-between p-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-foreground font-mono">{d.invoice_no}</span>
+                            <span className="text-muted-foreground ml-2">৳{Number(d.final_total || 0).toFixed(2)}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => resumeDraft(d)}
+                            className="h-7 px-2 text-[11px] font-semibold text-amber-700 border-amber-500/40 cursor-pointer"
+                          >
+                            Resume
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  </button>
-                );
-              })}
+                  )}
+                </div>
+
+                {/* Recent Invoices Box */}
+                <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Recent Sales ({recentSales.length})
+                      </h3>
+                    </div>
+                    {recentSales.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRecentSalesModalOpen(true)}
+                        className="h-6 text-[11px] text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        View all
+                      </Button>
+                    )}
+                  </div>
+
+                  {recentSales.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">Completed sales will appear here for instant reprint.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {recentSales.slice(0, 3).map((s: any) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between p-2 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-xs"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-foreground font-mono">{s.invoice_no}</span>
+                            <span className="text-muted-foreground ml-2">৳{Number(s.final_total || 0).toFixed(2)}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => triggerReprintSale(s.id)}
+                            className="h-7 px-2 text-[11px] font-semibold text-blue-700 border-blue-500/40 gap-1 cursor-pointer"
+                          >
+                            <Printer className="h-3 w-3" /> Reprint
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Keyboard Shortcuts Reference */}
+              <div className="rounded-2xl border border-border/80 bg-card p-4 space-y-2.5 shadow-2xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Quick Keyboard Navigation
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F2</kbd>
+                    <span className="text-muted-foreground">Focus Search</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">Enter</kbd>
+                    <span className="text-muted-foreground">Add Top Match</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F4</kbd>
+                    <span className="text-muted-foreground">Finalize Sale</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[11px]">F8</kbd>
+                    <span className="text-muted-foreground">Hold Draft</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1035,7 +1188,7 @@ function PosScreen() {
               <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[10px]">F8</kbd> Hold Draft
             </span>
           </div>
-          <span>Showing {filteredItems.length} of {allItems.length} medicines</span>
+          <span>{allItems.length} medicines in catalog</span>
         </div>
       </div>
 
