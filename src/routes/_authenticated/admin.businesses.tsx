@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Building2, Search, Save, ArrowRightLeft, Users, Trash2, Sparkles, AlertTriangle } from "lucide-react";
+import { Building2, Search, Save, ArrowRightLeft, Users, Trash2, Sparkles, AlertTriangle, Crown, ShieldCheck } from "lucide-react";
 
 import { ALL_SECTIONS, expandSections, PRESETS } from "@/hooks/use-allowed-sections";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -11,6 +11,7 @@ import {
   listBusinessesWithMembers,
   setMemberSections,
   setBusinessSections,
+  setOwnerSections,
   moveDoctorToOwnBusiness,
   deleteBusiness,
   removeMemberFromBusiness,
@@ -69,6 +70,7 @@ function AdminBusinessesPage() {
   const list = useServerFn(listBusinessesWithMembers);
   const saveMember = useServerFn(setMemberSections);
   const saveBusiness = useServerFn(setBusinessSections);
+  const saveOwner = useServerFn(setOwnerSections);
   const moveDoctor = useServerFn(moveDoctorToOwnBusiness);
   const removeBiz = useServerFn(deleteBusiness);
   const removeMember = useServerFn(removeMemberFromBusiness);
@@ -84,6 +86,15 @@ function AdminBusinessesPage() {
     qc.invalidateQueries({ queryKey: ["admin-businesses"] });
     qc.invalidateQueries({ queryKey: ["allowed-sections"] });
   };
+
+  const ownerMut = useMutation({
+    mutationFn: (v: { business_id: string; sections: string[] | null }) => saveOwner({ data: v }),
+    onSuccess: () => {
+      toast.success("Modules strictly saved for the business owner");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save modules for owner"),
+  });
 
   const memberMut = useMutation({
     mutationFn: (v: { business_id: string; user_id: string; sections: string[] | null }) =>
@@ -214,12 +225,14 @@ function AdminBusinessesPage() {
             key={b.id}
             biz={b}
             busy={
+              ownerMut.isPending ||
               memberMut.isPending ||
               bizMut.isPending ||
               moveMut.isPending ||
               deleteMut.isPending ||
               removeMemberMut.isPending
             }
+            onSaveOwner={(sections) => ownerMut.mutate({ business_id: b.id, sections })}
             onSaveMember={(user_id, sections) =>
               memberMut.mutate({ business_id: b.id, user_id, sections })
             }
@@ -254,6 +267,7 @@ function BusinessCard({
   biz,
   busy,
   onSaveMember,
+  onSaveOwner,
   onSaveAll,
   onMoveDoctor,
   onRemoveMember,
@@ -262,13 +276,32 @@ function BusinessCard({
   biz: BizRow;
   busy: boolean;
   onSaveMember: (userId: string, sections: string[] | null) => void;
+  onSaveOwner: (sections: string[] | null) => void;
   onSaveAll: (sections: string[] | null) => void;
   onMoveDoctor: (userId: string) => void;
   onRemoveMember: (userId: string, deleteAccount?: boolean) => void;
   onDelete: () => void;
 }) {
   const options = useSectionOptions();
-  const [bulk, setBulk] = useState<string[]>([]);
+
+  const ownerMember = useMemo(
+    () => biz.members.find((m) => m.user_id === biz.owner_id),
+    [biz.members, biz.owner_id],
+  );
+
+  const [bulk, setBulk] = useState<string[]>(() => {
+    if (ownerMember && Array.isArray(ownerMember.sections)) {
+      return expandSections(ownerMember.sections) ?? [];
+    }
+    return [];
+  });
+
+  // Keep bulk checkboxes in sync when owner sections update from server
+  useEffect(() => {
+    if (ownerMember && Array.isArray(ownerMember.sections)) {
+      setBulk(expandSections(ownerMember.sections) ?? []);
+    }
+  }, [ownerMember?.sections]);
 
   return (
     <Card className="overflow-hidden border border-border/70 shadow-sm">
@@ -283,8 +316,9 @@ function BusinessCard({
             <Users className="h-3.5 w-3.5" /> {biz.members.length} {biz.members.length === 1 ? "member" : "members"}
           </span>
           {biz.owner_email && (
-            <span className="text-xs font-normal text-muted-foreground">
-              owner: <span className="font-mono">{biz.owner_email}</span>
+            <span className="text-xs font-normal text-muted-foreground flex items-center gap-1">
+              <Crown className="h-3.5 w-3.5 text-amber-500" />
+              owner: <span className="font-mono font-medium text-foreground">{biz.owner_email}</span>
             </span>
           )}
           <Button
@@ -303,11 +337,18 @@ function BusinessCard({
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                GIVE THESE MODULES TO EVERY MEMBER
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Mark the checkboxes to grant exact access, or use presets for instant setup ({bulk.length} of {options.length} selected).
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                  GIVE THESE MODULES TO EVERY MEMBER / OWNER
+                </p>
+                {biz.owner_email && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                    <Crown className="mr-1 h-3 w-3 inline text-amber-600" /> Owner: {biz.owner_email}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Mark the checkboxes to grant exact access ({bulk.length} of {options.length} selected). Apply to owner only or to all members.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -375,19 +416,51 @@ function BusinessCard({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
             <Button
               size="sm"
+              className="h-8 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+              disabled={busy || !biz.owner_id}
+              onClick={() => {
+                if (!biz.owner_id) {
+                  toast.error("No owner assigned to this business");
+                  return;
+                }
+                onSaveOwner(bulk);
+              }}
+            >
+              <Crown className="mr-1.5 h-3.5 w-3.5" /> Apply ({bulk.length} modules) to Owner Only
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
               className="h-8 text-xs font-semibold"
               disabled={busy}
               onClick={() => onSaveAll(bulk)}
             >
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Apply ({bulk.length} modules) to all members
+              <Users className="mr-1.5 h-3.5 w-3.5" /> Apply ({bulk.length} modules) to all members
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-xs"
+              className="h-8 text-xs text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+              disabled={busy || !biz.owner_id}
+              onClick={() => {
+                if (!biz.owner_id) {
+                  toast.error("No owner assigned to this business");
+                  return;
+                }
+                if (window.confirm(`Give Full Access (unrestricted) to owner only (${biz.owner_email || "Owner"})?`)) {
+                  onSaveOwner(null);
+                }
+              }}
+            >
+              Full Access (Owner Only)
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={() => {
                 if (window.confirm("Give unlimited full access (no module restrictions) to all members?")) {
@@ -395,7 +468,7 @@ function BusinessCard({
                 }
               }}
             >
-              Give Full Access (All modules)
+              Full Access (All modules)
             </Button>
           </div>
         </div>
@@ -471,6 +544,11 @@ function MemberRow({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold">{member.name}</span>
         <span className="text-xs font-mono text-muted-foreground">{member.email}</span>
+        {member.is_owner && (
+          <Badge className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 gap-1 font-semibold">
+            <Crown className="h-3 w-3 inline" /> Business Owner
+          </Badge>
+        )}
         {member.role && (
           <Badge variant="outline" className="text-[10px]">
             {member.role}

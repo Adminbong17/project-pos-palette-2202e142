@@ -18,8 +18,8 @@ export type Business = {
 export function useCurrentBusiness() {
   return useQuery({
     queryKey: ["current-business"],
-    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
-    gcTime: 30 * 60 * 1000,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
@@ -32,14 +32,34 @@ export function useCurrentBusiness() {
 
       let bizId = profile?.current_business_id ?? null;
       if (bizId) {
-        const { data: activeCurrent } = await supabase
-          .from("business_users")
-          .select("business_id")
-          .eq("user_id", userId)
-          .eq("business_id", bizId)
-          .eq("is_active", true)
+        // Owner always belongs to their business
+        const { data: isOwner } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("id", bizId)
+          .eq("owner_id", userId)
           .maybeSingle();
-        if (!activeCurrent) bizId = null;
+
+        if (!isOwner) {
+          const { data: activeCurrent } = await supabase
+            .from("business_users")
+            .select("business_id")
+            .eq("user_id", userId)
+            .eq("business_id", bizId)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (!activeCurrent) bizId = null;
+        }
+      }
+      if (!bizId) {
+        // Fall back to business owned by this user
+        const { data: ownedBiz } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("owner_id", userId)
+          .limit(1)
+          .maybeSingle();
+        bizId = ownedBiz?.id ?? null;
       }
       if (!bizId) {
         // fall back to first active membership

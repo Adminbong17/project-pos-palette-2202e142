@@ -172,20 +172,20 @@ export function useAllowedSections() {
       const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
       if (!userId) return expandSections(DEFAULT_SALESMAN);
 
-      const { data: ur } = await supabase
+      const { data: urRows } = await supabase
         .from("user_roles")
         .select("role_id, allowed_sections")
         .eq("user_id", userId)
-        .eq("business_id", business!.id)
-        .maybeSingle();
+        .eq("business_id", business!.id);
 
-      if (!ur) return isAdmin ? null : expandSections(DEFAULT_SALESMAN);
-
-      const userOverride = (ur as any).allowed_sections as string[] | null;
       // If the admin explicitly marked an array of modules (even empty []), strictly enforce it.
-      if (Array.isArray(userOverride)) {
-        return expandSections(userOverride) ?? [];
+      const explicitRow = (urRows ?? []).find((r: any) => Array.isArray(r.allowed_sections));
+      if (explicitRow) {
+        return expandSections(explicitRow.allowed_sections) ?? [];
       }
+
+      const ur = urRows?.[0] ?? null;
+      if (!ur) return isAdmin ? null : expandSections(DEFAULT_SALESMAN);
 
       if (isAdmin && !ur.role_id) return null;
 

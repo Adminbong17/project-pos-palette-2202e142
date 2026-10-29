@@ -10,6 +10,7 @@ export type BizMember = {
   role: string | null;
   sections: string[] | null;
   is_active: boolean;
+  is_owner?: boolean;
 };
 
 export type BizRow = {
@@ -59,11 +60,26 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
         return true;
       });
 
+      // Ensure the business owner is ALWAYS included in members!
+      if (b.owner_id && profileById.has(b.owner_id) && !seenUserIds.has(b.owner_id)) {
+        seenUserIds.add(b.owner_id);
+        const ownerProf: any = profileById.get(b.owner_id);
+        const ownerEmail = String(ownerProf?.email ?? "").toLowerCase().trim();
+        if (ownerEmail && ownerEmail !== "—") seenEmails.add(ownerEmail);
+        rows.unshift({
+          user_id: b.owner_id,
+          business_id: b.id,
+          is_active: true,
+        });
+      }
+
       const memberList: BizMember[] = rows.map((m: any) => {
         const p: any = profileById.get(m.user_id) ?? {};
         const ur: any = (userRoles ?? []).find(
           (r: any) => r.user_id === m.user_id && r.business_id === b.id,
         );
+        const isOwner = m.user_id === b.owner_id;
+        const assignedRole = ur?.role_id ? (roleById.get(ur.role_id) ?? null) : null;
         return {
           user_id: m.user_id,
           name:
@@ -72,9 +88,10 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
             p.email ||
             "—",
           email: p.email ?? "—",
-          role: ur?.role_id ? (roleById.get(ur.role_id) ?? null) : null,
+          role: isOwner ? (assignedRole ? `Owner (${assignedRole})` : "Owner / Admin") : assignedRole,
           sections: (ur?.allowed_sections as string[] | null) ?? null,
           is_active: !!m.is_active,
+          is_owner: isOwner,
         };
       });
       const owner: any = b.owner_id ? profileById.get(b.owner_id) : null;
@@ -85,7 +102,11 @@ export const listBusinessesWithMembers = createServerFn({ method: "POST" })
         clinic_mode: !!b.clinic_mode,
         owner_id: b.owner_id ?? null,
         owner_email: owner?.email ?? null,
-        members: memberList.sort((a, z) => a.name.localeCompare(z.name)),
+        members: memberList.sort((a, z) => {
+          if (a.user_id === b.owner_id) return -1;
+          if (z.user_id === b.owner_id) return 1;
+          return a.name.localeCompare(z.name);
+        }),
       };
     });
   });
@@ -106,38 +127,61 @@ export const setMemberSections = createServerFn({ method: "POST" })
       ? Array.from(new Set(data.sections.filter((s): s is string => typeof s === "string" && s.trim().length > 0)))
       : null;
 
-    // Check if user_role row exists
-    const { data: existing } = await supabaseAdmin
+    // Check if user is owner of this business
+    const { data: biz } = await supabaseAdmin
+      .from("businesses")
+      .select("owner_id")
+      .eq("id", data.business_id)
+      .maybeSingle();
+
+    const isOwner = biz?.owner_id === data.user_id;
+
+    // Check if user_role row exists (fetch all to avoid maybeSingle crash on duplicate legacy rows)
+    const { data: existingRoles } = await supabaseAdmin
       .from("user_roles")
       .select("id")
       .eq("business_id", data.business_id)
-      .eq("user_id", data.user_id)
-      .maybeSingle();
+      .eq("user_id", data.user_id);
 
-    if (existing) {
+    if (existingRoles && existingRoles.length > 0) {
       const { error } = await supabaseAdmin
         .from("user_roles")
         .update({ allowed_sections: cleanedSections })
-        .eq("id", existing.id);
+        .eq("business_id", data.business_id)
+        .eq("user_id", data.user_id);
       if (error) throw new Error(error.message);
     } else {
-      // Find role for this business
-      const { data: role } = await supabaseAdmin
-        .from("roles")
-        .select("id")
-        .eq("business_id", data.business_id)
-        .order("is_default", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Find role for this business (prefer Admin if owner)
+      let roleId: string | undefined;
+      if (isOwner) {
+        const { data: adminRole } = await supabaseAdmin
+          .from("roles")
+          .select("id")
+          .eq("business_id", data.business_id)
+          .ilike("name", "Admin%")
+          .limit(1)
+          .maybeSingle();
+        roleId = adminRole?.id;
+      }
 
-      let roleId = role?.id;
+      if (!roleId) {
+        const { data: role } = await supabaseAdmin
+          .from("roles")
+          .select("id")
+          .eq("business_id", data.business_id)
+          .order("is_default", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        roleId = role?.id;
+      }
+
       if (!roleId) {
         const { data: newRole, error: roleErr } = await supabaseAdmin
           .from("roles")
           .insert({
             business_id: data.business_id,
-            name: "Member",
-            is_default: true,
+            name: isOwner ? "Admin" : "Member",
+            is_default: !isOwner,
           })
           .select("id")
           .single();
@@ -164,10 +208,113 @@ export const setMemberSections = createServerFn({ method: "POST" })
         { onConflict: "business_id,user_id" },
       );
 
+    if (isOwner) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ current_business_id: data.business_id })
+        .eq("id", data.user_id);
+    }
+
     return { ok: true };
   });
 
-/** Give the same module list to every member of a business. */
+/** Strictly save allowed modules for the business owner only. */
+export const setOwnerSections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { business_id: string; sections: string[] | null }) => {
+    if (!data?.business_id) throw new Error("business_id required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Fetch business and owner_id
+    const { data: biz, error: bizErr } = await supabaseAdmin
+      .from("businesses")
+      .select("id, name, owner_id")
+      .eq("id", data.business_id)
+      .single();
+
+    if (bizErr || !biz) throw new Error("Business not found");
+    if (!biz.owner_id) throw new Error("This business does not have an owner assigned");
+
+    const ownerId = biz.owner_id;
+
+    // Clean up sections list: null = full access; array = strictly that set
+    const cleanedSections = Array.isArray(data.sections)
+      ? Array.from(new Set(data.sections.filter((s): s is string => typeof s === "string" && s.trim().length > 0)))
+      : null;
+
+    // 2. Ensure owner is active in business_users
+    await supabaseAdmin
+      .from("business_users")
+      .upsert(
+        { business_id: data.business_id, user_id: ownerId, is_active: true },
+        { onConflict: "business_id,user_id" },
+      );
+
+    // 3. Ensure owner's profile points to this business
+    await supabaseAdmin
+      .from("profiles")
+      .update({ current_business_id: data.business_id })
+      .eq("id", ownerId);
+
+    // 4. Ensure Admin role exists for this business
+    let { data: adminRole } = await supabaseAdmin
+      .from("roles")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .ilike("name", "Admin%")
+      .limit(1)
+      .maybeSingle();
+
+    if (!adminRole) {
+      const { data: newRole } = await supabaseAdmin
+        .from("roles")
+        .insert({
+          business_id: data.business_id,
+          name: "Admin",
+          is_default: false,
+        })
+        .select("id")
+        .single();
+      adminRole = newRole;
+    }
+
+    // 5. Update or insert owner's user_roles
+    const { data: existingRoles } = await supabaseAdmin
+      .from("user_roles")
+      .select("id")
+      .eq("business_id", data.business_id)
+      .eq("user_id", ownerId);
+
+    if (existingRoles && existingRoles.length > 0) {
+      const { error: updErr } = await supabaseAdmin
+        .from("user_roles")
+        .update({
+          allowed_sections: cleanedSections,
+          role_id: adminRole?.id ?? undefined,
+        })
+        .eq("business_id", data.business_id)
+        .eq("user_id", ownerId);
+      if (updErr) throw new Error(updErr.message);
+    } else {
+      const { error: insErr } = await supabaseAdmin
+        .from("user_roles")
+        .insert({
+          business_id: data.business_id,
+          user_id: ownerId,
+          role_id: adminRole?.id ?? null,
+          allowed_sections: cleanedSections,
+        });
+      if (insErr) throw new Error(insErr.message);
+    }
+
+    return { ok: true, owner_id: ownerId };
+  });
+
+/** Give the same module list to every member of a business (including the owner). */
 export const setBusinessSections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { business_id: string; sections: string[] | null }) => {
@@ -188,7 +335,55 @@ export const setBusinessSections = createServerFn({ method: "POST" })
       .update({ allowed_sections: cleanedSections })
       .eq("business_id", data.business_id);
 
-    // 2. Fetch all members in business_users for this business
+    // 2. Ensure business owner is active and updated
+    const { data: biz } = await supabaseAdmin
+      .from("businesses")
+      .select("owner_id")
+      .eq("id", data.business_id)
+      .maybeSingle();
+
+    if (biz?.owner_id) {
+      await supabaseAdmin
+        .from("business_users")
+        .upsert(
+          { business_id: data.business_id, user_id: biz.owner_id, is_active: true },
+          { onConflict: "business_id,user_id" },
+        );
+
+      const { data: ownerRoles } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("business_id", data.business_id)
+        .eq("user_id", biz.owner_id);
+
+      if (!ownerRoles || ownerRoles.length === 0) {
+        let { data: adminRole } = await supabaseAdmin
+          .from("roles")
+          .select("id")
+          .eq("business_id", data.business_id)
+          .ilike("name", "Admin%")
+          .limit(1)
+          .maybeSingle();
+
+        if (!adminRole) {
+          const { data: newRole } = await supabaseAdmin
+            .from("roles")
+            .insert({ business_id: data.business_id, name: "Admin", is_default: false })
+            .select("id")
+            .single();
+          adminRole = newRole;
+        }
+
+        await supabaseAdmin.from("user_roles").insert({
+          business_id: data.business_id,
+          user_id: biz.owner_id,
+          role_id: adminRole?.id ?? null,
+          allowed_sections: cleanedSections,
+        });
+      }
+    }
+
+    // 3. Fetch all members in business_users for this business
     const { data: members } = await supabaseAdmin
       .from("business_users")
       .select("user_id")
@@ -237,7 +432,7 @@ export const setBusinessSections = createServerFn({ method: "POST" })
       }
     }
 
-    // 3. Update the default role allowed_sections as well
+    // 4. Update the default role allowed_sections as well
     await supabaseAdmin
       .from("roles")
       .update({ allowed_sections: cleanedSections })
