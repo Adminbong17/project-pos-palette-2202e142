@@ -15,9 +15,9 @@ export function useCurrentRole() {
   const { data: business, isLoading: bizLoading } = useCurrentBusiness();
   const q = useQuery({
     queryKey: ["current-role", business?.id],
-    enabled: !!business?.id,
-    staleTime: 15 * 1000,
-    gcTime: 5 * 60 * 1000,
+    enabled: !isSuperAdmin && !!business?.id,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("current_user_role_name", {
         _business_id: business!.id,
@@ -28,7 +28,7 @@ export function useCurrentRole() {
   });
   return {
     role: isSuperAdmin ? "Admin" : (q.data ?? null),
-    isLoading: bizLoading || q.isLoading,
+    isLoading: isSuperAdmin ? false : (bizLoading || q.isLoading),
     isSalesman: !isSuperAdmin && q.data === "Salesman",
     isAdmin: isSuperAdmin || q.data === "Admin",
     isDoctor: !isSuperAdmin && q.data === "Doctor",

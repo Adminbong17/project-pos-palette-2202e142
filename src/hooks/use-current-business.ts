@@ -18,12 +18,13 @@ export type Business = {
 export function useCurrentBusiness() {
   return useQuery({
     queryKey: ["current-business"],
-    staleTime: 30 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // Fresh cache for 10 minutes — fast navigation without re-fetching
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
       if (!userId) return null;
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("current_business_id")
@@ -31,16 +32,23 @@ export function useCurrentBusiness() {
         .maybeSingle();
 
       let bizId = profile?.current_business_id ?? null;
+
+      // Fast path: fetch business directly
       if (bizId) {
-        // Owner always belongs to their business
-        const { data: isOwner } = await supabase
+        const { data: directBiz } = await supabase
           .from("businesses")
-          .select("id")
+          .select(
+            "id, name, owner_id, currency_id, sku_prefix, logo, time_zone, clinic_mode, clinic_type, notify_phone, address",
+          )
           .eq("id", bizId)
-          .eq("owner_id", userId)
           .maybeSingle();
 
-        if (!isOwner) {
+        if (directBiz) {
+          // If user owns it, return immediately (zero extra network calls!)
+          if (directBiz.owner_id === userId) {
+            return directBiz as Business;
+          }
+          // If user is an active member, return immediately
           const { data: activeCurrent } = await supabase
             .from("business_users")
             .select("business_id")
@@ -48,11 +56,15 @@ export function useCurrentBusiness() {
             .eq("business_id", bizId)
             .eq("is_active", true)
             .maybeSingle();
-          if (!activeCurrent) bizId = null;
+          if (activeCurrent) {
+            return directBiz as Business;
+          }
         }
+        bizId = null;
       }
+
+      // Fallback 1: Business owned by this user
       if (!bizId) {
-        // Fall back to business owned by this user
         const { data: ownedBiz } = await supabase
           .from("businesses")
           .select("id")
@@ -61,8 +73,9 @@ export function useCurrentBusiness() {
           .maybeSingle();
         bizId = ownedBiz?.id ?? null;
       }
+
+      // Fallback 2: First active business membership
       if (!bizId) {
-        // fall back to first active membership
         const { data: bu } = await supabase
           .from("business_users")
           .select("business_id")
@@ -72,8 +85,9 @@ export function useCurrentBusiness() {
           .maybeSingle();
         bizId = bu?.business_id ?? null;
       }
+
+      // Fallback 3: First available business on platform
       if (!bizId) {
-        // Fallback: pick the first available business on platform (e.g. Sheikh Pharma)
         const { data: firstBiz } = await supabase
           .from("businesses")
           .select("id")
@@ -81,6 +95,7 @@ export function useCurrentBusiness() {
           .maybeSingle();
         bizId = firstBiz?.id ?? null;
       }
+
       if (!bizId) return null;
 
       const { data: biz } = await supabase

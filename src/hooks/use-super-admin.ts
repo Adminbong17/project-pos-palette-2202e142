@@ -8,12 +8,14 @@ export { SUPER_ADMIN_EMAIL, SUPER_ADMIN_EMAILS, isSuperAdminEmail };
 export function useIsSuperAdmin() {
   const q = useQuery({
     queryKey: ["is-super-admin"],
-    staleTime: 15 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     queryFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      const email = sessionData.session?.user?.email ?? (await supabase.auth.getUser()).data.user?.email ?? "";
-      return isSuperAdminEmail(email);
+      const email = sessionData.session?.user?.email;
+      if (email) return isSuperAdminEmail(email);
+      const { data } = await supabase.auth.getUser();
+      return isSuperAdminEmail(data.user?.email ?? "");
     },
   });
   return { isSuperAdmin: !!q.data, isLoading: q.isLoading };
