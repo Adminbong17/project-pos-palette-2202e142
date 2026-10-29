@@ -34,7 +34,7 @@ function Dashboard() {
     gcTime: 15 * 60 * 1000,
     queryFn: async () => {
       const [salesRpc, productsCount, customersCount, locationsCount] = await Promise.all([
-        supabase.rpc("get_business_sales_total", { _business_id: businessId! }),
+        supabase.rpc("get_business_sales_total" as any, { _business_id: businessId! }),
         supabase.from("products").select("*", { count: "exact", head: true })
           .eq("business_id", businessId!),
         supabase.from("contacts").select("*", { count: "exact", head: true })
