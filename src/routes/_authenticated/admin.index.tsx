@@ -222,7 +222,8 @@ function AdminHubPage() {
     queryKey: ["super-admin-master-metrics"],
     enabled: !!isSuperAdmin,
     queryFn: () => fetchMetrics({ data: undefined as never }),
-    refetchInterval: 30000, // 30 sec auto-refresh
+    staleTime: 60_000,
+    refetchInterval: 120000, // 2 min auto-refresh (30s was too heavy for the main thread)
   });
 
   // Manual Backup Mutation

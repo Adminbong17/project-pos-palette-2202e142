@@ -150,26 +150,30 @@ function PosScreen() {
   }, [cart.length]);
 
   // Keyboard Shortcuts (F2: Search focus, F4: Finalize, F8: Hold / Draft)
+  // The listener is registered ONCE; latest cart/save state is read via a ref
+  // so it never goes stale and is never torn down / re-added on cart changes.
+  const shortcutStateRef = useRef<{ cartLen: number; save: any }>({ cartLen: 0, save: null });
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const { cartLen, save: s } = shortcutStateRef.current;
       if (e.key === "F2") {
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === "F4") {
         e.preventDefault();
-        if (cart.length > 0 && !save.isPending) {
-          save.mutate(false);
+        if (cartLen > 0 && s && !s.isPending) {
+          s.mutate(false);
         }
       } else if (e.key === "F8") {
         e.preventDefault();
-        if (cart.length > 0 && !save.isPending) {
-          save.mutate(true);
+        if (cartLen > 0 && s && !s.isPending) {
+          s.mutate(true);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart.length]);
+  }, []);
 
   // Locations — auto-pick first
   const { data: locations = [] } = useQuery({
@@ -185,11 +189,12 @@ function PosScreen() {
     enabled: !!business,
   });
 
+  const firstLocationId = (locations[0] as any)?.id as string | undefined;
   useEffect(() => {
-    if (!locationId && locations.length > 0) {
-      setLocationId(locations[0].id);
+    if (!locationId && firstLocationId) {
+      setLocationId(firstLocationId);
     }
-  }, [locationId, locations]);
+  }, [locationId, firstLocationId]);
 
   const currentLocation = locations.find((l: any) => l.id === locationId) as any;
   const locAddress =
@@ -551,6 +556,9 @@ function PosScreen() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Keep the keyboard-shortcut handler's view of state current (no re-subscribe).
+  shortcutStateRef.current = { cartLen: cart.length, save };
 
   // Resume Draft into Cart
   async function resumeDraft(draft: any) {

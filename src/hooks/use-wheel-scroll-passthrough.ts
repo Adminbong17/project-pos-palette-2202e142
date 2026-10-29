@@ -19,12 +19,18 @@ export function useWheelScrollPassthrough<T extends HTMLElement>() {
       if (!dy) return;
 
       let node = e.target as HTMLElement | null;
-      while (node && node !== el) {
-        const style = getComputedStyle(node);
-        if (/(auto|scroll|overlay)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
-          const atTop = node.scrollTop <= 0;
-          const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
-          if ((dy < 0 && !atTop) || (dy > 0 && !atBottom)) return; // inner scroller handles it
+      let depth = 0;
+      while (node && node !== el && depth < 25) {
+        depth++;
+        // Cheap overflow check first — only pay for getComputedStyle on
+        // elements that actually have overflowing content.
+        if (node.scrollHeight > node.clientHeight + 1) {
+          const overflowY = getComputedStyle(node).overflowY;
+          if (/(auto|scroll|overlay)/.test(overflowY)) {
+            const atTop = node.scrollTop <= 0;
+            const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+            if ((dy < 0 && !atTop) || (dy > 0 && !atBottom)) return; // inner scroller handles it
+          }
         }
         node = node.parentElement;
       }

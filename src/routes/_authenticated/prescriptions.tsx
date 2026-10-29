@@ -728,6 +728,9 @@ function PrescriptionsPage() {
   };
 
   // Saved vitals load asynchronously — keep them present as defaults on a new Rx.
+  // Keyed on the vitals' names (not the array reference) so a fresh-but-equal
+  // array from the query never re-fires this effect.
+  const myVitalsKey = myVitals.items.map((v) => v.name.toLowerCase()).join("|");
   useEffect(() => {
     if (!open || editing || myVitals.items.length === 0) return;
     setExtraVitals((prev) => {
@@ -736,7 +739,8 @@ function PrescriptionsPage() {
         .map((v) => ({ name: v.name, value: "" }));
       return missing.length ? [...prev, ...missing] : prev;
     });
-  }, [open, editing, myVitals.items]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing, myVitalsKey]);
 
   const openEdit = async (rx: Rx) => {
     setEditing(rx);
@@ -1627,8 +1631,10 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click — only listen while the dropdown is open,
+  // so N medicine rows don't keep N permanent document listeners.
   useEffect(() => {
+    if (!isOpen) return;
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -1636,7 +1642,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const query = (line.medicine_name || "").trim();
   const deferredSearch = useDeferredValue(query);

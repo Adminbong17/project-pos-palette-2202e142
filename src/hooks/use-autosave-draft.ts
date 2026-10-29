@@ -44,6 +44,9 @@ export function useAutosaveDraft<T>(
   // saved snapshot blocked until the user changes the form into a new draft.
   const blockUntilRef = useRef(0);
   const clearedSignatureRef = useRef<string | null>(null);
+  // Last payload actually written to localStorage (key|json) — lets flush skip
+  // redundant synchronous writes.
+  const lastWrittenRef = useRef<string | null>(null);
 
   const getSignature = useCallback((value: T) => {
     try {
@@ -58,6 +61,7 @@ export function useAutosaveDraft<T>(
     blockUntilRef.current = Date.now() + 2000;
     if (!storageKey || typeof window === "undefined") return;
     try {
+      lastWrittenRef.current = null;
       window.localStorage.removeItem(storageKey);
     } catch {
       /* ignore */
@@ -72,18 +76,26 @@ export function useAutosaveDraft<T>(
       const signature = getSignature(current);
       if (isEmptyRef.current?.(current)) {
         clearedSignatureRef.current = null;
-        window.localStorage.removeItem(storageKey);
+        lastWrittenRef.current = null;
+      window.localStorage.removeItem(storageKey);
         return;
       }
       if (clearedSignatureRef.current === signature) {
-        window.localStorage.removeItem(storageKey);
+        lastWrittenRef.current = null;
+      window.localStorage.removeItem(storageKey);
         return;
       }
       clearedSignatureRef.current = null;
+      // Skip the synchronous localStorage write when nothing changed since the
+      // last flush — the periodic 3s safety flush would otherwise rewrite the
+      // same payload forever and block the main thread on large drafts.
+      const dataJson = signature; // signature is already JSON.stringify(current)
+      if (lastWrittenRef.current === storageKey + '|' + dataJson) return;
       window.localStorage.setItem(
         storageKey,
         JSON.stringify({ version: VERSION, at: Date.now(), signature, data: current }),
       );
+      lastWrittenRef.current = storageKey + '|' + dataJson;
     } catch {
       /* quota / private mode — ignore */
     }
@@ -105,12 +117,14 @@ export function useAutosaveDraft<T>(
       if (raw) {
         const parsed = JSON.parse(raw) as { version?: number; at?: number; data?: T };
         if (parsed.version !== VERSION) {
-          window.localStorage.removeItem(storageKey);
+          lastWrittenRef.current = null;
+      window.localStorage.removeItem(storageKey);
         } else if (parsed?.data !== undefined && Date.now() - (parsed.at ?? 0) < MAX_AGE_MS) {
           restoreRef.current(parsed.data);
           toast.info(restoreMessage);
         } else {
-          window.localStorage.removeItem(storageKey);
+          lastWrittenRef.current = null;
+      window.localStorage.removeItem(storageKey);
         }
       }
     } catch {
@@ -124,7 +138,8 @@ export function useAutosaveDraft<T>(
     if (!storageKey || !enabled || !readyRef.current) return;
     if (isEmptyRef.current?.(data)) {
       try {
-        window.localStorage.removeItem(storageKey);
+        lastWrittenRef.current = null;
+      window.localStorage.removeItem(storageKey);
       } catch {
         /* ignore */
       }
