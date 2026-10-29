@@ -53,6 +53,8 @@ type CartLine = {
   unit_price: number;
   quantity: number;
   total_amount: number;
+  qty_str?: string;
+  total_str?: string;
 };
 
 type SaleSnapshot = {
@@ -402,8 +404,10 @@ function PosScreen() {
           sub_sku: item.sub_sku,
           original_price: item.price,
           unit_price: item.price,
-          quantity: 1,
-          total_amount: item.price,
+          quantity: 0,
+          total_amount: 0,
+          qty_str: "",
+          total_str: "",
         },
       ];
     });
@@ -424,29 +428,44 @@ function PosScreen() {
     }, 0);
   }
 
-  function updateQty(variation_id: string, q: number) {
-    if (q <= 0) {
-      removeLine(variation_id);
-      return;
-    }
+  function handleQtyChange(variation_id: string, rawVal: string) {
     setCart((c) =>
       c.map((l) => {
         if (l.variation_id !== variation_id) return l;
-        const qty = Math.max(0, q);
-        const unit_price = l.unit_price > 0 ? l.unit_price : l.original_price;
-        return { ...l, quantity: qty, total_amount: Number((unit_price * qty).toFixed(2)) };
-      }),
+        if (rawVal === "") {
+          return { ...l, qty_str: "", quantity: 0 };
+        }
+        const q = Math.max(0, Number(rawVal) || 0);
+        return { ...l, qty_str: rawVal, quantity: q };
+      })
     );
   }
 
-  function updateTotal(variation_id: string, t: number) {
+  function handleTotalChange(variation_id: string, rawVal: string) {
     setCart((c) =>
       c.map((l) => {
         if (l.variation_id !== variation_id) return l;
-        const total_amount = Math.max(0, t);
-        const unit_price = l.quantity > 0 ? total_amount / l.quantity : 0;
-        return { ...l, total_amount, unit_price };
-      }),
+        if (rawVal === "") {
+          return { ...l, total_str: "", total_amount: 0 };
+        }
+        const t = Math.max(0, Number(rawVal) || 0);
+        return { ...l, total_str: rawVal, total_amount: t };
+      })
+    );
+  }
+
+  function adjustQty(variation_id: string, delta: number) {
+    setCart((c) =>
+      c.map((l) => {
+        if (l.variation_id !== variation_id) return l;
+        const currentQ = l.quantity || 0;
+        const nextQ = Math.max(0, currentQ + delta);
+        return {
+          ...l,
+          quantity: nextQ,
+          qty_str: nextQ === 0 ? "" : String(nextQ),
+        };
+      })
     );
   }
 
@@ -465,9 +484,25 @@ function PosScreen() {
     }
   }
 
+  // Helper to calculate effective line values
+  const getLineEffective = (l: CartLine) => {
+    const qty = l.quantity || 0;
+    const unitPrice = l.unit_price > 0 ? l.unit_price : l.original_price;
+    const softPrice = Number((unitPrice * qty).toFixed(2));
+    const hasTotalInput = l.total_str !== undefined && l.total_str.trim() !== "";
+    const totalAmount = hasTotalInput ? (Number(l.total_str) || 0) : softPrice;
+    return { qty, softPrice, totalAmount, hasTotalInput };
+  };
+
   // Calculations
-  const subtotal = cart.reduce((s, l) => s + l.quantity * l.original_price, 0);
-  const lineDiscount = cart.reduce((s, l) => s + Math.max(0, l.quantity * l.original_price - l.total_amount), 0);
+  const subtotal = cart.reduce((s, l) => {
+    const { softPrice } = getLineEffective(l);
+    return s + softPrice;
+  }, 0);
+  const lineDiscount = cart.reduce((s, l) => {
+    const { softPrice, totalAmount, hasTotalInput } = getLineEffective(l);
+    return s + (hasTotalInput ? Math.max(0, softPrice - totalAmount) : 0);
+  }, 0);
   const extraDiscount = discountType === "percent" ? (subtotal * discount) / 100 : discount;
   const totalDiscount = lineDiscount + extraDiscount;
   const total = Math.max(0, subtotal - totalDiscount);
@@ -480,6 +515,10 @@ function PosScreen() {
       if (!business) throw new Error("No business");
       if (!locationId) throw new Error("Select a location");
       if (cart.length === 0) throw new Error("Cart is empty");
+      const missingQty = cart.find((l) => (l.quantity || 0) <= 0);
+      if (missingQty) {
+        throw new Error(`দয়া করে "${missingQty.name}" এর পরিমাণ (Quantity) দিন`);
+      }
 
       const d = new Date();
       const datePart = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -507,15 +546,19 @@ function PosScreen() {
         .single();
       if (error) throw error;
 
-      const lines = cart.map((l) => ({
-        transaction_id: tx.id,
-        product_id: l.product_id,
-        variation_id: l.variation_id,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-        unit_price_inc_tax: l.unit_price,
-        line_discount_amount: Math.max(0, l.quantity * l.original_price - l.total_amount),
-      }));
+      const lines = cart.map((l) => {
+        const { qty, softPrice, totalAmount, hasTotalInput } = getLineEffective(l);
+        const lineDisc = hasTotalInput ? Math.max(0, softPrice - totalAmount) : 0;
+        return {
+          transaction_id: tx.id,
+          product_id: l.product_id,
+          variation_id: l.variation_id,
+          quantity: qty,
+          unit_price: l.unit_price,
+          unit_price_inc_tax: l.unit_price,
+          line_discount_amount: lineDisc,
+        };
+      });
       const { error: lerr } = await supabase.from("transaction_sell_lines").insert(lines);
       if (lerr) throw lerr;
 
@@ -559,7 +602,10 @@ function PosScreen() {
         ? null
         : {
             invoice_no: invoiceNo,
-            lines: cart,
+            lines: cart.map((l) => {
+        const { qty, totalAmount } = getLineEffective(l);
+        return { ...l, quantity: qty, total_amount: totalAmount };
+      }),
             subtotal,
             discount: totalDiscount,
             total,
@@ -1203,81 +1249,103 @@ function PosScreen() {
                       </thead>
                       <tbody className="divide-y divide-border/50">
                         {cart.map((l, i) => {
-                          const itemDiscount = l.quantity * l.original_price - l.total_amount;
+                          const { qty, softPrice, totalAmount, hasTotalInput } = getLineEffective(l);
+                          const hasQty = (l.qty_str !== undefined ? l.qty_str !== "" : l.quantity > 0) && (l.quantity || 0) > 0;
+                          const discountAmount = Number((softPrice - totalAmount).toFixed(2));
+                          const qtyDisplay = l.qty_str !== undefined ? l.qty_str : (l.quantity === 0 ? "" : String(l.quantity));
+                          const totalDisplay = l.total_str !== undefined ? l.total_str : (l.total_amount === 0 ? "" : String(l.total_amount));
+
                           return (
                             <tr
                               key={l.variation_id}
                               className="hover:bg-muted/40 transition-colors group"
                             >
-                              <td className="p-3 text-center text-muted-foreground font-mono font-medium">
+                              <td className="p-3 text-center text-muted-foreground font-mono font-medium align-middle">
                                 {i + 1}
                               </td>
-                              <td className="p-3">
+                              <td className="p-3 align-middle">
                                 <div className="font-bold text-foreground text-sm leading-tight">
                                   {l.name}
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono mt-0.5">
                                   <span>SKU: {l.sub_sku}</span>
-                                  {itemDiscount > 0.0001 && (
-                                    <span className="text-emerald-600 bg-emerald-500/10 px-1.5 py-0.2 rounded font-sans font-semibold text-[10px]">
-                                      Discount: -৳{itemDiscount.toFixed(2)}
-                                    </span>
-                                  )}
                                 </div>
                               </td>
-                              <td className="p-3 text-right">
+                              <td className="p-3 text-right align-middle">
                                 <span className="font-semibold text-foreground">
                                   ৳{l.unit_price > 0 ? l.unit_price.toFixed(2) : l.original_price.toFixed(2)}
                                 </span>
                               </td>
-                              <td className="p-3">
+                              <td className="p-3 align-middle">
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button
                                     type="button"
-                                    onClick={() => updateQty(l.variation_id, l.quantity - 1)}
+                                    onClick={() => adjustQty(l.variation_id, -1)}
                                     className="h-7 w-7 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs cursor-pointer shadow-2xs active:scale-95"
                                   >
                                     <Minus className="h-3.5 w-3.5" />
                                   </button>
                                   <input
                                     type="number"
-                                    min="1"
-                                    value={l.quantity === 0 ? "" : l.quantity}
-                                    onChange={(e) =>
-                                      updateQty(
-                                        l.variation_id,
-                                        e.target.value === "" ? 0 : Number(e.target.value)
-                                      )
-                                    }
+                                    min="0"
+                                    placeholder="Qty"
+                                    value={qtyDisplay}
+                                    onChange={(e) => handleQtyChange(l.variation_id, e.target.value)}
                                     className="w-14 h-7 text-center rounded-lg border border-border bg-input text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => updateQty(l.variation_id, l.quantity + 1)}
+                                    onClick={() => adjustQty(l.variation_id, 1)}
                                     className="h-7 w-7 grid place-items-center rounded-lg border border-border bg-card hover:bg-muted font-bold text-xs cursor-pointer shadow-2xs active:scale-95"
                                   >
                                     <Plus className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
                               </td>
-                              <td className="p-3 text-right">
+                              <td className="p-3 text-right align-top">
                                 <div className="flex items-center justify-end gap-1">
                                   <span className="font-bold text-primary text-xs">৳</span>
                                   <input
                                     type="number"
                                     step="any"
-                                    value={l.total_amount === 0 ? "" : l.total_amount}
-                                    onChange={(e) =>
-                                      updateTotal(
-                                        l.variation_id,
-                                        e.target.value === "" ? 0 : Number(e.target.value)
-                                      )
-                                    }
+                                    placeholder={hasQty ? softPrice.toFixed(2) : "0.00"}
+                                    value={totalDisplay}
+                                    onChange={(e) => handleTotalChange(l.variation_id, e.target.value)}
                                     className="w-24 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
                                   />
                                 </div>
+                                {/* Soft Price (Red) or Converted Item Discount */}
+                                <div className="mt-1 text-right min-h-[16px]">
+                                  {hasQty && !hasTotalInput && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTotalChange(l.variation_id, softPrice.toFixed(2))}
+                                      className="text-[11px] font-bold text-rose-600 dark:text-rose-400 font-mono tracking-tight hover:underline cursor-pointer transition-colors"
+                                      title="Standard price for this quantity (Click to apply)"
+                                    >
+                                      ৳{softPrice.toFixed(2)}
+                                    </button>
+                                  )}
+                                  {hasQty && hasTotalInput && (
+                                    <div className="text-[11px] font-mono tracking-tight font-bold">
+                                      {discountAmount > 0.001 ? (
+                                        <span className="text-rose-600 dark:text-rose-400">
+                                          Discount: -৳{discountAmount.toFixed(2)}
+                                        </span>
+                                      ) : discountAmount < -0.001 ? (
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                          +৳{Math.abs(discountAmount).toFixed(2)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground font-normal text-[10px]">
+                                          ৳0.00 discount
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 text-center">
+                              <td className="p-3 text-center align-top pt-3.5">
                                 <button
                                   type="button"
                                   onClick={() => removeLine(l.variation_id)}
