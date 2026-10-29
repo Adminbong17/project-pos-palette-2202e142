@@ -33,10 +33,8 @@ function Dashboard() {
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     queryFn: async () => {
-      const [sales, productsCount, customersCount, locationsCount] = await Promise.all([
-        supabase.from("transactions")
-          .select("final_total")
-          .eq("business_id", businessId!).eq("type", "sell"),
+      const [salesRpc, productsCount, customersCount, locationsCount] = await Promise.all([
+        supabase.rpc("get_business_sales_total", { _business_id: businessId! }),
         supabase.from("products").select("*", { count: "exact", head: true })
           .eq("business_id", businessId!),
         supabase.from("contacts").select("*", { count: "exact", head: true })
@@ -44,7 +42,7 @@ function Dashboard() {
         supabase.from("business_locations").select("*", { count: "exact", head: true })
           .eq("business_id", businessId!),
       ]);
-      const totalSales = (sales.data ?? []).reduce((a: number, r: any) => a + Number(r.final_total || 0), 0);
+      const totalSales = Number(salesRpc.data ?? 0);
       return {
         totalSales,
         products: productsCount.count ?? 0,
