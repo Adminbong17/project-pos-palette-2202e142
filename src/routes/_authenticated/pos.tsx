@@ -144,6 +144,75 @@ function PosScreen() {
   const lastLineRef = useRef<HTMLDivElement>(null);
   const prevCartLen = useRef(0);
 
+  // Keyboard navigation & focus refs
+  const qtyInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const totalInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const dropdownItemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const pendingFocusRef = useRef<{ id: string; field: "qty" | "total" } | null>(null);
+
+  function focusQty(variationId: string) {
+    pendingFocusRef.current = { id: variationId, field: "qty" };
+    const el = qtyInputRefs.current.get(variationId);
+    if (el) {
+      el.focus();
+      el.select();
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      pendingFocusRef.current = null;
+      return;
+    }
+    setTimeout(() => {
+      const retry = qtyInputRefs.current.get(variationId);
+      if (retry) {
+        retry.focus();
+        retry.select();
+        retry.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        pendingFocusRef.current = null;
+      }
+    }, 50);
+  }
+
+  function focusTotal(variationId: string) {
+    pendingFocusRef.current = { id: variationId, field: "total" };
+    const el = totalInputRefs.current.get(variationId);
+    if (el) {
+      el.focus();
+      el.select();
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      pendingFocusRef.current = null;
+      return;
+    }
+    setTimeout(() => {
+      const retry = totalInputRefs.current.get(variationId);
+      if (retry) {
+        retry.focus();
+        retry.select();
+        retry.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        pendingFocusRef.current = null;
+      }
+    }, 50);
+  }
+
+  function focusSearch() {
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 40);
+  }
+
+  // Ensure newly mounted cart line input is focused promptly
+  useEffect(() => {
+    if (pendingFocusRef.current) {
+      const { id, field } = pendingFocusRef.current;
+      const el = field === "qty" ? qtyInputRefs.current.get(id) : totalInputRefs.current.get(id);
+      if (el) {
+        el.focus();
+        el.select();
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        pendingFocusRef.current = null;
+      }
+    }
+  }, [cart]);
+
   // Auto-save the in-progress cart so a power cut does not lose it.
   const { clearDraft: clearPosDraft } = useAutosaveDraft(
     business?.id ? `pos:${business.id}` : null,
@@ -378,6 +447,16 @@ function PosScreen() {
     return list;
   }, [allItems, selectedCategory, search]);
 
+  const safeSelectedIdx = Math.min(selectedIdx, Math.max(0, Math.min(filteredItems.length - 1, 14)));
+
+  useEffect(() => {
+    if (dropdownOpen && dropdownItemRefs.current.has(safeSelectedIdx)) {
+      dropdownItemRefs.current.get(safeSelectedIdx)?.scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [safeSelectedIdx, dropdownOpen]);
+
   // Cart operations
   function addToCart(item: FlatItem) {
     setCart((c) => {
@@ -423,9 +502,7 @@ function PosScreen() {
     setSearch("");
     setDropdownOpen(false);
     setSelectedIdx(0);
-    setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 0);
+    focusQty(item.variation_id);
   }
 
   function handleQtyChange(variation_id: string, rawVal: string) {
@@ -778,8 +855,7 @@ function PosScreen() {
     const c = code.trim().toLowerCase();
     const matches = allItems.filter((i) => (i.barcode && i.barcode.toLowerCase() === c) || i.sub_sku.toLowerCase() === c);
     if (matches.length === 1) {
-      addToCart(matches[0]);
-      toast.success(`Added: ${matches[0].name}`);
+      selectProduct(matches[0]);
     } else if (matches.length > 1) {
       setPickerCode(code);
       setPickerMatches(matches);
@@ -904,15 +980,18 @@ function PosScreen() {
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     if (!dropdownOpen) setDropdownOpen(true);
-                    setSelectedIdx((prev) => Math.min(prev + 1, Math.min(filteredItems.length - 1, 14)));
+                    const maxIdx = Math.max(0, Math.min(filteredItems.length - 1, 14));
+                    setSelectedIdx((prev) => Math.min(prev + 1, maxIdx));
                   } else if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setSelectedIdx((prev) => Math.max(prev - 1, 0));
                   } else if (e.key === "Enter") {
                     e.preventDefault();
                     if (filteredItems.length > 0) {
-                      const item = filteredItems[selectedIdx] ?? filteredItems[0];
-                      selectProduct(item);
+                      const item = filteredItems[safeSelectedIdx] ?? filteredItems[0];
+                      if (item) {
+                        selectProduct(item);
+                      }
                     }
                   } else if (e.key === "Escape") {
                     setSearch("");
@@ -946,14 +1025,20 @@ function PosScreen() {
                   ) : (
                     filteredItems.slice(0, 15).map((item, idx) => {
                       const isOutOfStock = item.stock <= 0;
-                      const isHighlighted = idx === selectedIdx;
+                      const isHighlighted = idx === safeSelectedIdx;
                       return (
                         <div
                           key={item.variation_id}
+                          ref={(el) => {
+                            if (el) dropdownItemRefs.current.set(idx, el);
+                            else dropdownItemRefs.current.delete(idx);
+                          }}
                           onMouseEnter={() => setSelectedIdx(idx)}
                           onClick={() => selectProduct(item)}
                           className={`px-3 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                            isHighlighted ? "bg-accent text-accent-foreground" : "hover:bg-muted/60"
+                            isHighlighted
+                              ? "bg-primary/10 text-foreground ring-1 ring-inset ring-primary/40 font-medium"
+                              : "hover:bg-muted/60"
                           }`}
                         >
                           <div className="min-w-0 flex-1">
@@ -962,9 +1047,9 @@ function PosScreen() {
                                 {item.name}
                                 {item.variant_label ? ` — ${item.variant_label}` : ""}
                               </span>
-                              {idx === 0 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold shrink-0">
-                                  Enter
+                              {isHighlighted && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-bold shrink-0 shadow-xs">
+                                  Enter ↵
                                 </span>
                               )}
                             </div>
@@ -1258,6 +1343,7 @@ function PosScreen() {
                           return (
                             <tr
                               key={l.variation_id}
+                              ref={i === cart.length - 1 ? (lastLineRef as any) : undefined}
                               className="hover:bg-muted/40 transition-colors group"
                             >
                               <td className="p-3 text-center text-muted-foreground font-mono font-medium align-middle">
@@ -1286,11 +1372,27 @@ function PosScreen() {
                                     <Minus className="h-3.5 w-3.5" />
                                   </button>
                                   <input
+                                    ref={(el) => {
+                                      if (el) qtyInputRefs.current.set(l.variation_id, el);
+                                      else qtyInputRefs.current.delete(l.variation_id);
+                                    }}
                                     type="number"
                                     min="0"
                                     placeholder="Qty"
                                     value={qtyDisplay}
                                     onChange={(e) => handleQtyChange(l.variation_id, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        if (!l.qty_str && (l.quantity === 0 || !l.quantity)) {
+                                          handleQtyChange(l.variation_id, "1");
+                                        }
+                                        focusTotal(l.variation_id);
+                                      } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        focusSearch();
+                                      }
+                                    }}
                                     className="w-14 h-7 text-center rounded-lg border border-border bg-input text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
                                   />
                                   <button
@@ -1306,11 +1408,24 @@ function PosScreen() {
                                 <div className="flex items-center justify-end gap-1">
                                   <span className="font-bold text-primary text-xs">৳</span>
                                   <input
+                                    ref={(el) => {
+                                      if (el) totalInputRefs.current.set(l.variation_id, el);
+                                      else totalInputRefs.current.delete(l.variation_id);
+                                    }}
                                     type="number"
                                     step="any"
                                     placeholder={hasQty ? softPrice.toFixed(2) : "0.00"}
                                     value={totalDisplay}
                                     onChange={(e) => handleTotalChange(l.variation_id, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        focusSearch();
+                                      } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        focusSearch();
+                                      }
+                                    }}
                                     className="w-24 h-7 text-right rounded-lg border border-border bg-input px-2 text-xs font-bold font-mono focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none"
                                   />
                                 </div>
@@ -1382,10 +1497,16 @@ function PosScreen() {
         </div>
 
         {/* Footer Shortcut Bar */}
-        <div className="px-4 py-2 border-t border-border/50 bg-muted/30 flex items-center justify-between text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-2 border-t border-border/50 bg-muted/30 flex items-center justify-between text-[11px] text-muted-foreground flex-wrap gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
             <span>
               <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[10px]">F2</kbd> Focus Search
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[10px]">↑/↓</kbd> Select Product
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[10px]">Enter</kbd> Qty → Price → Search
             </span>
             <span>
               <kbd className="px-1.5 py-0.5 rounded bg-background border font-mono font-bold text-[10px]">F4</kbd> Finalize Sale
@@ -1794,8 +1915,7 @@ function PosScreen() {
                 <button
                   key={m.variation_id}
                   onClick={() => {
-                    addToCart(m);
-                    toast.success(`Added: ${m.name}`);
+                    selectProduct(m);
                     setPickerMatches([]);
                   }}
                   className="w-full text-left rounded-xl border border-border p-3 hover:bg-accent transition-colors"
