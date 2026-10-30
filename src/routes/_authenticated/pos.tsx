@@ -28,6 +28,7 @@ import {
   RotateCcw,
   Sparkles,
   LayoutGrid,
+  Calendar,
 } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
@@ -128,6 +129,22 @@ function PosScreen() {
   const [lastSale, setLastSale] = useState<SaleSnapshot | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
 
+  // Sale Date State (Today or Previous Day / Backdated Entry)
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const getYesterdayStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const todayStr = useMemo(() => getTodayStr(), []);
+  const yesterdayStr = useMemo(() => getYesterdayStr(), []);
+  const [saleDate, setSaleDate] = useState<string>(todayStr);
+  const isBackdated = saleDate !== todayStr;
+
   // Modals
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
@@ -216,7 +233,7 @@ function PosScreen() {
   // Auto-save the in-progress cart so a power cut does not lose it.
   const { clearDraft: clearPosDraft } = useAutosaveDraft(
     business?.id ? `pos:${business.id}` : null,
-    { cart, discount, discountType, paymentMethod, amountPaid, contactId },
+    { cart, discount, discountType, paymentMethod, amountPaid, contactId, saleDate },
     (d) => {
       if (d.cart?.length) setCart(d.cart);
       if (d.discount) setDiscount(d.discount);
@@ -224,6 +241,7 @@ function PosScreen() {
       if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
       if (d.amountPaid) setAmountPaid(d.amountPaid);
       if (d.contactId) setContactId(d.contactId);
+      if (d.saleDate) setSaleDate(d.saleDate);
     },
     { isEmpty: (d) => !d.cart?.length, restoreMessage: "Unsaved cart restored" },
   );
@@ -597,12 +615,22 @@ function PosScreen() {
         throw new Error(`দয়া করে "${missingQty.name}" এর পরিমাণ (Quantity) দিন`);
       }
 
-      const d = new Date();
-      const datePart = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+      let txDate: Date;
+      if (saleDate && saleDate !== todayStr) {
+        const now = new Date();
+        const [y, m, day] = saleDate.split("-").map(Number);
+        txDate = new Date(y, m - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+      } else {
+        txDate = new Date();
+      }
+
+      const datePart = `${txDate.getFullYear()}${String(txDate.getMonth() + 1).padStart(2, "0")}${String(txDate.getDate()).padStart(2, "0")}`;
       const rand = Math.floor(10000 + Math.random() * 90000);
       const invoiceNo = `SKP-${datePart}-${rand}`;
       const paid = draft ? 0 : Math.min(paidNum, total);
       const payment_status = draft ? "due" : paid >= total ? "paid" : paid > 0 ? "partial" : "due";
+
+      const txDateISO = txDate.toISOString();
 
       const { data: tx, error } = await supabase
         .from("transactions")
@@ -614,6 +642,8 @@ function PosScreen() {
           payment_status,
           contact_id: contactId || null,
           invoice_no: invoiceNo,
+          transaction_date: txDateISO,
+          created_at: txDateISO,
           total_before_tax: subtotal,
           discount_amount: totalDiscount,
           final_total: total,
@@ -645,6 +675,8 @@ function PosScreen() {
           business_id: business.id,
           amount: paid,
           method: paymentMethod,
+          paid_on: txDateISO,
+          created_at: txDateISO,
         });
       }
 
@@ -690,12 +722,18 @@ function PosScreen() {
             change: paid - total,
             payment_method: paymentMethod,
             customer_name: contacts.find((c: any) => c.id === contactId)?.name ?? null,
-            date: formatDateTime(new Date()),
+            date: formatDateTime(txDate),
           };
       return { id: tx.id, snapshot };
     },
     onSuccess: ({ snapshot }) => {
-      toast.success(snapshot ? "Sale finalized successfully!" : "Sale held as Draft!");
+      toast.success(
+        snapshot
+          ? isBackdated
+            ? `Sale finalized for ${saleDate === yesterdayStr ? "Yesterday" : saleDate}!`
+            : "Sale finalized successfully!"
+          : "Sale held as Draft!"
+      );
       if (snapshot) setLastSale(snapshot);
       clearPosDraft();
       setCart([]);
@@ -739,6 +777,11 @@ function PosScreen() {
       if (draft.discount_amount) {
         setDiscount(Number(draft.discount_amount));
         setDiscountType("flat");
+      }
+      if (draft.transaction_date || draft.created_at) {
+        const dt = new Date(draft.transaction_date || draft.created_at);
+        const dtStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+        setSaleDate(dtStr);
       }
       // Delete draft row so it transitions to active
       await supabase.from("transactions").delete().eq("id", draft.id);
@@ -956,6 +999,30 @@ function PosScreen() {
                   </option>
                 ))}
               </select>
+
+              {/* Sale Date Indicator in Header */}
+              {isBackdated ? (
+                <div
+                  className="flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-amber-500/60 bg-amber-500/15 text-amber-900 dark:text-amber-200 text-xs font-semibold shadow-2xs"
+                  title="পূর্ববর্তী তারিখের সেল এন্ট্রি চলছে"
+                >
+                  <Calendar className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <span>তারিখ: <strong>{saleDate === yesterdayStr ? "গতকাল" : formatDate(saleDate)}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setSaleDate(todayStr)}
+                    className="ml-1 text-[11px] underline hover:text-foreground font-bold cursor-pointer"
+                    title="আজকের তারিখে ফিরে যান"
+                  >
+                    (আজকে ফিরুন)
+                  </button>
+                </div>
+              ) : (
+                <div className="hidden sm:flex items-center gap-1.5 h-8.5 px-2.5 rounded-lg border border-border bg-card text-muted-foreground text-xs">
+                  <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="font-mono text-[11px]">{formatDate(todayStr)}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1560,6 +1627,66 @@ function PosScreen() {
                 <UserPlus className="h-3.5 w-3.5 mr-1" /> New
               </Button>
             </div>
+          </div>
+
+          {/* Sale Date (আজকের বিক্রয় / পূর্ববর্তী তারিখ এন্ট্রি) */}
+          <div className="space-y-1 pt-1 border-t border-border/40">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-primary" />
+                <span>Sale Date (বিক্রয় তারিখ)</span>
+              </label>
+              {isBackdated ? (
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/40">
+                  ⚠️ পূর্ববর্তী তারিখ (Backdated)
+                </span>
+              ) : (
+                <span className="text-[10px] text-muted-foreground font-medium">আজকের বিক্রয়</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                max={todayStr}
+                value={saleDate}
+                onChange={(e) => setSaleDate(e.target.value || todayStr)}
+                className={`flex-1 h-8.5 rounded-xl border bg-input px-2.5 text-xs font-bold font-mono outline-none transition-all ${
+                  isBackdated
+                    ? "border-amber-500 bg-amber-500/10 text-amber-900 dark:text-amber-100 ring-1 ring-amber-500/40"
+                    : "border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setSaleDate(todayStr)}
+                className={`h-8.5 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  !isBackdated
+                    ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title="আজকের তারিখ সেট করুন"
+              >
+                আজকে
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaleDate(yesterdayStr)}
+                className={`h-8.5 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  saleDate === yesterdayStr
+                    ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title="গতকালকের তারিখ সেট করুন"
+              >
+                গতকাল
+              </button>
+            </div>
+            {isBackdated && (
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 font-medium leading-tight">
+                ইনভয়েস ও অ্যাকাউন্টিং রিপোর্ট এই তারিখে ({saleDate === yesterdayStr ? "গতকাল" : formatDate(saleDate)}) রেকর্ড হবে।
+              </p>
+            )}
           </div>
         </div>
 
