@@ -118,7 +118,6 @@ function PosScreen() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [dropdownOpen]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<"flat" | "percent">("flat");
@@ -335,22 +334,7 @@ function PosScreen() {
     enabled: !!business,
   });
 
-  // Product Categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ["pos-categories", business?.id],
-    staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("categories")
-        .select("id, name")
-        .eq("business_id", business!.id)
-        .order("name");
-      return data ?? [];
-    },
-    enabled: !!business,
-  });
-
-  // Products with variations and inventory
+  // Products with variations and inventory (loads full catalog without 15k truncation or inactive drop)
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ["pos-products", business?.id],
     staleTime: 10 * 60 * 1000,
@@ -359,20 +343,18 @@ function PosScreen() {
       const PAGE = 1000;
       const all: any[] = [];
       let pageCount = 0;
-      for (let from = 0; pageCount < 15; from += PAGE) {
+      for (let from = 0; pageCount < 60; from += PAGE) {
         pageCount++;
         const { data, error } = await supabase
           .from("products")
           .select(`
-            id, name, sku, barcode, category_id,
-            variations:variations!variations_product_id_fkey(
+            id, name, sku, barcode, default_sell_price, mrp,
+            variations(
               id, name, sub_sku, barcode, default_sell_price, mrp,
               variation_location_details(qty_available, location_id)
             )
           `)
           .eq("business_id", business!.id)
-          .eq("is_inactive", false)
-          .eq("not_for_selling", false)
           .order("id", { ascending: true })
           .range(from, from + PAGE - 1);
         if (error) {
@@ -430,47 +412,58 @@ function PosScreen() {
     enabled: !!business,
   });
 
-  // Flatten items
+  // Flatten items - includes standalone products and variant products
   const allItems: FlatItem[] = useMemo(() => {
     const out: FlatItem[] = [];
     for (const p of products as any[]) {
-      for (const v of p.variations ?? []) {
-        const vld = (v.variation_location_details ?? []).find((d: any) => d.location_id === locationId);
-        const hasVariant = v.name && v.name !== "DUMMY";
+      const vars = p.variations ?? [];
+      if (vars.length === 0) {
+        // Fallback for standalone products without variation rows
         out.push({
-          variation_id: v.id,
+          variation_id: p.id,
           product_id: p.id,
           name: p.name ?? "Unnamed product",
-          variant_label: hasVariant ? v.name : null,
-          sub_sku: v.sub_sku || p.sku || "",
-          barcode: (v.barcode || p.barcode || "") as string,
-          price: Number(v.mrp ?? v.default_sell_price ?? 0),
-          stock: vld ? Number(vld.qty_available) : 0,
-          image: p.image,
-          category_id: p.category_id || null,
+          variant_label: null,
+          sub_sku: p.sku || "",
+          barcode: (p.barcode || "") as string,
+          price: Number(p.mrp ?? p.default_sell_price ?? 0),
+          stock: 0,
+          image: null,
+          category_id: null,
         });
+      } else {
+        for (const v of vars) {
+          const vld = (v.variation_location_details ?? []).find((d: any) => d.location_id === locationId);
+          const hasVariant = v.name && v.name !== "DUMMY";
+          out.push({
+            variation_id: v.id,
+            product_id: p.id,
+            name: p.name ?? "Unnamed product",
+            variant_label: hasVariant ? v.name : null,
+            sub_sku: v.sub_sku || p.sku || "",
+            barcode: (v.barcode || p.barcode || "") as string,
+            price: Number(v.mrp ?? v.default_sell_price ?? p.mrp ?? p.default_sell_price ?? 0),
+            stock: vld ? Number(vld.qty_available) : 0,
+            image: null,
+            category_id: null,
+          });
+        }
       }
     }
     return out;
   }, [products, locationId]);
 
-  // Filtered items based on search and category
+  // Filtered items based purely on search (no category system)
   const filteredItems: FlatItem[] = useMemo(() => {
-    let list = allItems;
-    if (selectedCategory !== "all") {
-      list = list.filter((i) => i.category_id === selectedCategory);
-    }
     const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (i) =>
-          i.name.toLowerCase().includes(q) ||
-          i.sub_sku.toLowerCase().includes(q) ||
-          (i.barcode && i.barcode.toLowerCase().includes(q)),
-      );
-    }
-    return list;
-  }, [allItems, selectedCategory, search]);
+    if (!q) return allItems;
+    return allItems.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.sub_sku.toLowerCase().includes(q) ||
+        (i.barcode && i.barcode.toLowerCase().includes(q)),
+    );
+  }, [allItems, search]);
 
   const safeSelectedIdx = Math.min(selectedIdx, Math.max(0, Math.min(filteredItems.length - 1, 14)));
 
@@ -1204,35 +1197,6 @@ function PosScreen() {
             </div>
           </div>
 
-          {/* Category Filter Pills (Quick filter for search) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar text-xs">
-            <button
-              onClick={() => setSelectedCategory("all")}
-              className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === "all"
-                  ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                  : "bg-card text-muted-foreground border-border hover:bg-muted"
-              }`}
-            >
-              All Categories ({allItems.length})
-            </button>
-            {categories.map((c: any) => {
-              const count = allItems.filter((i) => i.category_id === c.id).length;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={`h-7 px-3 rounded-lg border font-medium whitespace-nowrap transition-all cursor-pointer ${
-                    selectedCategory === c.id
-                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  {c.name} {count > 0 ? `(${count})` : ""}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Main Content Area: Search Results or Fast Pharmacy Dashboard */}
@@ -1242,7 +1206,7 @@ function PosScreen() {
               <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span>Loading medicines & catalog…</span>
             </div>
-          ) : search.trim() || selectedCategory !== "all" ? (
+          ) : search.trim() ? (
             /* Search Results Mode */
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
@@ -1266,11 +1230,10 @@ function PosScreen() {
                     variant="outline"
                     onClick={() => {
                       setSearch("");
-                      setSelectedCategory("all");
                     }}
                     className="rounded-lg h-8 text-xs font-medium cursor-pointer"
                   >
-                    Clear Filter & Search
+                    Clear Search
                   </Button>
                 </div>
               ) : (
