@@ -1768,62 +1768,18 @@ function PosScreen() {
             {/* Payment Method Selector */}
             <div className="space-y-1.5 pt-1">
               <label className="text-[11px] font-medium text-muted-foreground">Payment Method (পরিশোধ পদ্ধতি)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  className="h-9 rounded-xl border border-border bg-input px-2.5 text-xs font-semibold"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  type="number"
-                  step="any"
-                  placeholder={`Paid (৳${total.toFixed(2)})`}
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(e.target.value)}
-                  className="h-9 rounded-xl border border-border bg-input px-3 text-xs font-bold font-mono focus:border-primary outline-none"
-                />
-              </div>
-
-              {/* Quick Cash Tender Buttons */}
-              <div className="flex items-center gap-1 pt-1 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={() => setAmountPaid(total > 0 ? String(total) : "")}
-                  className="px-2 py-1 rounded-md border border-primary/40 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 shrink-0 cursor-pointer"
-                >
-                  Exact (৳{total.toFixed(2)})
-                </button>
-                {[50, 100, 500, 1000].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => setAmountPaid(String(num))}
-                    className="px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-[10px] font-semibold shrink-0 cursor-pointer"
-                  >
-                    ৳{num}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Change / Due display */}
-            {amountPaid && (
-              <div
-                className={`flex justify-between items-center p-2.5 rounded-xl text-xs font-bold ${
-                  change >= 0 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30" : "bg-destructive/10 text-destructive border border-destructive/30"
-                }`}
+              <select
+                className="w-full h-9 rounded-xl border border-border bg-input px-3 text-xs font-semibold focus:border-primary outline-none"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
               >
-                <span>{change >= 0 ? "Change to return (ফেরত)" : "Due amount (বকেয়া)"}</span>
-                <span className="text-sm font-extrabold font-mono">৳{Math.abs(change).toFixed(2)}</span>
-              </div>
-            )}
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Action Buttons: Hold Draft vs Finalize Sale */}
