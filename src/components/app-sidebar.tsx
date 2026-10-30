@@ -8,6 +8,7 @@ import {
   ShieldCheck, LayoutDashboard, ShoppingCart, Package, Users, Truck, BarChart3,
   Receipt, Wallet, Settings, Factory, UtensilsCrossed, Wrench, HeartHandshake,
   Building2, Stethoscope, ClipboardList, BookOpen, UserCog, FolderArchive, Boxes, PackagePlus, FileText, ListChecks, CalendarClock, MessageSquare, History, FlaskConical, Stamp,
+  HandCoins,
 } from "lucide-react";
 import { useAllowedSections } from "@/hooks/use-allowed-sections";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -75,6 +76,7 @@ const sections = [
     items: [
       { to: "/pos", label: "POS", icon: ShoppingCart, enabled: true, key: "pos" },
       { to: "/sales", label: "Sales", icon: Receipt, enabled: true, key: "sales" },
+      { to: "/due", label: "বকেয়া খাতা (Due)", icon: HandCoins, enabled: true, key: "sales" },
       { to: "/purchases", label: "Purchases", icon: Truck, enabled: true, key: "purchases" },
       { to: "/products", label: "Products", icon: Package, enabled: true, key: "products" },
       { to: "/quick-box", label: "Quick Box Add", icon: PackagePlus, enabled: true, key: "quick-box" },

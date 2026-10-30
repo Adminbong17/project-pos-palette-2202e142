@@ -29,6 +29,7 @@ import {
   Sparkles,
   LayoutGrid,
   Calendar,
+  HandCoins,
 } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
@@ -978,6 +979,16 @@ function PosScreen() {
                 <Clock className="h-3.5 w-3.5 text-blue-600" />
                 <span>Recent Invoices</span>
               </Button>
+
+              {/* Due Management / বকেয়া খাতা Button */}
+              <Link
+                to="/due"
+                className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-900 dark:text-rose-200 hover:bg-rose-500/20 px-2.5 text-xs font-semibold cursor-pointer"
+                title="বকেয়া খাতা ও কালেকশন (Due Management)"
+              >
+                <HandCoins className="h-3.5 w-3.5 text-rose-600" />
+                <span>বকেয়া খাতা</span>
+              </Link>
 
               <Link
                 to="/products/short-list"

@@ -23,6 +23,7 @@ import { Route as AuthenticatedClinicServicesRouteImport } from './routes/_authe
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDueRouteImport } from './routes/_authenticated/due'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedFilesRouteImport } from './routes/_authenticated/files'
 import { Route as AuthenticatedHrmRouteImport } from './routes/_authenticated/hrm'
@@ -177,6 +178,11 @@ const AuthenticatedCrmRoute = AuthenticatedCrmRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDueRoute = AuthenticatedDueRouteImport.update({
+  id: '/due',
+  path: '/due',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedExpensesRoute = AuthenticatedExpensesRouteImport.update({
@@ -646,6 +652,7 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AuthenticatedContactsRoute
   '/crm': typeof AuthenticatedCrmRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/due': typeof AuthenticatedDueRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
   '/hrm': typeof AuthenticatedHrmRouteWithChildren
@@ -741,6 +748,7 @@ export interface FileRoutesByTo {
   '/clinic-services': typeof AuthenticatedClinicServicesRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/due': typeof AuthenticatedDueRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/files': typeof AuthenticatedFilesRoute
   '/manufacturing': typeof AuthenticatedManufacturingRoute
@@ -832,6 +840,7 @@ export interface FileRoutesById {
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/crm': typeof AuthenticatedCrmRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/due': typeof AuthenticatedDueRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/files': typeof AuthenticatedFilesRoute
   '/_authenticated/hrm': typeof AuthenticatedHrmRouteWithChildren
@@ -930,6 +939,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/crm'
     | '/dashboard'
+    | '/due'
     | '/expenses'
     | '/files'
     | '/hrm'
@@ -1025,6 +1035,7 @@ export interface FileRouteTypes {
     | '/clinic-services'
     | '/contacts'
     | '/dashboard'
+    | '/due'
     | '/expenses'
     | '/files'
     | '/manufacturing'
@@ -1115,6 +1126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contacts'
     | '/_authenticated/crm'
     | '/_authenticated/dashboard'
+    | '/_authenticated/due'
     | '/_authenticated/expenses'
     | '/_authenticated/files'
     | '/_authenticated/hrm'
@@ -1309,6 +1321,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/due': {
+      id: '/_authenticated/due'
+      path: '/due'
+      fullPath: '/due'
+      preLoaderRoute: typeof AuthenticatedDueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/expenses': {
@@ -2075,6 +2094,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDueRoute: typeof AuthenticatedDueRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFilesRoute: typeof AuthenticatedFilesRoute
   AuthenticatedHrmRoute: typeof AuthenticatedHrmRouteWithChildren
@@ -2125,6 +2145,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedCrmRoute: AuthenticatedCrmRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDueRoute: AuthenticatedDueRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFilesRoute: AuthenticatedFilesRoute,
   AuthenticatedHrmRoute: AuthenticatedHrmRouteWithChildren,
