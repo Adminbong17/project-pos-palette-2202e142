@@ -204,7 +204,7 @@ function PosScreen() {
       if (retry) {
         retry.focus();
         retry.select();
-        retry.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        retry.scrollIntoView({ behavior: "auto", block: "nearest" });
         pendingFocusRef.current = null;
       }
     }, 50);
@@ -225,16 +225,22 @@ function PosScreen() {
       if (el) {
         el.focus();
         el.select();
-        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        el.scrollIntoView({ behavior: "auto", block: "nearest" });
         pendingFocusRef.current = null;
       }
     }
   }, [cart]);
 
+  // Stable draft payload — only changes when values change, preventing render thrashing
+  const posDraftData = useMemo(
+    () => ({ cart, discount, discountType, paymentMethod, amountPaid, contactId, saleDate }),
+    [cart, discount, discountType, paymentMethod, amountPaid, contactId, saleDate],
+  );
+
   // Auto-save the in-progress cart so a power cut does not lose it.
   const { clearDraft: clearPosDraft } = useAutosaveDraft(
     business?.id ? `pos:${business.id}` : null,
-    { cart, discount, discountType, paymentMethod, amountPaid, contactId, saleDate },
+    posDraftData,
     (d) => {
       if (d.cart?.length) setCart(d.cart);
       if (d.discount) setDiscount(d.discount);
@@ -249,7 +255,7 @@ function PosScreen() {
 
   useEffect(() => {
     if (cart.length > prevCartLen.current) {
-      lastLineRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      lastLineRef.current?.scrollIntoView({ behavior: "auto", block: "nearest" });
     }
     prevCartLen.current = cart.length;
   }, [cart.length]);
@@ -353,12 +359,12 @@ function PosScreen() {
       const PAGE = 1000;
       const all: any[] = [];
       let pageCount = 0;
-      for (let from = 0; pageCount < 50; from += PAGE) {
+      for (let from = 0; pageCount < 15; from += PAGE) {
         pageCount++;
         const { data, error } = await supabase
           .from("products")
           .select(`
-            id, name, sku, image, barcode, category_id,
+            id, name, sku, barcode, category_id,
             variations:variations!variations_product_id_fkey(
               id, name, sub_sku, barcode, default_sell_price, mrp,
               variation_location_details(qty_available, location_id)

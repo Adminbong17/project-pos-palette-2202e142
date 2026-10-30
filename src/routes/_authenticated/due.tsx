@@ -1,7 +1,7 @@
 import { formatDate } from "@/lib/utils";
 import { fmtDateTime } from "@/lib/format-date";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
@@ -99,6 +99,17 @@ function DueManagementPage() {
   const [search, setSearch] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("all");
 
+  // Pagination for DOM performance (prevents browser freezing when thousands of invoices exist)
+  const [invoicePage, setInvoicePage] = useState(1);
+  const INVOICE_PAGE_SIZE = 50;
+  const [customerPage, setCustomerPage] = useState(1);
+  const CUSTOMER_PAGE_SIZE = 50;
+
+  useEffect(() => {
+    setInvoicePage(1);
+    setCustomerPage(1);
+  }, [search, statusFilter, dateRange, customFrom, customTo, selectedLocationId]);
+
   // Single Invoice Payment Modal
   const [payRow, setPayRow] = useState<DueSaleRow | null>(null);
   const [payAmount, setPayAmount] = useState<string>("");
@@ -145,16 +156,17 @@ function DueManagementPage() {
     return resolvePresetRange(dateRange, customFrom, customTo);
   }, [dateRange, customFrom, customTo]);
 
-  // Fetch Sales Transactions
+  // Fetch Sales Transactions with lean payload and caching
   const { data: allSales = [], isLoading } = useQuery({
     queryKey: ["due-sales", business?.id],
     enabled: !!business?.id,
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
         .select(
-          `id, invoice_no, ref_no, transaction_date, created_at, status, payment_status, final_total, total_paid, contact_id, location_id, additional_notes,
+          `id, invoice_no, ref_no, transaction_date, created_at, status, payment_status, final_total, total_paid, contact_id, location_id,
            contact:contacts(id, name, mobile, address_line_1),
            location:business_locations(name)`
         )
@@ -162,7 +174,7 @@ function DueManagementPage() {
         .eq("type", "sell")
         .eq("status", "final")
         .order("transaction_date", { ascending: false })
-        .limit(3000);
+        .limit(2000);
 
       if (error) throw error;
       return (data ?? []) as unknown as DueSaleRow[];
@@ -331,6 +343,18 @@ function DueManagementPage() {
     // Default sort by largest due first
     return list.sort((a, b) => b.totalDue - a.totalDue);
   }, [rowsWithDue, search]);
+
+  const totalInvoicePages = Math.max(1, Math.ceil(filteredRows.length / INVOICE_PAGE_SIZE));
+  const paginatedInvoices = useMemo(() => {
+    const start = (invoicePage - 1) * INVOICE_PAGE_SIZE;
+    return filteredRows.slice(start, start + INVOICE_PAGE_SIZE);
+  }, [filteredRows, invoicePage]);
+
+  const totalCustomerPages = Math.max(1, Math.ceil(customerLedgers.length / CUSTOMER_PAGE_SIZE));
+  const paginatedCustomers = useMemo(() => {
+    const start = (customerPage - 1) * CUSTOMER_PAGE_SIZE;
+    return customerLedgers.slice(start, start + CUSTOMER_PAGE_SIZE);
+  }, [customerLedgers, customerPage]);
 
   // Currency formatter
   const money = (n: number) =>
@@ -953,7 +977,7 @@ function DueManagementPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRows.map((r) => {
+                  paginatedInvoices.map((r) => {
                     return (
                       <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-3.5 whitespace-nowrap text-xs">
@@ -1056,6 +1080,38 @@ function DueManagementPage() {
               </tbody>
             </FoldTable>
           </div>
+
+          {/* Pagination Controls */}
+          {totalInvoicePages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/60 bg-muted/20 text-xs flex-wrap gap-2">
+              <span className="text-muted-foreground">
+                মোট {filteredRows.length.toLocaleString()} টির মধ্যে {((invoicePage - 1) * INVOICE_PAGE_SIZE) + 1} হতে {Math.min(invoicePage * INVOICE_PAGE_SIZE, filteredRows.length).toLocaleString()} টি দেখানো হচ্ছে
+              </span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={invoicePage <= 1}
+                  onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
+                  className="h-7.5 px-3 text-xs"
+                >
+                  পূর্ববর্তী
+                </Button>
+                <span className="font-semibold px-2">
+                  পাতা {invoicePage} / {totalInvoicePages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={invoicePage >= totalInvoicePages}
+                  onClick={() => setInvoicePage((p) => Math.min(totalInvoicePages, p + 1))}
+                  className="h-7.5 px-3 text-xs"
+                >
+                  পরবর্তী
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1083,7 +1139,7 @@ function DueManagementPage() {
                     </td>
                   </tr>
                 ) : (
-                  customerLedgers.map((c, idx) => (
+                  paginatedCustomers.map((c, idx) => (
                     <tr key={c.id || `walkin-${idx}`} className="hover:bg-muted/30 transition-colors">
                       <td className="p-3.5 font-semibold text-foreground">
                         {c.name}
@@ -1140,6 +1196,38 @@ function DueManagementPage() {
               </tbody>
             </FoldTable>
           </div>
+
+          {/* Customer Ledger Pagination Controls */}
+          {totalCustomerPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/60 bg-muted/20 text-xs flex-wrap gap-2">
+              <span className="text-muted-foreground">
+                মোট {customerLedgers.length.toLocaleString()} জন কাস্টমারের মধ্যে {((customerPage - 1) * CUSTOMER_PAGE_SIZE) + 1} হতে {Math.min(customerPage * CUSTOMER_PAGE_SIZE, customerLedgers.length).toLocaleString()} জন দেখানো হচ্ছে
+              </span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={customerPage <= 1}
+                  onClick={() => setCustomerPage((p) => Math.max(1, p - 1))}
+                  className="h-7.5 px-3 text-xs"
+                >
+                  পূর্ববর্তী
+                </Button>
+                <span className="font-semibold px-2">
+                  পাতা {customerPage} / {totalCustomerPages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={customerPage >= totalCustomerPages}
+                  onClick={() => setCustomerPage((p) => Math.min(totalCustomerPages, p + 1))}
+                  className="h-7.5 px-3 text-xs"
+                >
+                  পরবর্তী
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

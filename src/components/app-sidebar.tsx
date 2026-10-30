@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -76,7 +77,7 @@ const sections = [
     items: [
       { to: "/pos", label: "POS", icon: ShoppingCart, enabled: true, key: "pos" },
       { to: "/sales", label: "Sales", icon: Receipt, enabled: true, key: "sales" },
-      { to: "/due", label: "বকেয়া খাতা (Due)", icon: HandCoins, enabled: true, key: "sales" },
+      { to: "/due", label: "বকেয়া খাতা (Due)", icon: HandCoins, enabled: true, key: "due" },
       { to: "/purchases", label: "Purchases", icon: Truck, enabled: true, key: "purchases" },
       { to: "/products", label: "Products", icon: Package, enabled: true, key: "products" },
       { to: "/quick-box", label: "Quick Box Add", icon: PackagePlus, enabled: true, key: "quick-box" },
@@ -273,50 +274,52 @@ export function AppSidebar() {
 
 
   // Visible items based on strictly marked module grants
-  let candidateSections: typeof sections;
+  const visibleSections = useMemo(() => {
+    let candidateSections: typeof sections;
 
-  if (Array.isArray(allowed)) {
-    // When the Super Admin has explicitly granted a set of modules (even empty []),
-    // we STRICTLY display ONLY the allowed modules that were marked.
-    // No secondary domain or doctor filter should ever hide what the admin explicitly marked!
-    candidateSections = sections
-      .map((sec) => ({
+    if (Array.isArray(allowed)) {
+      // When the Super Admin has explicitly granted a set of modules (even empty []),
+      // we STRICTLY display ONLY the allowed modules that were marked.
+      // No secondary domain or doctor filter should ever hide what the admin explicitly marked!
+      candidateSections = sections
+        .map((sec) => ({
+          ...sec,
+          items: sec.items.filter((it: any) => allowed.includes(it.key) && (!it.superOnly || isSuperAdmin)),
+        }))
+        .filter((sec) => sec.items.length > 0);
+    } else {
+      // Unrestricted / legacy accounts (allowed === null):
+      const base = sections.map((sec) => ({
         ...sec,
-        items: sec.items.filter((it: any) => allowed.includes(it.key) && (!it.superOnly || isSuperAdmin)),
-      }))
+        items: sec.items.filter((it: any) => !it.superOnly || isSuperAdmin),
+      }));
+
+      const scoped = (rxMode && !isSuperAdmin) || isDoctor
+        ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
+        : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
+
+      candidateSections = scoped
+        .map((sec) => ({
+          ...sec,
+          items: sec.items
+            .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
+            .filter((it: any) =>
+              ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
+                ? clinicMode || isSuperAdmin
+                : true,
+            ),
+        }))
+        .filter((sec) => sec.items.length > 0);
+    }
+
+    // Deduplicate items by destination path so the same page never renders twice
+    return candidateSections
+      .map((sec) => {
+        const seen = new Set<string>();
+        return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };
+      })
       .filter((sec) => sec.items.length > 0);
-  } else {
-    // Unrestricted / legacy accounts (allowed === null):
-    const base = sections.map((sec) => ({
-      ...sec,
-      items: sec.items.filter((it: any) => !it.superOnly || isSuperAdmin),
-    }));
-
-    const scoped = (rxMode && !isSuperAdmin) || isDoctor
-      ? base.map((sec) => ({ ...sec, items: sec.items.filter((it) => RX_PATHS.includes(it.to)) }))
-      : base.map((sec) => ({ ...sec, items: sec.items.filter((it) => !RX_ONLY_PATHS.includes(it.to)) }));
-
-    candidateSections = scoped
-      .map((sec) => ({
-        ...sec,
-        items: sec.items
-          .filter((it) => (isDoctor && !isAdmin ? doctorPaths.includes(it.to) : true))
-          .filter((it: any) =>
-            ["/clinic-dashboard", "/clinic-doctors"].includes(it.to)
-              ? clinicMode || isSuperAdmin
-              : true,
-          ),
-      }))
-      .filter((sec) => sec.items.length > 0);
-  }
-
-  // Deduplicate items by destination path so the same page never renders twice
-  const visibleSections = candidateSections
-    .map((sec) => {
-      const seen = new Set<string>();
-      return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };
-    })
-    .filter((sec) => sec.items.length > 0);
+  }, [allowed, isSuperAdmin, rxMode, isDoctor, isAdmin, clinicMode]);
 
   return (
     <Sidebar>

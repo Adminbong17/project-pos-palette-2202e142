@@ -13,6 +13,7 @@ export const ALL_SECTIONS: { key: string; label: string; path: string; category?
   { key: "dashboard", label: "Dashboard", path: "/dashboard", category: "General" },
   { key: "pos", label: "POS", path: "/pos", category: "Operations" },
   { key: "sales", label: "Sales", path: "/sales", category: "Operations" },
+  { key: "due", label: "Due Management", path: "/due", category: "Operations" },
   { key: "purchases", label: "Purchases", path: "/purchases", category: "Operations" },
   { key: "products", label: "Products", path: "/products", category: "Inventory" },
   { key: "files", label: "Files", path: "/files", category: "Operations" },
@@ -52,6 +53,7 @@ export const PRESETS = {
     "dashboard",
     "pos",
     "sales",
+    "due",
     "purchases",
     "products",
     "quick-box",
@@ -62,7 +64,7 @@ export const PRESETS = {
     "accounts",
     "reports",
   ],
-  POS_CASHIER: ["pos", "sales", "contacts"],
+  POS_CASHIER: ["pos", "sales", "due", "contacts"],
   DOCTOR_CLINIC: [
     "rx-dashboard",
     "rx-write",
@@ -84,6 +86,7 @@ export const PRESETS = {
 
 /** Old grouped keys → the individual pages they used to unlock. */
 export const LEGACY_GROUPS: Record<string, string[]> = {
+  sales: ["sales", "due"],
   prescriptions: [
     "rx-dashboard",
     "rx-write",
@@ -125,7 +128,8 @@ export function expandSections(list: string[] | null | undefined): string[] | nu
   return Array.from(out);
 }
 
-const DEFAULT_SALESMAN = ["pos", "purchases"];
+const DEFAULT_SALESMAN = ["pos", "purchases", "sales", "due"];
+const EXPANDED_DEFAULT_SALESMAN = expandSections(DEFAULT_SALESMAN) ?? [];
 
 // Clinical-only keys: users limited to these never get POS/inventory extras.
 const CLINICAL_KEYS = [
@@ -170,7 +174,7 @@ export function useAllowedSections() {
     queryFn: async (): Promise<string[] | null> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user?.id ?? (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) return expandSections(DEFAULT_SALESMAN);
+      if (!userId) return EXPANDED_DEFAULT_SALESMAN;
 
       const { data: urRows } = await supabase
         .from("user_roles")
@@ -185,7 +189,7 @@ export function useAllowedSections() {
       }
 
       const ur = urRows?.[0] ?? null;
-      if (!ur) return isAdmin ? null : expandSections(DEFAULT_SALESMAN);
+      if (!ur) return isAdmin ? null : EXPANDED_DEFAULT_SALESMAN;
 
       if (isAdmin && !ur.role_id) return null;
 
@@ -201,15 +205,15 @@ export function useAllowedSections() {
       }
 
       // Admins with no section limit configured keep full access.
-      return isAdmin ? null : expandSections(DEFAULT_SALESMAN);
+      return isAdmin ? null : EXPANDED_DEFAULT_SALESMAN;
     },
   });
 
   const raw = Array.isArray(q.data)
     ? q.data
     : q.data === null
-      ? (isAdmin ? null : expandSections(DEFAULT_SALESMAN))
-      : (isAdmin ? null : expandSections(DEFAULT_SALESMAN));
+      ? (isAdmin ? null : EXPANDED_DEFAULT_SALESMAN)
+      : (isAdmin ? null : EXPANDED_DEFAULT_SALESMAN);
 
   // A Doctor / Assistant account with no explicit grant stays clinical-only.
   // When the super admin has explicitly picked sections for that user (hasExplicitGrant),
@@ -238,6 +242,10 @@ export function useAllowedSections() {
 export function isPathAllowed(pathname: string, sections: string[] | null) {
   if (sections === null) return true;
   const expanded = expandSections(sections) ?? [];
+  // Due is part of the sales / accounts domain: if allowed sales, automatically allow /due
+  if (pathname === "/due" || pathname.startsWith("/due/")) {
+    return expanded.includes("sales") || expanded.includes("due");
+  }
   return ALL_SECTIONS.some(
     (s) => expanded.includes(s.key) && (pathname === s.path || pathname.startsWith(s.path + "/")),
   );
@@ -255,6 +263,7 @@ export function sectionHomePath(sections: string[] | null) {
   if (list.includes("rx-write")) return "/prescriptions";
   if (list.includes("clinic-dashboard")) return "/clinic-dashboard";
   if (list.includes("sales")) return "/sales";
+  if (list.includes("due")) return "/due";
   if (list.includes("purchases")) return "/purchases";
   if (list.includes("products")) return "/products";
   if (list.includes("clinic-sales")) return "/clinic-sales";

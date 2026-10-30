@@ -76,18 +76,22 @@ export function useAutosaveDraft<T>(
       const signature = getSignature(current);
       if (isEmptyRef.current?.(current)) {
         clearedSignatureRef.current = null;
-        lastWrittenRef.current = null;
-      window.localStorage.removeItem(storageKey);
+        if (lastWrittenRef.current !== null) {
+          lastWrittenRef.current = null;
+          window.localStorage.removeItem(storageKey);
+        }
         return;
       }
       if (clearedSignatureRef.current === signature) {
-        lastWrittenRef.current = null;
-      window.localStorage.removeItem(storageKey);
+        if (lastWrittenRef.current !== null) {
+          lastWrittenRef.current = null;
+          window.localStorage.removeItem(storageKey);
+        }
         return;
       }
       clearedSignatureRef.current = null;
       // Skip the synchronous localStorage write when nothing changed since the
-      // last flush — the periodic 3s safety flush would otherwise rewrite the
+      // last flush — the periodic safety flush would otherwise rewrite the
       // same payload forever and block the main thread on large drafts.
       const dataJson = signature; // signature is already JSON.stringify(current)
       if (lastWrittenRef.current === storageKey + '|' + dataJson) return;
@@ -118,13 +122,13 @@ export function useAutosaveDraft<T>(
         const parsed = JSON.parse(raw) as { version?: number; at?: number; data?: T };
         if (parsed.version !== VERSION) {
           lastWrittenRef.current = null;
-      window.localStorage.removeItem(storageKey);
+          window.localStorage.removeItem(storageKey);
         } else if (parsed?.data !== undefined && Date.now() - (parsed.at ?? 0) < MAX_AGE_MS) {
           restoreRef.current(parsed.data);
           toast.info(restoreMessage);
         } else {
           lastWrittenRef.current = null;
-      window.localStorage.removeItem(storageKey);
+          window.localStorage.removeItem(storageKey);
         }
       }
     } catch {
@@ -137,11 +141,13 @@ export function useAutosaveDraft<T>(
   useEffect(() => {
     if (!storageKey || !enabled || !readyRef.current) return;
     if (isEmptyRef.current?.(data)) {
-      try {
-        lastWrittenRef.current = null;
-      window.localStorage.removeItem(storageKey);
-      } catch {
-        /* ignore */
+      if (lastWrittenRef.current !== null) {
+        try {
+          lastWrittenRef.current = null;
+          window.localStorage.removeItem(storageKey);
+        } catch {
+          /* ignore */
+        }
       }
       return;
     }
@@ -153,7 +159,7 @@ export function useAutosaveDraft<T>(
   // on pagehide alone.
   useEffect(() => {
     if (!storageKey || !enabled || typeof window === "undefined") return;
-    const id = window.setInterval(() => flush(), 3000);
+    const id = window.setInterval(() => flush(), 15000);
     return () => window.clearInterval(id);
   }, [storageKey, enabled, flush]);
 
