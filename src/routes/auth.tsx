@@ -3,6 +3,7 @@ import { isRxMode, isPatientHost } from "@/lib/rx-mode";
 import { loginIdentifierToEmail } from "@/lib/rx-staff";
 import { isSuperAdminEmail } from "@/lib/super-admin-auth";
 import { ensureSuperAdminCredentials } from "@/lib/super-admin-auth.functions";
+import { resolveLoginIdentifier } from "@/lib/auth-identifier.functions";
 
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -90,7 +91,22 @@ function AuthPage() {
         return;
       }
 
-      const cleanEmail = loginIdentifierToEmail(email).trim().toLowerCase();
+      let cleanEmail = email.trim().toLowerCase();
+
+      // If user typed a username or phone number (no '@'), resolve it to their registered email
+      if (!cleanEmail.includes("@")) {
+        try {
+          const resolved = await resolveLoginIdentifier({ data: { identifier: cleanEmail } });
+          if (resolved?.email) {
+            cleanEmail = resolved.email.trim().toLowerCase();
+          } else {
+            cleanEmail = loginIdentifierToEmail(cleanEmail).trim().toLowerCase();
+          }
+        } catch (resolveErr) {
+          console.warn("[auth] username resolution fallback:", resolveErr);
+          cleanEmail = loginIdentifierToEmail(cleanEmail).trim().toLowerCase();
+        }
+      }
 
       // Pre-provision super admin if needed
       if (isSuperAdminEmail(cleanEmail)) {
