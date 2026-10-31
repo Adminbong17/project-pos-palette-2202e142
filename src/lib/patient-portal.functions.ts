@@ -643,13 +643,35 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       };
     }
 
-    // 6. Insert Appointment (Serial trigger automatically assigns serial_no)
+    // 5.5 Compute consecutive serial_no for this doctor on this appointment date
+    let assignedSerial = 1;
+    try {
+      const { data: existingAppts } = await db
+        .from("rx_appointments")
+        .select("serial_no")
+        .eq("business_id", businessId)
+        .eq("appt_date", data.appt_date)
+        .eq("doctor_id", data.doctor_id);
+
+      if (existingAppts && existingAppts.length > 0) {
+        const maxS = Math.max(
+          0,
+          ...existingAppts.map((a: any) => Number(a.serial_no) || 0)
+        );
+        assignedSerial = maxS + 1;
+      }
+    } catch (sErr) {
+      console.warn("[bookPatientAppointment] serial calculation fallback:", sErr);
+    }
+
+    // 6. Insert Appointment with explicit consecutive serial_no
     const { data: inserted, error: insErr } = await db
       .from("rx_appointments")
       .insert({
         business_id: businessId,
         doctor_id: data.doctor_id,
         chamber_id: chamberId,
+        serial_no: assignedSerial,
         patient_code: patientCode,
         patient_name: data.patient_name.trim(),
         patient_phone: phone,
@@ -672,11 +694,13 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
       throw new Error(insErr?.message || "সিরিয়াল বুকিং সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।");
     }
 
+    const finalSerial = inserted.serial_no ?? assignedSerial;
+
     return {
       success: true,
       already_booked: false,
       id: inserted.id,
-      serial_no: inserted.serial_no,
+      serial_no: finalSerial,
       patient_code: inserted.patient_code || patientCode,
       appt_date: inserted.appt_date,
       patient_name: inserted.patient_name,

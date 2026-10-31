@@ -56,6 +56,7 @@ export function AppointmentQueue({
   date,
   chamberId,
   chambers,
+  doctorId,
   allowDelete = false,
   allowEdit = false,
   allowStart = true,
@@ -65,6 +66,7 @@ export function AppointmentQueue({
   date: string;
   chamberId?: string;
   chambers: Chamber[];
+  doctorId?: string | null;
   allowDelete?: boolean;
   allowEdit?: boolean;
   /** Assistants only print tokens — the doctor starts the prescription. */
@@ -118,7 +120,7 @@ export function AppointmentQueue({
   }, [businessId, date, qc]);
 
   const list = useQuery({
-    queryKey: ["rx-appointments", businessId, date, chamberId ?? "all"],
+    queryKey: ["rx-appointments", businessId, date, chamberId ?? "all", doctorId ?? "all"],
     enabled: !!businessId,
     queryFn: async () => {
       let q = supabase
@@ -132,6 +134,9 @@ export function AppointmentQueue({
       if (chamberId && chamberId !== "all") {
         // Also show unassigned/portal appointments so staff never miss patient portal bookings!
         q = q.or(`chamber_id.eq.${chamberId},chamber_id.is.null`);
+      }
+      if (doctorId) {
+        q = q.eq("doctor_id", doctorId);
       }
       const { data, error } = await q;
       if (error) throw error;

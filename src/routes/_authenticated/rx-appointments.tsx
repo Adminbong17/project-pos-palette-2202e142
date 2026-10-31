@@ -79,7 +79,16 @@ function AppointmentsPage() {
   const chambers = useChambers(businessId);
   const chamberList = chambers.data ?? [];
   const myStaff = useMyStaffChamber(businessId);
-  const lockedChamberId = isAssistant ? myStaff.data?.chamber_id ?? null : null;
+  const staffAccess = myStaff.data;
+
+  // If assistant has specific chambers assigned, filter chamber list to those; otherwise show all
+  const availableChambers = useMemo(() => {
+    if (!isAssistant || !staffAccess) return chamberList;
+    if (staffAccess.isAllLocations || staffAccess.assignedChamberIds.length === 0) {
+      return chamberList;
+    }
+    return chamberList.filter((c) => staffAccess.assignedChamberIds.includes(c.id));
+  }, [isAssistant, staffAccess, chamberList]);
 
   const doctorsQ = useBusinessDoctors(businessId);
   const doctorList = doctorsQ.data ?? [];
@@ -134,26 +143,35 @@ function AppointmentsPage() {
   }, []);
 
   useEffect(() => {
-    if (lockedChamberId) {
-      setChamberId(lockedChamberId);
-    } else if (chamberList.length > 0 && !chamberId) {
-      setChamberId(chamberList[0].id);
+    if (availableChambers.length > 0) {
+      if (!chamberId || !availableChambers.some((c) => c.id === chamberId)) {
+        setChamberId(availableChambers[0].id);
+      }
     }
-  }, [lockedChamberId, chamberList]);
+  }, [availableChambers, chamberId]);
 
   // Current selected chamber details
   const activeChamber = useMemo(() => {
-    return chamberList.find((c) => c.id === chamberId) || chamberList[0];
-  }, [chamberList, chamberId]);
+    return availableChambers.find((c) => c.id === chamberId) || availableChambers[0] || chamberList[0];
+  }, [availableChambers, chamberId, chamberList]);
 
-  // Dynamic next serial number for selected date & chamber
+  // Target doctor for this appointment
+  const targetDoctorId = useMemo(() => {
+    return (
+      (doctorId && !isAssistant
+        ? doctorId
+        : activeChamber?.doctor_id || doctorList[0]?.user_id) || null
+    );
+  }, [doctorId, isAssistant, activeChamber, doctorList]);
+
+  // Dynamic next serial number for selected date & doctor
   const todayApptsQ = useQuery({
     queryKey: ["rx-appointments-preview", businessId, date],
     enabled: !!businessId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rx_appointments")
-        .select("id, serial_no, patient_phone, patient_name, patient_age, patient_gender")
+        .select("id, serial_no, patient_phone, patient_name, patient_age, patient_gender, doctor_id, chamber_id")
         .eq("business_id", businessId!)
         .eq("appt_date", date);
       if (error) throw error;
@@ -163,10 +181,13 @@ function AppointmentsPage() {
 
   const nextSerial = useMemo(() => {
     const rows = todayApptsQ.data ?? [];
-    if (!rows.length) return 1;
-    const maxSerial = Math.max(...rows.map((r: any) => Number(r.serial_no) || 0));
+    const filtered = targetDoctorId
+      ? rows.filter((r: any) => r.doctor_id === targetDoctorId)
+      : rows;
+    if (!filtered.length) return 1;
+    const maxSerial = Math.max(...filtered.map((r: any) => Number(r.serial_no) || 0));
     return maxSerial + 1;
-  }, [todayApptsQ.data]);
+  }, [todayApptsQ.data, targetDoctorId]);
 
   // Auto-calculated fee preview based on patient type & chamber
   const calculatedFee = useMemo(() => {
@@ -321,11 +342,30 @@ function AppointmentsPage() {
         throw new Error("কোন ডাক্তারের অধীনে সিরিয়াল হবে তা নির্বাচন করুন");
       }
 
-      const assignedChamber = chamberId || lockedChamberId || null;
-      const targetDoctorId =
-        (doctorId && !isAssistant
-          ? doctorId
-          : activeChamber?.doctor_id || doctorList[0]?.user_id) || null;
+      const assignedChamber = chamberId || activeChamber?.id || null;
+
+      // Dynamic consecutive serial number for targetDoctorId on this date
+      let nextSerialToUse = 1;
+      try {
+        let q = supabase
+          .from("rx_appointments")
+          .select("serial_no")
+          .eq("business_id", businessId)
+          .eq("appt_date", date);
+        if (targetDoctorId) {
+          q = q.eq("doctor_id", targetDoctorId);
+        }
+        const { data: existingRows } = await q;
+        if (existingRows && existingRows.length > 0) {
+          const maxS = Math.max(
+            0,
+            ...existingRows.map((r: any) => Number(r.serial_no) || 0)
+          );
+          nextSerialToUse = maxS + 1;
+        }
+      } catch (err) {
+        console.warn("[rx-appointments] Error calculating next serial:", err);
+      }
 
       const { data: auth } = await supabase.auth.getUser();
 
@@ -334,6 +374,7 @@ function AppointmentsPage() {
         .insert({
           business_id: businessId,
           chamber_id: assignedChamber,
+          serial_no: nextSerialToUse,
           patient_name: form.patient_name.trim(),
           patient_age: form.patient_age.trim() || null,
           patient_gender: form.patient_gender || null,
@@ -404,7 +445,7 @@ function AppointmentsPage() {
   // Effective chamberId to pass to AppointmentQueue:
   // If staff has selected "all" view, pass undefined so all chamber & online serials are shown!
   const effectiveChamberId =
-    viewFilter === "all" ? undefined : chamberId || lockedChamberId || undefined;
+    viewFilter === "all" ? undefined : chamberId || undefined;
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
@@ -439,11 +480,15 @@ function AppointmentsPage() {
 
           {/* Quick Desk Badges */}
           <div className="flex flex-wrap items-center gap-2">
-            {lockedChamberId ? (
+            {isAssistant ? (
               <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary gap-1.5 py-1 px-3 text-xs">
                 <MapPin className="h-3.5 w-3.5" />
                 <span>
-                  চেম্বার: {chamberList.find((c) => c.id === lockedChamberId)?.name ?? "নির্ধারিত চেম্বার"}
+                  {availableChambers.length === 1
+                    ? `চেম্বার: ${availableChambers[0]?.name}`
+                    : staffAccess?.isAllLocations
+                    ? `সব চেম্বার (${chamberList.length}টি সক্রিয়)`
+                    : `অ্যাসাইন করা চেম্বার (${availableChambers.length}টি)`}
                 </span>
               </Badge>
             ) : chamberList.length > 0 ? (
@@ -663,20 +708,20 @@ function AppointmentsPage() {
           {/* Location & Doctor Row */}
           <div>
             <Label className="mb-1 block text-xs font-medium text-foreground">চেম্বার লোকেশন</Label>
-            {isAssistant ? (
+            {isAssistant && availableChambers.length <= 1 ? (
               <div className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 text-xs">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
                 <span className="truncate">
-                  {chamberList.find((c) => c.id === lockedChamberId)?.name ?? "নির্ধারিত চেম্বার"}
+                  {availableChambers[0]?.name ?? "নির্ধারিত চেম্বার"}
                 </span>
               </div>
             ) : (
               <select
                 value={chamberId}
                 onChange={(e) => setChamberId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-border bg-input px-3 text-xs"
+                className="h-9 w-full rounded-lg border border-border bg-input px-3 text-xs font-medium"
               >
-                {chamberList.map((c) => (
+                {availableChambers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>

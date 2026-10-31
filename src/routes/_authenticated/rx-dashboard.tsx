@@ -138,6 +138,7 @@ function RxDashboard() {
           allowEdit
           businessId={businessId}
           date={queueDate}
+          doctorId={isAdmin ? undefined : (doctorId ?? undefined)}
           chambers={chambers.data ?? []}
           clinicName={business?.clinic_mode ? business?.name ?? null : null}
         />

@@ -11,6 +11,7 @@ type CreateStaffInput = {
   password: string;
   phone?: string;
   chamber_id?: string | null;
+  chamber_ids?: string[] | null;
   /** Create the assistant under this doctor (clinic use); defaults to the caller. */
   doctor_id?: string | null;
   /** "doctor_assistant" works under a doctor; "clinic_staff" works for the clinic. */
@@ -104,6 +105,13 @@ export const createRxStaff = createServerFn({ method: "POST" })
     }
 
     const kind = data.staff_kind === "clinic_staff" ? "clinic_staff" : "doctor_assistant";
+    const baseSections = kind === "clinic_staff" ? (data.sections ?? ["rx-queue"]) : ["rx-queue"];
+    const chamberTags = (data.chamber_ids ?? (data.chamber_id ? [data.chamber_id] : [])).map(
+      (cid) => `chamber:${cid}`
+    );
+    const combinedSections = Array.from(new Set([...baseSections, ...chamberTags]));
+    const primaryChamber = data.chamber_ids?.[0] || data.chamber_id || null;
+
     const { error: pErr } = await (supabase.rpc as any)("provision_rx_staff", {
       _business_id: data.business_id,
       _user_id: staffUserId,
@@ -111,11 +119,11 @@ export const createRxStaff = createServerFn({ method: "POST" })
       _name: name,
       _phone: data.phone?.trim() || "",
       _username: data.username,
-      _chamber_id: data.chamber_id || null,
+      _chamber_id: primaryChamber,
       _doctor_id: kind === "clinic_staff" ? null : data.doctor_id || null,
       _staff_kind: kind,
       _role_label: data.role_label?.trim() || null,
-      _sections: kind === "clinic_staff" ? (data.sections ?? ["rx-queue"]) : ["rx-queue"],
+      _sections: combinedSections,
     });
     if (pErr) throw new Error(pErr.message);
 
@@ -204,3 +212,58 @@ export const setRxStaffRoles = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     return { ok: true, roles: data.roles, sections };
   });
+
+/** Assign one, multiple, or all locations (chambers) to a staff account. */
+export const updateRxStaffLocations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      staff_id: string;
+      chamber_ids: string[];
+      primary_chamber_id?: string | null;
+    }) => {
+      if (!data?.staff_id) throw new Error("staff_id required");
+      return data;
+    }
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    // Fetch existing staff
+    const { data: staff, error: fetchErr } = await supabase
+      .from("rx_staff")
+      .select("id, allowed_sections, chamber_id")
+      .eq("id", data.staff_id)
+      .maybeSingle();
+
+    if (fetchErr || !staff) throw new Error(fetchErr?.message || "Staff not found");
+
+    const currentSections = ((staff as any).allowed_sections ?? []) as string[];
+    const nonChamberSections = currentSections.filter(
+      (s) => !s.startsWith("chamber:")
+    );
+    const newChamberSections = (data.chamber_ids ?? []).map(
+      (cid) => `chamber:${cid}`
+    );
+    const updatedSections = Array.from(
+      new Set([...nonChamberSections, ...newChamberSections])
+    );
+
+    const primaryId =
+      data.primary_chamber_id !== undefined
+        ? data.primary_chamber_id
+        : data.chamber_ids?.[0] || null;
+
+    const { error: updErr } = await supabase
+      .from("rx_staff")
+      .update({
+        chamber_id: primaryId,
+        allowed_sections: updatedSections,
+      } as never)
+      .eq("id", data.staff_id);
+
+    if (updErr) throw new Error(updErr.message);
+
+    return { ok: true, chamber_ids: data.chamber_ids, primary_id: primaryId };
+  });
+
