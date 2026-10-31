@@ -15,7 +15,7 @@
  *   X = Math.floor(N / 100)
  */
 
-export const APP_BUILD_NUMBER = 1476;
+export const APP_BUILD_NUMBER = 1477;
 
 export function formatBuildVersion(buildNum: number): string {
   const z = buildNum % 10;
@@ -24,4 +24,5 @@ export function formatBuildVersion(buildNum: number): string {
   return `${x}.${y}.${z}`;
 }
 
-export const APP_VERSION = formatBuildVersion(APP_BUILD_NUMBER); // "14.7.6"
+export const APP_VERSION = formatBuildVersion(APP_BUILD_NUMBER); // "14.7.7"
+

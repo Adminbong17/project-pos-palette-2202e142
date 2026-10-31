@@ -28,6 +28,8 @@ import {
   User,
   Download,
   Users,
+  Home,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -941,6 +943,7 @@ function Dashboard({
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [selectedPatientUid, setSelectedPatientUid] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("rx");
 
   useEffect(() => {
     if (q.error && /log in/i.test(String((q.error as Error).message))) onLogout();
@@ -1021,7 +1024,7 @@ function Dashboard({
   };
 
   return (
-    <div className="relative z-10 mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <div className="relative z-10 mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6 lg:p-8 pb-32">
       {/* Dashboard Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-2xl border border-border/80 bg-card/85 p-3.5 sm:p-5 shadow-lg backdrop-blur-md">
         <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
@@ -1206,7 +1209,7 @@ function Dashboard({
       </div>
 
       {/* Tabs Navigation for Patient Records - Mobile Responsive 2x2 Grid / Desktop 4 Columns */}
-      <Tabs defaultValue="appt" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto p-1.5 gap-1.5 sm:gap-2 rounded-2xl bg-muted/80 border border-border/80 shadow-inner">
           <TabsTrigger
             value="appt"
@@ -1400,18 +1403,51 @@ function Dashboard({
 
         {/* PRESCRIPTIONS TAB (আমার প্রেসক্রিপশন - সহজ ভাষায় বিশ্লেষণ) */}
         <TabsContent value="rx" className="mt-4 space-y-4">
-          {filteredPrescriptions.length === 0 && <Empty message={curr.empty} />}
-          {filteredPrescriptions.map((r: any) => (
-            <PatientSmartPrescription key={r.id} prescription={r} />
-          ))}
+          {filteredPrescriptions.length === 0 ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:text-emerald-300 font-medium flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>এটি প্রেসক্রিপশন বিশ্লেষণের একটি পূর্ণাঙ্গ নমুনা (ডাক্তার নতুন প্রেসক্রিপশন দিলে এখানে স্বয়ংক্রিয়ভাবে দেখাবে)</span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenBooking()}
+                  className="h-7 text-xs font-bold border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                >
+                  ডাক্তারের সিরিয়াল নিন
+                </Button>
+              </div>
+              <PatientSmartPrescription prescription={null} />
+            </div>
+          ) : (
+            filteredPrescriptions.map((r: any) => (
+              <PatientSmartPrescription key={r.id} prescription={r} />
+            ))
+          )}
         </TabsContent>
 
         {/* LAB REPORTS TAB (আমার রিপোর্ট - সহজ ভাষায় বিশ্লেষণ) */}
         <TabsContent value="lab" className="mt-4 space-y-4">
-          {filteredLabReports.length === 0 && <Empty message={curr.empty} />}
-          {filteredLabReports.map((r: any) => (
-            <PatientSmartLabReport key={r.id} report={r} />
-          ))}
+          {filteredLabReports.length === 0 ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-teal-500/25 bg-teal-500/10 p-3 text-xs text-teal-900 dark:text-teal-300 font-medium flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                  <span>এটি ল্যাব রিপোর্ট বিশ্লেষণের একটি পূর্ণাঙ্গ নমুনা (ল্যাব টেস্ট সম্পন্ন হলে আপনার আসল রিপোর্ট এখানে যুক্ত হবে)</span>
+                </span>
+                <Badge variant="outline" className="border-teal-500/30 text-teal-700 dark:text-teal-300 font-semibold">
+                  CBC + ESR ডেমো
+                </Badge>
+              </div>
+              <PatientSmartLabReport report={null} />
+            </div>
+          ) : (
+            filteredLabReports.map((r: any) => (
+              <PatientSmartLabReport key={r.id} report={r} />
+            ))
+          )}
         </TabsContent>
 
         {/* BILLING & INVOICES TAB */}
@@ -1504,6 +1540,86 @@ function Dashboard({
           qc.invalidateQueries({ queryKey: ["patient-dashboard", token] });
         }}
       />
+
+      {/* ================= STICKY BOTTOM NAVIGATION BAR (HUBUHU LIKE PDF) ================= */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-lg py-1.5 px-3">
+        <div className="max-w-md mx-auto flex items-center justify-around relative">
+          {/* ১. হোম */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("appt")}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer",
+              activeTab === "appt"
+                ? "text-emerald-700 dark:text-emerald-400 font-bold scale-105"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+            )}
+          >
+            <Home className="h-5 w-5" />
+            <span className="text-[10px] font-medium">{lang === "bn" ? "হোম" : "Home"}</span>
+          </button>
+
+          {/* ২. আমার প্রেসক্রিপশন */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("rx")}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer",
+              activeTab === "rx"
+                ? "text-emerald-700 dark:text-emerald-400 font-bold scale-105"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+            )}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-[10px] font-medium">{lang === "bn" ? "আমার প্রেসক্রিপশন" : "Prescription"}</span>
+          </button>
+
+          {/* ৩. নতুন স্ক্যান (Elevated Center Circular Floating Action Button) */}
+          <div className="-mt-7 flex flex-col items-center justify-center">
+            <button
+              type="button"
+              onClick={() => handleOpenBooking()}
+              className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-700 text-white shadow-lg shadow-emerald-700/40 hover:bg-emerald-800 hover:scale-110 active:scale-95 transition-all cursor-pointer border-3 border-white dark:border-slate-950"
+              title={lang === "bn" ? "নতুন সিরিয়াল বা স্ক্যান" : "New Scan / Serial"}
+            >
+              <Plus className="h-6 w-6 stroke-[3]" />
+            </button>
+            <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 mt-0.5">
+              {lang === "bn" ? "নতুন স্ক্যান" : "New Scan"}
+            </span>
+          </div>
+
+          {/* ৪. রিপোর্ট ব্যাখ্যা */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("lab")}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer",
+              activeTab === "lab"
+                ? "text-emerald-700 dark:text-emerald-400 font-bold scale-105"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+            )}
+          >
+            <FlaskConical className="h-5 w-5" />
+            <span className="text-[10px] font-medium">{lang === "bn" ? "রিপোর্ট ব্যাখ্যা" : "Lab Reports"}</span>
+          </button>
+
+          {/* ৫. সেটিংস */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("bill")}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer",
+              activeTab === "bill"
+                ? "text-emerald-700 dark:text-emerald-400 font-bold scale-105"
+                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+            )}
+          >
+            <Settings className="h-5 w-5" />
+            <span className="text-[10px] font-medium">{lang === "bn" ? "সেটিংস" : "Settings"}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
