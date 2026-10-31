@@ -263,9 +263,15 @@ export function AppSidebar() {
           ))}
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-3 py-2 flex items-center justify-between border-t border-border/40 text-xs text-muted-foreground">
-            <span>Theme</span>
-            <ThemeToggle />
+          <div className="px-3 py-2.5 flex flex-col gap-2 border-t border-border/40">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Theme</span>
+              <ThemeToggle />
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
+              <span>Platform Core</span>
+              <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v1.0</span>
+            </div>
           </div>
         </SidebarFooter>
       </Sidebar>
@@ -324,14 +330,15 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-3">
+        <div className="flex items-center gap-2.5 px-3 py-3 border-b border-border/40">
           <img
             src="/favicon.png"
             alt="QweekPOS"
             className="h-8 w-8 rounded-lg object-cover shadow-sm"
           />
           <div className="leading-tight">
-            <div className="text-[10px] text-muted-foreground">v1.0</div>
+            <span className="text-sm font-bold text-foreground">QweekPOS</span>
+            <div className="text-[10px] text-muted-foreground">{business?.name || "Pharmacy & Retail"}</div>
           </div>
         </div>
       </SidebarHeader>
@@ -400,8 +407,15 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-1 pb-1">
-          <ThemeToggle />
+        <div className="px-3 py-2.5 flex flex-col gap-2 border-t border-border/40">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Theme</span>
+            <ThemeToggle />
+          </div>
+          <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
+            <span>{business?.name || "QweekPOS"}</span>
+            <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v1.0</span>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
