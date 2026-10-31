@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Trash2, Stethoscope, Pencil, Printer } from "lucide-react";
+import {
+  FileText,
+  Trash2,
+  Stethoscope,
+  Pencil,
+  Printer,
+  Globe,
+  Building2,
+  Clock,
+  CheckCircle2,
+  RotateCcw,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/utils";
@@ -65,7 +76,46 @@ export function AppointmentQueue({
   const [busy, setBusy] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditState | null>(null);
   const [tokenSize, setTokenSize] = useState<TokenSize>("80mm");
+  const [filter, setFilter] = useState<"all" | "online" | "waiting" | "in_progress" | "done">("all");
 
+  // Real-time listener: instantly reflect online portal bookings & status changes
+  useEffect(() => {
+    if (!businessId) return;
+    const channel = supabase
+      .channel(`rx-appts-realtime-${businessId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "rx_appointments",
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload: any) => {
+          qc.invalidateQueries({ queryKey: ["rx-appointments"] });
+          qc.invalidateQueries({ queryKey: ["rx-appointment-stats"] });
+          if (payload.eventType === "INSERT") {
+            const row = payload.new;
+            if (row?.appt_date === date) {
+              const isOnline =
+                (row.notes || "").toLowerCase().includes("পোর্টাল") ||
+                (row.notes || "").toLowerCase().includes("portal") ||
+                (row.notes || "").toLowerCase().includes("অনলাইন");
+              toast.info(
+                `🔔 নতুন সিরিয়াল #${row.serial_no ?? "—"}: ${row.patient_name || "রোগী"} ${
+                  isOnline ? "(অনলাইন পোর্টাল থেকে)" : ""
+                }`,
+              );
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [businessId, date, qc]);
 
   const list = useQuery({
     queryKey: ["rx-appointments", businessId, date, chamberId ?? "all"],
@@ -79,11 +129,27 @@ export function AppointmentQueue({
         .eq("business_id", businessId!)
         .eq("appt_date", date)
         .order("serial_no", { ascending: true });
-      if (chamberId) q = q.eq("chamber_id", chamberId);
+      if (chamberId && chamberId !== "all") {
+        // Also show unassigned/portal appointments so staff never miss patient portal bookings!
+        q = q.or(`chamber_id.eq.${chamberId},chamber_id.is.null`);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Appointment[];
     },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("rx_appointments").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("স্ট্যাটাস আপডেট হয়েছে");
+      qc.invalidateQueries({ queryKey: ["rx-appointments"] });
+      qc.invalidateQueries({ queryKey: ["rx-appointment-stats"] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const del = useMutation({
@@ -204,132 +270,354 @@ export function AppointmentQueue({
     }
   };
 
-  const rows = list.data ?? [];
+  const allRows = list.data ?? [];
+
+  const counts = useMemo(() => {
+    let online = 0;
+    let waiting = 0;
+    let inProgress = 0;
+    let done = 0;
+    for (const a of allRows) {
+      const isOnline =
+        (a.notes || "").toLowerCase().includes("পোর্টাল") ||
+        (a.notes || "").toLowerCase().includes("portal") ||
+        (a.notes || "").toLowerCase().includes("অনলাইন");
+      if (isOnline) online++;
+      const st = a.status || (a.prescription_id ? "in_progress" : "waiting");
+      if (st === "waiting") waiting++;
+      else if (st === "in_progress") inProgress++;
+      else if (st === "done") done++;
+    }
+    return { all: allRows.length, online, waiting, inProgress, done };
+  }, [allRows]);
+
+  const rows = useMemo(() => {
+    return allRows.filter((a) => {
+      const isOnline =
+        (a.notes || "").toLowerCase().includes("পোর্টাল") ||
+        (a.notes || "").toLowerCase().includes("portal") ||
+        (a.notes || "").toLowerCase().includes("অনলাইন");
+      if (filter === "online") return isOnline;
+      const st = a.status || (a.prescription_id ? "in_progress" : "waiting");
+      if (filter === "waiting") return st === "waiting";
+      if (filter === "in_progress") return st === "in_progress";
+      if (filter === "done") return st === "done";
+      return true;
+    });
+  }, [allRows, filter]);
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Stethoscope className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">Patient queue · {formatDate(date)}</h2>
+    <div className="rounded-2xl border border-border/60 bg-card shadow-xs overflow-hidden">
+      {/* Header bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Stethoscope className="h-4 w-4" />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground">সিরিয়াল তালিকা · {formatDate(date)}</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                লাইভ
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              মোট {allRows.length} জন রোগী নথিবদ্ধ • {counts.waiting} জন অপেক্ষমান
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            Token
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground bg-background rounded-lg border border-border px-2 py-1">
+            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>টোকেন সাইজ:</span>
             <select
               value={tokenSize}
               onChange={(e) => setTokenSize(e.target.value as TokenSize)}
-              className="h-7 rounded-md border border-border bg-input px-1.5 text-[11px]"
+              className="bg-transparent font-medium text-foreground text-xs focus:outline-hidden"
             >
-              <option value="58mm">58mm</option>
-              <option value="80mm">80mm</option>
+              <option value="58mm">58mm POS</option>
+              <option value="80mm">80mm POS</option>
               <option value="A5">Half A4</option>
             </select>
           </label>
-          <span className="text-xs text-muted-foreground">{rows.length} patient(s)</span>
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1 border-b border-border/60 bg-muted/30 px-3 py-2 overflow-x-auto">
+        <button
+          onClick={() => setFilter("all")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            filter === "all"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          সকল রোগী ({counts.all})
+        </button>
+        <button
+          onClick={() => setFilter("online")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            filter === "online"
+              ? "bg-sky-600 text-white shadow-xs"
+              : "text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
+          }`}
+        >
+          <Globe className="h-3.5 w-3.5" />
+          অনলাইন বুকিং ({counts.online})
+        </button>
+        <button
+          onClick={() => setFilter("waiting")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            filter === "waiting"
+              ? "bg-amber-600 text-white shadow-xs"
+              : "text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          অপেক্ষমান ({counts.waiting})
+        </button>
+        <button
+          onClick={() => setFilter("in_progress")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            filter === "in_progress"
+              ? "bg-blue-600 text-white shadow-xs"
+              : "text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+          }`}
+        >
+          <Stethoscope className="h-3.5 w-3.5" />
+          ডাক্তারের রুমে ({counts.inProgress})
+        </button>
+        <button
+          onClick={() => setFilter("done")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            filter === "done"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+          }`}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          সম্পন্ন ({counts.done})
+        </button>
+      </div>
+
       {list.isLoading ? (
-        <p className="p-6 text-center text-sm text-muted-foreground">Loading…</p>
+        <div className="flex flex-col items-center justify-center p-10 text-muted-foreground">
+          <RotateCcw className="h-6 w-6 animate-spin mb-2" />
+          <p className="text-sm">সিরিয়াল তালিকা লোড হচ্ছে…</p>
+        </div>
       ) : rows.length === 0 ? (
-        <p className="p-6 text-center text-sm text-muted-foreground">No patients listed for this day.</p>
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <Stethoscope className="h-10 w-10 text-muted-foreground/30 mb-2" />
+          <p className="text-sm font-medium text-foreground">
+            {filter === "online"
+              ? "আজ কোনো অনলাইন বুকিং পাওয়া যায়নি"
+              : filter === "waiting"
+              ? "বর্তমানে কোনো অপেক্ষমান রোগী নেই"
+              : filter === "done"
+              ? "পরামর্শ সম্পন্ন হওয়া রোগী নেই"
+              : "এই দিনের জন্য কোনো রোগীর সিরিয়াল নথিবদ্ধ নেই"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            নতুন রোগী যোগ করতে ওপরের কাউন্টার এন্ট্রি ফর্ম ব্যবহার করুন।
+          </p>
+        </div>
       ) : (
         <ul className="divide-y divide-border/60">
-          {rows.map((a) => (
-            <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 text-sm">
-              <span className="flex h-7 min-w-7 items-center justify-center rounded-md bg-primary/15 px-1.5 font-mono text-xs font-semibold text-primary">
-                {a.serial_no ?? "—"}
-              </span>
-              <span className="font-medium">{a.patient_name}</span>
-              {a.patient_code && (
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold">
-                  {a.patient_code}
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {a.patient_age ? `${a.patient_age}y` : ""} {a.patient_gender ?? ""}
-              </span>
-              {a.patient_phone && <span className="text-xs text-muted-foreground">{a.patient_phone}</span>}
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">
-                {patientTypeLabel(a.patient_type, a.is_new_patient !== false)}
-              </span>
-              {a.fee_amount != null && (
-                <span className="text-xs font-medium">৳ {Number(a.fee_amount).toFixed(0)}</span>
-              )}
-              <span className="text-xs text-muted-foreground">{chamberName(a.chamber_id)}</span>
-              {a.doctor_id && doctors.data?.[a.doctor_id]?.name && (
-                <span className="text-xs text-muted-foreground">
-                  {doctors.data[a.doctor_id]!.name}
-                </span>
-              )}
-              {a.appt_time && (
-                <span className="font-mono text-[11px] text-muted-foreground">{a.appt_time.slice(0, 5)}</span>
-              )}
-              {a.prescription_id ? (
-                <Badge variant="outline" className="text-[10px]">Rx started</Badge>
-              ) : null}
-              <div className="ml-auto flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  title="Print patient token"
-                  onClick={() => printToken(a)}
-                >
-                  <Printer className="mr-1 h-3.5 w-3.5" /> Token
-                </Button>
-                {allowStart &&
-                  (a.prescription_id ? (
-                    <Button size="sm" disabled className="h-8 text-xs" title="Prescription already created">
-                      <FileText className="mr-1 h-3.5 w-3.5" /> Rx created
-                    </Button>
-                  ) : (
-                    <Button size="sm" disabled={busy === a.id} onClick={() => start(a)} className="h-8 text-xs">
-                      <FileText className="mr-1 h-3.5 w-3.5" /> Start prescription
-                    </Button>
-                  ))}
-                {allowEdit && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    title="Edit patient"
-                    onClick={() =>
-                      setEdit({
-                        id: a.id,
-                        patient_name: a.patient_name ?? "",
-                        patient_age: a.patient_age ?? "",
-                        patient_gender: a.patient_gender ?? "",
-                        patient_phone: a.patient_phone ?? "",
-                        appt_date: a.appt_date ?? date,
-                        appt_time: a.appt_time ? a.appt_time.slice(0, 5) : "",
-                        chamber_id: a.chamber_id ?? "",
-                        serial_no: a.serial_no != null ? String(a.serial_no) : "",
-                        status: a.status ?? "waiting",
-                        notes: (a as any).notes ?? "",
-                        patient_type:
-                          (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")) as string,
-                        fee_amount: a.fee_amount != null ? String(a.fee_amount) : "",
-                      })
-                    }
+          {rows.map((a) => {
+            const isOnline =
+              (a.notes || "").toLowerCase().includes("পোর্টাল") ||
+              (a.notes || "").toLowerCase().includes("portal") ||
+              (a.notes || "").toLowerCase().includes("অনলাইন");
+            const currentStatus = a.status || (a.prescription_id ? "in_progress" : "waiting");
+
+            return (
+              <li
+                key={a.id}
+                className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 p-3.5 text-sm transition-colors hover:bg-muted/30 ${
+                  isOnline ? "bg-sky-500/5 dark:bg-sky-500/[0.03]" : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Serial Number Badge */}
+                  <span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-primary/15 font-mono text-sm font-bold text-primary shadow-2xs">
+                    #{a.serial_no ?? "—"}
+                  </span>
+
+                  {/* Patient Name & Details */}
+                  <div className="flex flex-col">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground text-sm">{a.patient_name}</span>
+                      {a.patient_code && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                          {a.patient_code}
+                        </span>
+                      )}
+                      {/* Booking Origin Badge */}
+                      {isOnline ? (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-600 dark:text-sky-400">
+                          <Globe className="h-3 w-3" /> অনলাইন পোর্টাল
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <Building2 className="h-3 w-3" /> কাউন্টার
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                      {(a.patient_age || a.patient_gender) && (
+                        <span>
+                          {[a.patient_age ? `${a.patient_age} বছর` : null, a.patient_gender]
+                            .filter(Boolean)
+                            .join(" / ")}
+                        </span>
+                      )}
+                      {a.patient_phone && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono text-xs">{a.patient_phone}</span>
+                        </>
+                      )}
+                      {a.chamber_id && (
+                        <>
+                          <span>•</span>
+                          <span>{chamberName(a.chamber_id)}</span>
+                        </>
+                      )}
+                      {a.doctor_id && doctors.data?.[a.doctor_id]?.name && (
+                        <>
+                          <span>•</span>
+                          <span className="text-primary font-medium">
+                            ডা. {doctors.data[a.doctor_id]!.name}
+                          </span>
+                        </>
+                      )}
+                      {a.appt_time && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono text-[11px]">{a.appt_time.slice(0, 5)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right badges & Actions */}
+                <div className="flex flex-wrap items-center gap-2 ml-auto">
+                  {/* Patient Type */}
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {patientTypeLabel(a.patient_type, a.is_new_patient !== false)}
+                  </span>
+
+                  {/* Fee amount */}
+                  {a.fee_amount != null && (
+                    <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      ৳ {Number(a.fee_amount).toFixed(0)}
+                    </span>
+                  )}
+
+                  {/* Status Dropdown */}
+                  <select
+                    value={currentStatus}
+                    onChange={(e) => updateStatus.mutate({ id: a.id, status: e.target.value })}
+                    className={`h-7 rounded-md border text-xs font-medium px-2 py-0 focus:outline-hidden ${
+                      currentStatus === "done"
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                        : currentStatus === "in_progress"
+                        ? "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                        : currentStatus === "cancelled"
+                        ? "border-destructive/40 bg-destructive/10 text-destructive"
+                        : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    }`}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-                {allowDelete && (
+                    <option value="waiting">⏳ অপেক্ষমান</option>
+                    <option value="in_progress">🩺 ডাক্তারের রুমে</option>
+                    <option value="done">✅ সম্পন্ন</option>
+                    <option value="cancelled">❌ বাতিল</option>
+                  </select>
+
+                  {/* Token Print Button */}
                   <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => { if (confirm("Remove this patient?")) del.mutate(a.id); }}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1 text-xs"
+                    title="প্রিন্ট টোকেন"
+                    onClick={() => printToken(a)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Printer className="h-3.5 w-3.5 text-primary" />
+                    <span>টোকেন</span>
                   </Button>
-                )}
-              </div>
-            </li>
-          ))}
+
+                  {/* Prescription Action */}
+                  {allowStart &&
+                    (a.prescription_id ? (
+                      <Button size="sm" disabled className="h-8 text-xs gap-1" title="প্রেসক্রিপশন তৈরি হয়েছে">
+                        <FileText className="h-3.5 w-3.5" /> Rx প্রস্তুত
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={busy === a.id}
+                        onClick={() => start(a)}
+                        className="h-8 text-xs gap-1"
+                      >
+                        <FileText className="h-3.5 w-3.5" /> প্রেসক্রিপশন
+                      </Button>
+                    ))}
+
+                  {/* Edit Patient */}
+                  {allowEdit && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      title="তথ্য সংশোধন"
+                      onClick={() =>
+                        setEdit({
+                          id: a.id,
+                          patient_name: a.patient_name ?? "",
+                          patient_age: a.patient_age ?? "",
+                          patient_gender: a.patient_gender ?? "",
+                          patient_phone: a.patient_phone ?? "",
+                          appt_date: a.appt_date ?? date,
+                          appt_time: a.appt_time ? a.appt_time.slice(0, 5) : "",
+                          chamber_id: a.chamber_id ?? "",
+                          serial_no: a.serial_no != null ? String(a.serial_no) : "",
+                          status: a.status ?? "waiting",
+                          notes: (a as any).notes ?? "",
+                          patient_type:
+                            (a.patient_type ?? (a.is_new_patient === false ? "old" : "new")) as string,
+                          fee_amount: a.fee_amount != null ? String(a.fee_amount) : "",
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
+                  {/* Delete Patient */}
+                  {allowDelete && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      title="মুছে ফেলুন"
+                      onClick={() => {
+                        if (confirm(`রোগী "${a.patient_name}"-এর সিরিয়াল বাতিল করবেন?`)) {
+                          del.mutate(a.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

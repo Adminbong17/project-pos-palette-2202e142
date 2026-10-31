@@ -274,10 +274,10 @@ export const getAvailableDoctors = createServerFn({ method: "GET" }).handler(
     const bizMap = new Map((businesses ?? []).map((b) => [b.id, b.name]));
 
     // 2. Fetch chambers
-    const { data: chambers } = await db
+    const { data: chambersData } = await db
       .from("rx_chambers")
-      .select("id, name, address, business_id, doctor_id, fee_new, fee_old, fee_medical, is_active")
-      .eq("is_active", true);
+      .select("id, name, address, business_id, doctor_id, fee_new, fee_old, fee_medical, is_active");
+    const chambers = (chambersData ?? []).filter((c: any) => c.is_active !== false);
 
     // 3. Fetch doctor profiles
     const [rolesRes, userRolesRes, profilesRes] = await Promise.all([
@@ -546,7 +546,7 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
     if (chamberId) {
       const { data: ch } = await db
         .from("rx_chambers")
-        .select("id, name, fee_new, fee_old")
+        .select("id, name, fee_new, fee_old, fee_medical")
         .eq("id", chamberId)
         .single();
       if (ch) {
@@ -557,19 +557,33 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
             : Number(ch.fee_new) || 500;
       }
     } else {
-      const { data: defCh } = await db
-        .from("rx_chambers")
-        .select("id, name, fee_new, fee_old")
-        .eq("business_id", businessId)
-        .eq("is_active", true)
-        .limit(1);
-      if (defCh?.[0]) {
-        chamberId = defCh[0].id;
-        chamberName = defCh[0].name;
+      // First try to find chamber specifically assigned to this doctor
+      let ch: any = null;
+      if (data.doctor_id) {
+        const { data: docCh } = await db
+          .from("rx_chambers")
+          .select("id, name, fee_new, fee_old, fee_medical")
+          .eq("doctor_id", data.doctor_id)
+          .limit(1);
+        if (docCh?.[0]) ch = docCh[0];
+      }
+      // If doctor doesn't have a specific chamber assigned, get the business's default chamber
+      if (!ch && businessId) {
+        const { data: bizCh } = await db
+          .from("rx_chambers")
+          .select("id, name, fee_new, fee_old, fee_medical")
+          .eq("business_id", businessId)
+          .limit(1);
+        if (bizCh?.[0]) ch = bizCh[0];
+      }
+
+      if (ch) {
+        chamberId = ch.id;
+        chamberName = ch.name;
         feeAmount =
           data.patient_type === "old"
-            ? Number(defCh[0].fee_old) || Number(defCh[0].fee_new) || 300
-            : Number(defCh[0].fee_new) || 500;
+            ? Number(ch.fee_old) || Number(ch.fee_new) || 300
+            : Number(ch.fee_new) || 500;
       } else {
         feeAmount = data.patient_type === "old" ? 300 : 500;
       }
@@ -647,8 +661,8 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
         fee_amount: feeAmount,
         status: "waiting",
         notes: data.notes?.trim()
-          ? `[পেশেন্ট পোর্টাল বুকিং] ${data.notes.trim()}`
-          : "পেশেন্ট পোর্টাল থেকে বুকড",
+          ? `[অনলাইন পোর্টাল] ${data.notes.trim()}`
+          : "[অনলাইন পোর্টাল] পেশেন্ট পোর্টাল থেকে বুকড",
       } as never)
       .select("id, serial_no, patient_code, appt_date, appt_time, patient_name, patient_phone, fee_amount, status")
       .single();
