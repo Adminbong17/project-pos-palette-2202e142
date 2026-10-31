@@ -17,6 +17,7 @@ import { useCurrentRole } from "@/hooks/use-current-role";
 
 import { isRxMode, RX_PATHS, RX_ONLY_PATHS } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
+import { APP_VERSION } from "@/lib/version";
 
 // Sub-pages of the Lab module, shown nested under the "Lab" menu button.
 const LAB_CHILDREN = [
@@ -270,7 +271,7 @@ export function AppSidebar() {
             </div>
             <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
               <span>Platform Core</span>
-              <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v1.0</span>
+              <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v{APP_VERSION}</span>
             </div>
           </div>
         </SidebarFooter>
@@ -414,7 +415,7 @@ export function AppSidebar() {
           </div>
           <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
             <span>{business?.name || "QweekPOS"}</span>
-            <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v1.0</span>
+            <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v{APP_VERSION}</span>
           </div>
         </div>
       </SidebarFooter>
