@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
+import { useAuth } from "@/hooks/use-auth";
+import { useCurrentRole } from "@/hooks/use-current-role";
 import { toast } from "sonner";
 import {
   Search,
@@ -97,6 +99,11 @@ const PAYMENT_METHODS = [
 
 function PosScreen() {
   const { data: business } = useCurrentBusiness();
+  const { user } = useAuth();
+  const { isAdmin, isSuperAdmin } = useCurrentRole();
+  const isOwnerOrAdmin = Boolean(
+    isSuperAdmin || isAdmin || (business?.owner_id && user?.id && business.owner_id === user.id)
+  );
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -512,7 +519,7 @@ function PosScreen() {
 
   function selectProduct(item: FlatItem) {
     addToCart(item);
-    if (item.stock <= 0) {
+    if (isOwnerOrAdmin && item.stock <= 0) {
       toast.warning(`${item.name} is out of stock!`);
     } else {
       toast.success(`Added ${item.name}`);
@@ -989,12 +996,14 @@ function PosScreen() {
                 <span>বকেয়া খাতা</span>
               </Link>
 
-              <Link
-                to="/products/short-list"
-                className="inline-flex h-8.5 items-center gap-1 rounded-lg border border-border bg-card px-2.5 text-xs font-medium hover:bg-muted"
-              >
-                Short List
-              </Link>
+              {isOwnerOrAdmin && (
+                <Link
+                  to="/products/short-list"
+                  className="inline-flex h-8.5 items-center gap-1 rounded-lg border border-border bg-card px-2.5 text-xs font-medium hover:bg-muted"
+                >
+                  Short List
+                </Link>
+              )}
 
               {/* Location Selector */}
               <select
@@ -1139,14 +1148,20 @@ function PosScreen() {
                             <Badge
                               variant="outline"
                               className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                item.stock > 10
-                                  ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
-                                  : item.stock > 0
-                                    ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
-                                    : "border-destructive/40 text-destructive bg-destructive/10"
+                                !isOwnerOrAdmin
+                                  ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10 font-medium"
+                                  : item.stock > 10
+                                    ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
+                                    : item.stock > 0
+                                      ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
+                                      : "border-destructive/40 text-destructive bg-destructive/10"
                               }`}
                             >
-                              {item.stock > 0 ? `${item.stock} in stock` : "0 stock"}
+                              {!isOwnerOrAdmin
+                                ? "Available"
+                                : item.stock > 0
+                                  ? `${item.stock} in stock`
+                                  : "0 stock"}
                             </Badge>
                             <span className="text-xs font-bold text-primary min-w-[55px] text-right">
                               ৳{item.price.toFixed(2)}
@@ -1280,14 +1295,20 @@ function PosScreen() {
                           <Badge
                             variant="outline"
                             className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                              item.stock > 10
+                              !isOwnerOrAdmin
                                 ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
-                                : item.stock > 0
-                                  ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
-                                  : "border-destructive/40 text-destructive bg-destructive/10"
+                                : item.stock > 10
+                                  ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
+                                  : item.stock > 0
+                                    ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
+                                    : "border-destructive/40 text-destructive bg-destructive/10"
                             }`}
                           >
-                            {item.stock > 0 ? `${item.stock} in stock` : "0 stock"}
+                            {!isOwnerOrAdmin
+                              ? "Available"
+                              : item.stock > 0
+                                ? `${item.stock} in stock`
+                                : "0 stock"}
                           </Badge>
 
                           <div className="text-right min-w-[70px]">
@@ -1989,8 +2010,16 @@ function PosScreen() {
                   </div>
                   <div className="text-[11px] text-muted-foreground font-mono">
                     SKU: {m.sub_sku} ·{" "}
-                    <span className={m.stock > 0 ? "text-emerald-600" : "text-destructive"}>
-                      {m.stock > 0 ? `In stock (${m.stock})` : "Out of stock"}
+                    <span
+                      className={
+                        !isOwnerOrAdmin || m.stock > 0 ? "text-emerald-600 font-medium" : "text-destructive"
+                      }
+                    >
+                      {!isOwnerOrAdmin
+                        ? "Available"
+                        : m.stock > 0
+                          ? `In stock (${m.stock})`
+                          : "Out of stock"}
                     </span>{" "}
                     · ৳{m.price.toFixed(2)}
                   </div>
