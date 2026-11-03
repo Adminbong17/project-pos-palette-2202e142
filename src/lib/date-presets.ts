@@ -10,6 +10,7 @@ export type DatePresetKey =
   | "thisMonth"
   | "lastMonth"
   | "all"
+  | "allTime"
   | "custom";
 
 export const DATE_PRESETS: { key: DatePresetKey; label: string }[] = [
@@ -63,7 +64,7 @@ export type PresetRange = { fromISO: string | null; toISO: string | null; label:
 
 /** Resolve a preset (+ optional custom dates) to an ISO range. `all` → nulls. */
 export function resolvePresetRange(
-  preset: DatePresetKey,
+  preset: DatePresetKey | string,
   customFrom?: string,
   customTo?: string,
 ): PresetRange {
@@ -84,6 +85,7 @@ export function resolvePresetRange(
     case "lastMonth":
       return { ...monthBounds(today, -1), label: "Last Month" };
     case "all":
+    case "allTime":
       return { fromISO: null, toISO: null, label: "All Time" };
     case "custom": {
       const f = customFrom || today;
@@ -94,5 +96,7 @@ export function resolvePresetRange(
         label: `${f} → ${t}`,
       };
     }
+    default:
+      return { fromISO: null, toISO: null, label: "All Time" };
   }
 }

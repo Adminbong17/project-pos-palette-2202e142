@@ -96,7 +96,7 @@ function DueManagementPage() {
   // Filters
   const [tab, setTab] = useState<"invoices" | "customers">("invoices");
   const [statusFilter, setStatusFilter] = useState<"all_due" | "partial" | "full_due" | "cleared" | "all">("all_due");
-  const [dateRange, setDateRange] = useState<DatePresetKey>("allTime");
+  const [dateRange, setDateRange] = useState<DatePresetKey>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [search, setSearch] = useState("");
@@ -163,7 +163,7 @@ function DueManagementPage() {
 
   // Resolve Date Range
   const { fromISO, toISO } = useMemo(() => {
-    return resolvePresetRange(dateRange, customFrom, customTo);
+    return resolvePresetRange(dateRange, customFrom, customTo) || { fromISO: null, toISO: null, label: "All Time" };
   }, [dateRange, customFrom, customTo]);
 
   // Fetch Sales Transactions with lean payload and caching
@@ -235,7 +235,7 @@ function DueManagementPage() {
       }
 
       // Date range filter
-      if (dateRange !== "allTime") {
+      if (dateRange !== "all" && (dateRange as string) !== "allTime") {
         if (fromISO && r.transaction_date < fromISO) return false;
         if (toISO && r.transaction_date >= toISO) return false;
       }
