@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { thermalPrinter, type ConnectedPrinterInfo } from "@/lib/bluetooth-printer";
+import { thermalPrinter, type ConnectedPrinterInfo, type PrinterDriverType } from "@/lib/bluetooth-printer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bluetooth, Printer, CheckCircle2, AlertCircle, RefreshCw, Zap, X } from "lucide-react";
+import { Bluetooth, Printer, CheckCircle2, AlertCircle, RefreshCw, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 interface BluetoothPrinterModalProps {
@@ -18,6 +18,9 @@ export function BluetoothPrinterModal({
   businessName = "Sheikh Pharma",
 }: BluetoothPrinterModalProps) {
   const [printer, setPrinter] = useState<ConnectedPrinterInfo | null>(thermalPrinter.getConnectedPrinter());
+  const [activeDriver, setActiveDriver] = useState<PrinterDriverType>(() => {
+    return thermalPrinter.getActiveDriver();
+  });
   const [loading, setLoading] = useState(false);
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     return localStorage.getItem("pos_auto_bt_print") === "true";
@@ -26,8 +29,21 @@ export function BluetoothPrinterModal({
   useEffect(() => {
     return thermalPrinter.subscribe((info) => {
       setPrinter(info);
+      if (info?.driver) {
+        setActiveDriver(info.driver);
+      }
     });
   }, []);
+
+  const handleDriverChange = (driver: PrinterDriverType) => {
+    setActiveDriver(driver);
+    thermalPrinter.setActiveDriver(driver);
+    toast.success(
+      driver === "cat_printer"
+        ? "MX04 Cat Printer মোড সক্রিয় করা হয়েছে (384-dot BLE)"
+        : "PT-220_73D4 (Standard 58mm ESC/POS) মোড সক্রিয় করা হয়েছে"
+    );
+  };
 
   const handleToggleAutoPrint = (checked: boolean) => {
     setAutoPrint(checked);
@@ -39,7 +55,8 @@ export function BluetoothPrinterModal({
     setLoading(true);
     try {
       const res = await thermalPrinter.connectBluetooth();
-      toast.success(`ব্লুটুথ প্রিন্টার কানেক্ট হয়েছে: ${res.name}`);
+      setActiveDriver(res.driver || "escpos");
+      toast.success(`ব্লুটুথ প্রিন্টার কানেক্ট হয়েছে: ${res.name} (${res.driver === "cat_printer" ? "Cat Printer" : "PT-220"})`);
     } catch (err: any) {
       if (err.name !== "NotFoundError") {
         toast.error(err.message || "কানেক্ট করতে সমস্যা হয়েছে");
@@ -82,15 +99,67 @@ export function BluetoothPrinterModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-2xl border-border p-6 shadow-2xl">
+      <DialogContent className="sm:max-w-lg rounded-2xl border-border p-6 shadow-2xl">
         <DialogHeader className="border-b border-border/60 pb-3">
           <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
             <Bluetooth className="h-5 w-5 text-blue-500 animate-pulse" />
-            <span>58mm ওয়্যারলেস থার্মাল প্রিন্টার (Bluetooth)</span>
+            <span>ওয়্যারলেস ব্লুটুথ প্রিন্টার ম্যানেজার (Dual Support)</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Driver Mode Selector: PT-220 vs MX04 Cat Printer */}
+          <div className="space-y-1.5">
+            <div className="text-xs font-semibold text-muted-foreground">সক্রিয় প্রিন্টার মডেল নির্বাচন করুন:</div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleDriverChange("escpos")}
+                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
+                  activeDriver === "escpos"
+                    ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-1 ring-primary/40"
+                    : "border-border hover:bg-muted/60 text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold">
+                    <Printer className="h-4 w-4" />
+                    <span>PT-220_73D4</span>
+                  </div>
+                  {activeDriver === "escpos" && (
+                    <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 border-primary/40 text-primary">সক্রিয়</Badge>
+                  )}
+                </div>
+                <div className="text-[11px] font-normal opacity-80">
+                  Standard 58mm ESC/POS
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDriverChange("cat_printer")}
+                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
+                  activeDriver === "cat_printer"
+                    ? "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold shadow-xs ring-1 ring-rose-500/40"
+                    : "border-border hover:bg-muted/60 text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold">
+                    <span>🐱</span>
+                    <span>MX04 Cat Printer</span>
+                  </div>
+                  {activeDriver === "cat_printer" && (
+                    <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 border-rose-500/40 text-rose-600">সক্রিয়</Badge>
+                  )}
+                </div>
+                <div className="text-[11px] font-normal opacity-80">
+                  Pocket Mini 384-Dot BLE
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Connection Status Box */}
           <div
             className={`rounded-xl border p-4 transition-all ${
@@ -107,13 +176,18 @@ export function BluetoothPrinterModal({
                   <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0" />
                 )}
                 <div>
-                  <div className="text-sm font-bold">
-                    {printer ? printer.name : "কোনো প্রিন্টার সংযুক্ত নেই"}
+                  <div className="text-sm font-bold flex items-center gap-1.5">
+                    <span>{printer ? printer.name : "কোনো প্রিন্টার সংযুক্ত নেই"}</span>
+                    {printer && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-mono">
+                        {printer.driver === "cat_printer" ? "Cat Protocol" : "ESC/POS"}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground mt-0.5">
                     {printer
                       ? `কানেকশন মোড: ${printer.type === "bluetooth" ? "Web Bluetooth (BLE)" : "Bluetooth Serial (COM)"}`
-                      : "তার ও ড্রাইভার ছাড়া ব্লুটুথ দিয়ে রসিদ প্রিন্ট করুন"}
+                      : "তার ও ড্রাইভার ছাড়া ব্লুটুথ দিয়ে সরাসরি রসিদ প্রিন্ট করুন"}
                   </div>
                 </div>
               </div>
@@ -122,7 +196,7 @@ export function BluetoothPrinterModal({
                   size="sm"
                   variant="outline"
                   onClick={handleDisconnect}
-                  className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+                  className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 cursor-pointer"
                 >
                   ডিসকানেক্ট
                 </Button>
@@ -130,18 +204,32 @@ export function BluetoothPrinterModal({
             </div>
           </div>
 
-          {/* Quick Setup Instructions */}
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-muted-foreground space-y-1.5">
-            <div className="font-semibold text-foreground flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-blue-600" />
-              <span>সহজ কানেকশন গাইড (PT-220_73D4):</span>
+          {/* Dynamic Quick Setup Instructions */}
+          {activeDriver === "cat_printer" ? (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs text-muted-foreground space-y-1.5">
+              <div className="font-semibold text-foreground flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                <span>🐱 MX04 Cat Printer কানেকশন নির্দেশিকা:</span>
+              </div>
+              <p>
+                ১. Cat Printer এর পাওয়ার বাটন চেপে অন করুন (LED বাতি জ্বলবে)।<br />
+                ২. নিচে <b>Web Bluetooth (BLE)</b> বাটনে ক্লিক করুন।<br />
+                ৩. ব্রাউজার লিস্টে <b>MX04</b>, <b>GT01</b>, <b>GB01</b>, বা <b>WalkPrint</b> সিলেক্ট করে পেয়ার করুন।<br />
+                ৪. পেয়ার হলে রসিদ ও টেস্ট প্রিন্ট সম্পূর্ণ ক্যাট ফরম্যাটে প্রিন্ট হবে।
+              </p>
             </div>
-            <p>
-              ১. প্রিন্টারের পাওয়ার অন রাখুন এবং পিসির ব্লুটুথ চালু রাখুন।<br />
-              ২. <b>Web Bluetooth</b> দিয়ে সরাসরি ব্রাউজারে ডিভাইস সিলেক্ট করুন।<br />
-              ৩. অথবা Windows Bluetooth-এ প্রিন্টারটি পেয়ার করে (PIN: <b>0000</b>) <b>Bluetooth COM</b> সিলেক্ট করুন।
-            </p>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-muted-foreground space-y-1.5">
+              <div className="font-semibold text-foreground flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                <Zap className="h-3.5 w-3.5" />
+                <span>PT-220_73D4 কানেকশন নির্দেশিকা:</span>
+              </div>
+              <p>
+                ১. PT-220 প্রিন্টারের পাওয়ার অন রাখুন এবং ডিভাইসের ব্লুটুথ চালু রাখুন।<br />
+                ২. <b>Web Bluetooth (BLE)</b> দিয়ে সরাসরি ব্রাউজারে ডিভাইস সিলেক্ট করুন।<br />
+                ৩. অথবা Windows Bluetooth-এ পেয়ার করে (PIN: <b>0000</b>) <b>Bluetooth COM</b> সিলেক্ট করুন।
+              </p>
+            </div>
+          )}
 
           {/* Connect Action Buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -200,7 +288,7 @@ export function BluetoothPrinterModal({
               ) : (
                 <Printer className="h-4 w-4" />
               )}
-              <span>টেস্ট রসিদ প্রিন্ট করুন (Test Print)</span>
+              <span>টেস্ট রসিদ প্রিন্ট করুন ({activeDriver === "cat_printer" ? "MX04 Cat Printer" : "PT-220_73D4"})</span>
             </Button>
           )}
         </div>
@@ -210,7 +298,7 @@ export function BluetoothPrinterModal({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-full h-9 rounded-xl text-xs"
+            className="w-full h-9 rounded-xl text-xs cursor-pointer"
           >
             বন্ধ করুন
           </Button>

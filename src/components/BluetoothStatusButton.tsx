@@ -29,7 +29,7 @@ export function BluetoothStatusButton({
             ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
             : "border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-200 hover:bg-blue-500/20"
         } ${className}`}
-        title={printer ? `সংযুক্ত প্রিন্টার: ${printer.name} (ক্লিক করে সেটিংস দেখুন)` : "58mm ব্লুটুথ থার্মাল প্রিন্টার কানেক্ট করুন (PT-220)"}
+        title={printer ? `সংযুক্ত প্রিন্টার: ${printer.name} (${printer.driver === "cat_printer" ? "MX04 Cat" : "PT-220 ESC/POS"})` : "ব্লুটুথ থার্মাল প্রিন্টার কানেক্ট করুন (PT-220 / MX04 Cat)"}
       >
         <Bluetooth className="h-3.5 w-3.5 text-blue-600 shrink-0" />
         {showText && (

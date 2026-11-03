@@ -283,7 +283,7 @@ export function DueVoucherModal({
                 <span>
                   {connectedPrinter
                     ? `⚡ Bluetooth Print (${connectedPrinter.name})`
-                    : "⚡ Bluetooth প্রিন্টারে পাঠান (PT-220)"}
+                    : "⚡ Bluetooth প্রিন্টারে পাঠান (PT-220 / MX04 Cat)"}
                 </span>
               </Button>
 

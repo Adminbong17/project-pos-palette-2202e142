@@ -9,21 +9,25 @@
 
 import type { ReceiptSale, ReceiptHeader } from "./receipt-print";
 import type { DueVoucherData } from "./due-print";
+import { canvasToCatPrinterPackets, renderCatTestSlipCanvas } from "./cat-printer-driver";
 
 export type PrinterConnectionType = "bluetooth" | "serial";
+export type PrinterDriverType = "escpos" | "cat_printer";
 
 export interface ConnectedPrinterInfo {
   name: string;
   type: PrinterConnectionType;
+  driver?: PrinterDriverType;
   id?: string;
   connectedAt: number;
 }
 
-// Known GATT service UUIDs used by mobile thermal printers (PT-220, MTP-II, POS-58, etc.)
+// Known GATT service UUIDs used by mobile thermal printers (PT-220, MTP-II, POS-58, MX04 Cat, etc.)
 const KNOWN_PRINTER_SERVICES = [
-  "000018f0-0000-1000-8000-00805f9b34fb", // Standard mobile printer service
+  "000018f0-0000-1000-8000-00805f9b34fb", // Standard mobile printer service (PT-220, MTP-II)
   "0000ffe0-0000-1000-8000-00805f9b34fb", // Common Chinese BLE POS
-  "0000ff00-0000-1000-8000-00805f9b34fb",
+  "0000ff00-0000-1000-8000-00805f9b34fb", // Cat Printer / MX04 / GT01 primary service
+  "0000ae30-0000-1000-8000-00805f9b34fb", // Cat Printer alternate service
   "0000fee7-0000-1000-8000-00805f9b34fb",
   "49535343-fe7d-4ae5-8fa9-9fafd205e455", // ISSC Transparent UART
   "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
@@ -644,9 +648,16 @@ class ThermalPrinterManager {
   private serialPort: any = null;
   private serialWriter: any = null;
   private currentPrinter: ConnectedPrinterInfo | null = null;
+  private activeDriver: PrinterDriverType = "escpos";
   private listeners: Set<(info: ConnectedPrinterInfo | null) => void> = new Set();
 
   constructor() {
+    try {
+      const savedDriver = (typeof localStorage !== "undefined" && localStorage.getItem("pos_printer_driver")) as PrinterDriverType;
+      if (savedDriver === "cat_printer" || savedDriver === "escpos") {
+        this.activeDriver = savedDriver;
+      }
+    } catch (_) {}
     this.restoreLastPrinter();
   }
 
@@ -668,6 +679,22 @@ class ThermalPrinterManager {
     return this.currentPrinter;
   }
 
+  public getActiveDriver(): PrinterDriverType {
+    return this.activeDriver;
+  }
+
+  public setActiveDriver(driver: PrinterDriverType) {
+    this.activeDriver = driver;
+    try {
+      localStorage.setItem("pos_printer_driver", driver);
+      if (this.currentPrinter) {
+        this.currentPrinter = { ...this.currentPrinter, driver };
+        localStorage.setItem("last_pos_thermal_printer", JSON.stringify(this.currentPrinter));
+      }
+    } catch (_) {}
+    this.notify();
+  }
+
   public isConnected(): boolean {
     return Boolean(this.bleCharacteristic || this.serialWriter);
   }
@@ -677,7 +704,10 @@ class ThermalPrinterManager {
       const saved = localStorage.getItem("last_pos_thermal_printer");
       if (saved) {
         const parsed = JSON.parse(saved);
-        this.currentPrinter = { ...parsed, connectedAt: Date.now() };
+        if (parsed.driver) {
+          this.activeDriver = parsed.driver;
+        }
+        this.currentPrinter = { ...parsed, driver: this.activeDriver, connectedAt: Date.now() };
       }
     } catch (_) {}
   }
@@ -747,9 +777,24 @@ class ThermalPrinterManager {
       this.bleCharacteristic = writeChar;
       this.disconnectSerial();
 
+      // Auto-detect printer model
+      const devName = (device.name || "").toLowerCase();
+      const isCat = /mx04|mx05|mx06|gt01|gb01|gb02|gb03|cat|walkprint|iprint|funprint|tiny/i.test(devName);
+      const isPt220 = /pt-220|mtp|pos-58|rpp|xprinter/i.test(devName);
+
+      if (isCat) {
+        this.activeDriver = "cat_printer";
+      } else if (isPt220) {
+        this.activeDriver = "escpos";
+      }
+      try {
+        localStorage.setItem("pos_printer_driver", this.activeDriver);
+      } catch (_) {}
+
       const info: ConnectedPrinterInfo = {
-        name: device.name || "PT-220 Thermal Printer",
+        name: device.name || (this.activeDriver === "cat_printer" ? "MX04 Cat Printer" : "PT-220 Thermal Printer"),
         type: "bluetooth",
+        driver: this.activeDriver,
         id: device.id,
         connectedAt: Date.now(),
       };
@@ -884,13 +929,28 @@ class ThermalPrinterManager {
    */
   /**
    * Print any arbitrary 2D canvas directly to the thermal printer
+   * Automatically branches between PT-220 (ESC/POS) and MX04 (Cat Printer BLE Protocol)
    */
   public async printCanvasDirect(
     canvas: HTMLCanvasElement,
     targetWidthDots = 384
   ): Promise<void> {
-    const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
-    await this.writeRaw(escPosBytes);
+    if (this.activeDriver === "cat_printer") {
+      await this.printCanvasCat(canvas);
+    } else {
+      const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
+      await this.writeRaw(escPosBytes);
+    }
+  }
+
+  /**
+   * Print 384px canvas to MX04 Cat Printer using 0x5178 protocol frames
+   */
+  public async printCanvasCat(canvas: HTMLCanvasElement): Promise<void> {
+    const packets = canvasToCatPrinterPackets(canvas);
+    for (const packet of packets) {
+      await this.writeRaw(packet, 64, 8);
+    }
   }
 
   /**
@@ -926,6 +986,10 @@ class ThermalPrinterManager {
     voucher: DueVoucherData,
     cols = 32
   ): Promise<void> {
+    if (this.activeDriver === "cat_printer") {
+      await this.printDueVoucherDirect(voucher, 384);
+      return;
+    }
     const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
 
@@ -1014,6 +1078,10 @@ class ThermalPrinterManager {
     header: ReceiptHeader,
     cols = 32
   ): Promise<void> {
+    if (this.activeDriver === "cat_printer") {
+      await this.printReceiptDirect(sale, header, 384);
+      return;
+    }
     const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
 
@@ -1200,9 +1268,15 @@ class ThermalPrinterManager {
   }
 
   /**
-   * Print a test slip to verify Bluetooth communication instantly
+   * Print a test slip to verify Bluetooth communication instantly (Supports both PT-220 & Cat Printer)
    */
   public async printTestSlip(businessName = "শেখ ফার্মা (Sheikh Pharma)") {
+    if (this.activeDriver === "cat_printer") {
+      const canvas = renderCatTestSlipCanvas(businessName);
+      await this.printCanvasCat(canvas);
+      return;
+    }
+
     const encoder = new TextEncoder();
     const parts: Uint8Array[] = [];
 
