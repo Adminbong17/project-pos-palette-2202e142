@@ -1265,9 +1265,9 @@ function DueManagementPage() {
 
       {/* SINGLE INVOICE PAYMENT / CLEAR DUE MODAL */}
       <Dialog open={!!payRow} onOpenChange={(o) => !o && setPayRow(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <HandCoins className="h-5 w-5 text-rose-600" />
               <span>বকেয়া টাকা জমা ও পরিশোধ (Pay Due)</span>
             </DialogTitle>
@@ -1275,118 +1275,132 @@ function DueManagementPage() {
 
           {payRow && (
             <div className="space-y-4 pt-1">
-              {/* Invoice Summary Card */}
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 text-xs space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">চালান নং:</span>
-                  <span className="font-mono font-bold text-primary">{payRow.invoice_no ?? payRow.ref_no ?? "—"}</span>
+              {/* Invoice Summary Card (Grid Layout for balanced square shape) */}
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">চালান নং:</span>
+                    <span className="font-mono font-bold text-primary text-sm truncate block">
+                      {payRow.invoice_no ?? payRow.ref_no ?? "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">কাস্টমার:</span>
+                    <span className="font-bold text-foreground truncate block">
+                      {payRow.contact?.name ?? "Walk-in Customer"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">মোট বিল:</span>
+                    <span className="font-mono font-bold text-foreground block">
+                      {money(Number(payRow.final_total || 0))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">পূর্বে পরিশোধিত:</span>
+                    <span className="font-mono font-bold text-emerald-700 block">
+                      {money(Number(payRow.total_paid || 0))}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">কাস্টমার:</span>
-                  <span className="font-bold text-foreground">{payRow.contact?.name ?? "Walk-in Customer"}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">মোট বিল:</span>
-                  <span className="font-mono">{money(Number(payRow.final_total || 0))}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">পূর্বে পরিশোধিত:</span>
-                  <span className="font-mono text-emerald-700">{money(Number(payRow.total_paid || 0))}</span>
-                </div>
-                <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-sm font-bold text-rose-600">
-                  <span>বর্তমান বকেয়া:</span>
-                  <span className="font-mono text-base font-extrabold">
+
+                <div className="border-t border-rose-500/20 mt-3 pt-2.5 flex justify-between items-center bg-rose-500/10 -mx-3.5 -mb-3.5 p-3 rounded-b-xl">
+                  <span className="text-xs font-bold text-rose-700">বর্তমান বকেয়া:</span>
+                  <span className="font-mono text-lg font-extrabold text-rose-700">
                     {money(Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0)))}
                   </span>
                 </div>
               </div>
 
-              {/* Payment Amount Input */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs font-semibold">আদায়কৃত টাকার পরিমাণ (Amount to Pay) *</Label>
-                  {/* Quick Preset Buttons */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
-                        setPayAmount(rem.toFixed(2));
-                      }}
-                      className="text-[11px] font-bold text-rose-600 hover:underline px-1.5 py-0.5 rounded bg-rose-50"
+              {/* Form inputs in balanced 2-column square layout */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Left Column: Amount to Pay */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs font-semibold">আদায়কৃত টাকা (Amount) *</Label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
+                          setPayAmount(rem.toFixed(2));
+                        }}
+                        className="text-[11px] font-bold text-rose-600 hover:underline px-1.5 py-0.5 rounded bg-rose-100/60 dark:bg-rose-950/60"
+                      >
+                        সম্পূর্ণ বকেয়া
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
+                          setPayAmount((rem / 2).toFixed(2));
+                        }}
+                        className="text-[11px] font-medium text-muted-foreground hover:underline px-1.5 py-0.5 rounded bg-muted"
+                      >
+                        ৫০% টাকা
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-base text-primary">৳</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-8 text-base font-bold font-mono h-10"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Live Remaining Preview */}
+                  {(() => {
+                    const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
+                    const entered = parseFloat(payAmount) || 0;
+                    const newBal = Math.max(0, rem - entered);
+                    return (
+                      <div className="flex items-center justify-between text-[11px] pt-1 px-1">
+                        <span className="text-muted-foreground">অবশিষ্ট বকেয়া:</span>
+                        <span className={`font-mono font-bold ${newBal <= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {newBal <= 0 ? "সম্পূর্ণ পরিশোধিত (Cleared)" : money(newBal)}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Right Column: Payment Method & Date */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">পরিশোধের মাধ্যম (Payment Method)</Label>
+                    <select
+                      value={payMethod}
+                      onChange={(e) => setPayMethod(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-border bg-input px-3 text-xs"
                     >
-                      সম্পূর্ণ বকেয়া
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
-                        setPayAmount((rem / 2).toFixed(2));
-                      }}
-                      className="text-[11px] font-medium text-muted-foreground hover:underline px-1.5 py-0.5 rounded bg-muted"
-                    >
-                      ৫০% টাকা
-                    </button>
+                      {PAYMENT_METHODS.map((m) => (
+                        <option key={m.key} value={m.key}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">আদায়ের তারিখ ও সময়</Label>
+                    <Input
+                      type="datetime-local"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      className="h-10 text-xs"
+                    />
                   </div>
                 </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-sm text-primary">৳</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="pl-8 text-base font-bold font-mono h-11"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Live Remaining Preview */}
-                {(() => {
-                  const rem = Math.max(0, Number(payRow.final_total || 0) - Number(payRow.total_paid || 0));
-                  const entered = parseFloat(payAmount) || 0;
-                  const newBal = Math.max(0, rem - entered);
-                  return (
-                    <div className="flex items-center justify-between text-[11px] pt-1 px-1">
-                      <span className="text-muted-foreground">জমা দেওয়ার পর অবশিষ্ট বকেয়া:</span>
-                      <span className={`font-mono font-bold ${newBal <= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                        {newBal <= 0 ? "সম্পূর্ণ পরিশোধিত (Cleared)" : money(newBal)}
-                      </span>
-                    </div>
-                  );
-                })()}
               </div>
 
-              {/* Payment Method Selector */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">পরিশোধের মাধ্যম (Payment Method)</Label>
-                <select
-                  value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value)}
-                  className="w-full h-9 rounded-lg border border-border bg-input px-3 text-xs"
-                >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.key} value={m.key}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Payment Date */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">আদায়ের তারিখ ও সময় (Collection Date)</Label>
-                <Input
-                  type="datetime-local"
-                  value={payDate}
-                  onChange={(e) => setPayDate(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-
-              {/* Note */}
+              {/* Full Width: Optional Note */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">নোট / মন্তব্য (Optional Note)</Label>
                 <Input
@@ -1399,7 +1413,7 @@ function DueManagementPage() {
             </div>
           )}
 
-          <DialogFooter className="pt-3 gap-2">
+          <DialogFooter className="pt-2 gap-2 flex-row justify-end">
             <Button variant="outline" onClick={() => setPayRow(null)} disabled={payMutation.isPending}>
               বাতিল
             </Button>
@@ -1416,34 +1430,36 @@ function DueManagementPage() {
 
       {/* BULK CUSTOMER SETTLEMENT MODAL */}
       <Dialog open={!!bulkCustomer} onOpenChange={(o) => !o && setBulkCustomer(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Users className="h-5 w-5 text-rose-600" />
-              <span>এককালীন কাস্টমার বকেয়া আদায়</span>
+              <span>এককালীন কাস্টমার বকেয়া আদায় (Bulk Settlement)</span>
             </DialogTitle>
           </DialogHeader>
 
           {bulkCustomer && (
             <div className="space-y-4 pt-1">
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 text-xs space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">কাস্টমার নাম:</span>
-                  <span className="font-bold text-foreground">{bulkCustomer.name}</span>
-                </div>
-                {bulkCustomer.mobile && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">মোবাইল:</span>
-                    <span className="font-mono">{bulkCustomer.mobile}</span>
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">কাস্টমার নাম:</span>
+                    <span className="font-bold text-foreground text-sm truncate block">{bulkCustomer.name}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">মোট বাকি চালান:</span>
-                  <span className="font-bold">{bulkCustomer.invoices.length} টি</span>
+                  {bulkCustomer.mobile && (
+                    <div>
+                      <span className="text-muted-foreground block text-[11px]">মোবাইল:</span>
+                      <span className="font-mono text-sm font-semibold">{bulkCustomer.mobile}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">মোট বাকি চালান:</span>
+                    <span className="font-bold text-sm">{bulkCustomer.invoices.length} টি</span>
+                  </div>
                 </div>
-                <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-sm font-bold text-rose-600">
-                  <span>সর্বমোট বকেয়া:</span>
-                  <span className="font-mono text-base font-extrabold">{money(bulkCustomer.totalDue)}</span>
+                <div className="border-t border-rose-500/20 mt-3 pt-2.5 flex justify-between items-center bg-rose-500/10 -mx-3.5 -mb-3.5 p-3 rounded-b-xl">
+                  <span className="text-xs font-bold text-rose-700">সর্বমোট বকেয়া:</span>
+                  <span className="font-mono text-lg font-extrabold text-rose-700">{money(bulkCustomer.totalDue)}</span>
                 </div>
               </div>
 
@@ -1452,50 +1468,55 @@ function DueManagementPage() {
                 টোটাল কালেকশনে যুক্ত হবে।
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">আদায়কৃত মোট টাকার পরিমাণ *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-sm text-primary">৳</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={bulkAmount}
-                    onChange={(e) => setBulkAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="pl-8 text-base font-bold font-mono h-11"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">আদায়কৃত মোট টাকার পরিমাণ *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-base text-primary">৳</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={bulkAmount}
+                      onChange={(e) => setBulkAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-8 text-base font-bold font-mono h-10"
+                      autoFocus
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">পরিশোধের মাধ্যম</Label>
-                <select
-                  value={bulkMethod}
-                  onChange={(e) => setBulkMethod(e.target.value)}
-                  className="w-full h-9 rounded-lg border border-border bg-input px-3 text-xs"
-                >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.key} value={m.key}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">পরিশোধের মাধ্যম</Label>
+                    <select
+                      value={bulkMethod}
+                      onChange={(e) => setBulkMethod(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-border bg-input px-3 text-xs"
+                    >
+                      {PAYMENT_METHODS.map((m) => (
+                        <option key={m.key} value={m.key}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">আদায়ের তারিখ</Label>
-                <Input
-                  type="datetime-local"
-                  value={bulkDate}
-                  onChange={(e) => setBulkDate(e.target.value)}
-                  className="h-9 text-xs"
-                />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">আদায়ের তারিখ</Label>
+                    <Input
+                      type="datetime-local"
+                      value={bulkDate}
+                      onChange={(e) => setBulkDate(e.target.value)}
+                      className="h-10 text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="pt-3 gap-2">
+          <DialogFooter className="pt-2 gap-2 flex-row justify-end">
             <Button variant="outline" onClick={() => setBulkCustomer(null)} disabled={bulkPayMutation.isPending}>
               বাতিল
             </Button>
@@ -1512,7 +1533,7 @@ function DueManagementPage() {
 
       {/* PAYMENT HISTORY DIALOG */}
       <Dialog open={!!historyRow} onOpenChange={(o) => !o && setHistoryRow(null)}>
-        <DialogContent className="max-w-lg rounded-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-2xl rounded-2xl max-h-[88vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <History className="h-5 w-5 text-primary" />

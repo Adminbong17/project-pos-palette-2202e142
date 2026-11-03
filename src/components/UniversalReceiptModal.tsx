@@ -146,7 +146,7 @@ export function UniversalReceiptModal({
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4">
-        <div className="bg-card rounded-2xl border border-border w-full max-w-sm overflow-hidden print:hidden shadow-2xl flex flex-col max-h-[92vh]">
+        <div className="bg-card rounded-2xl border border-border w-full max-w-md sm:max-w-lg overflow-hidden print:hidden shadow-2xl flex flex-col max-h-[92vh]">
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
             <div>
