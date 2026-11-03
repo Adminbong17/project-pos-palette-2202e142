@@ -8,6 +8,7 @@
  */
 
 import type { ReceiptSale, ReceiptHeader } from "./receipt-print";
+import type { DueVoucherData } from "./due-print";
 
 export type PrinterConnectionType = "bluetooth" | "serial";
 
@@ -390,6 +391,253 @@ export function renderReceiptToCanvas(
   return canvas;
 }
 
+export function renderDueVoucherToCanvas(
+  voucher: DueVoucherData,
+  targetWidth = 384,
+  fontSizeMode: ReceiptFontSize = "large"
+): HTMLCanvasElement {
+  const pad = 8;
+  const contentWidth = targetWidth - pad * 2;
+
+  const measureCanvas = document.createElement("canvas");
+  const mctx = measureCanvas.getContext("2d")!;
+
+  const wrap = (text: string, font: string, maxW: number): string[] => {
+    mctx.font = font;
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (mctx.measureText(test).width <= maxW) {
+        cur = test;
+      } else {
+        if (cur) lines.push(cur);
+        cur = w;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [""];
+  };
+
+  const cfg = {
+    normal: {
+      title: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 26,
+      sub: "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 20,
+      meta: "bold 16px 'Courier New', Consolas, monospace",
+      metaLineH: 22,
+      rowLabel: "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      rowVal: "bold 18px 'Courier New', Consolas, monospace",
+      rowLineH: 24,
+      paidLabel: "bold 19px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      paidVal: "bold 24px 'Courier New', Consolas, monospace",
+      paidBoxH: 70,
+      footer: "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 22,
+    },
+    large: {
+      title: "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 32,
+      sub: "bold 17px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 23,
+      meta: "bold 18px 'Courier New', Consolas, monospace",
+      metaLineH: 24,
+      rowLabel: "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      rowVal: "bold 20px 'Courier New', Consolas, monospace",
+      rowLineH: 27,
+      paidLabel: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      paidVal: "bold 28px 'Courier New', Consolas, monospace",
+      paidBoxH: 82,
+      footer: "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 24,
+    },
+    xlarge: {
+      title: "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 36,
+      sub: "bold 19px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 25,
+      meta: "bold 20px 'Courier New', Consolas, monospace",
+      metaLineH: 26,
+      rowLabel: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      rowVal: "bold 22px 'Courier New', Consolas, monospace",
+      rowLineH: 30,
+      paidLabel: "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      paidVal: "bold 32px 'Courier New', Consolas, monospace",
+      paidBoxH: 92,
+      footer: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 26,
+    },
+  }[fontSizeMode];
+
+  const bizName = voucher.business?.name || "Sheikh Pharma";
+  const bizAddr = voucher.business?.address || "";
+  const bizPhone = voucher.business?.notify_phone || "";
+
+  const nameLines = wrap(bizName, cfg.title, contentWidth);
+  const addrLines = bizAddr ? wrap(bizAddr, cfg.sub, contentWidth) : [];
+  const phoneLines = bizPhone ? wrap(`Phone: ${bizPhone}`, cfg.sub, contentWidth) : [];
+
+  let totalHeight = 20;
+  totalHeight += nameLines.length * cfg.titleLineH + 4;
+  totalHeight += addrLines.length * cfg.subLineH;
+  totalHeight += phoneLines.length * cfg.subLineH + 8;
+  totalHeight += 40; // Title banner
+  totalHeight += 18; // divider
+  totalHeight += cfg.metaLineH * 4; // VoucherNo, Date, InvoiceNo, Customer
+  if (voucher.customerMobile) totalHeight += cfg.metaLineH;
+  if (voucher.customerAddress) totalHeight += cfg.metaLineH;
+  totalHeight += 18; // divider
+  totalHeight += cfg.rowLineH * 3; // totalBill, previouslyPaid, prevDue
+  totalHeight += cfg.paidBoxH + 15; // amountPaidNow box
+  totalHeight += cfg.rowLineH + 10; // remainingDue
+  if (voucher.note) totalHeight += cfg.metaLineH * 1.5;
+  totalHeight += 50; // signature lines
+  totalHeight += cfg.footerLineH + 55; // footer & tear margin
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = Math.ceil(totalHeight);
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, targetWidth, canvas.height);
+  ctx.fillStyle = "#000000";
+  ctx.strokeStyle = "#000000";
+
+  let y = 16;
+  const centerX = targetWidth / 2;
+
+  // Header
+  ctx.textAlign = "center";
+  ctx.font = cfg.title;
+  for (const l of nameLines) {
+    ctx.fillText(l, centerX, y + cfg.titleLineH * 0.75);
+    y += cfg.titleLineH;
+  }
+  ctx.font = cfg.sub;
+  for (const l of addrLines) {
+    ctx.fillText(l, centerX, y + cfg.subLineH * 0.75);
+    y += cfg.subLineH;
+  }
+  for (const l of phoneLines) {
+    ctx.fillText(l, centerX, y + cfg.subLineH * 0.75);
+    y += cfg.subLineH;
+  }
+
+  y += 6;
+
+  // Title Box
+  const bannerH = 28;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(pad + 10, y, contentWidth - 20, bannerH);
+  ctx.font = cfg.sub;
+  ctx.fillText("বকেয়া আদায় রশিদ / Due Voucher", centerX, y + bannerH * 0.68);
+  y += bannerH + 12;
+
+  // Dashed divider
+  const drawDashed = (currY: number) => {
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pad, currY);
+    ctx.lineTo(targetWidth - pad, currY);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  drawDashed(y);
+  y += 14;
+
+  // Meta rows
+  ctx.textAlign = "left";
+  ctx.font = cfg.meta;
+  const drawMetaRow = (left: string, right: string) => {
+    ctx.textAlign = "left";
+    ctx.fillText(left, pad, y + cfg.metaLineH * 0.75);
+    ctx.textAlign = "right";
+    ctx.fillText(right, targetWidth - pad, y + cfg.metaLineH * 0.75);
+    y += cfg.metaLineH;
+  };
+
+  drawMetaRow("রশিদ নং:", voucher.voucherNo);
+  drawMetaRow("তারিখ:", voucher.date);
+  drawMetaRow("মূল চালান:", voucher.invoiceNo);
+  drawMetaRow("মাধ্যম:", (voucher.paymentMethod || "CASH").toUpperCase());
+  drawMetaRow("গ্রাহক:", voucher.customerName || "Walk-in");
+  if (voucher.customerMobile) {
+    drawMetaRow("মোবাইল:", voucher.customerMobile);
+  }
+
+  y += 6;
+  drawDashed(y);
+  y += 14;
+
+  const money = (n: number) => `Tk ${(Number(n) || 0).toFixed(2)}`;
+
+  // Table rows
+  ctx.font = cfg.rowLabel;
+  const drawBillRow = (label: string, val: string, isBold = false) => {
+    ctx.textAlign = "left";
+    ctx.font = isBold ? cfg.rowLabel : cfg.meta;
+    ctx.fillText(label, pad, y + cfg.rowLineH * 0.75);
+    ctx.textAlign = "right";
+    ctx.font = cfg.rowVal;
+    ctx.fillText(val, targetWidth - pad, y + cfg.rowLineH * 0.75);
+    y += cfg.rowLineH;
+  };
+
+  drawBillRow("মূল চালানের মোট বিল:", money(voucher.totalBill));
+  drawBillRow("পূর্বে পরিশোধিত টাকা:", money(voucher.previouslyPaid));
+  const prevDue = Math.max(0, voucher.totalBill - voucher.previouslyPaid);
+  drawBillRow("আজকের পূর্বের বকেয়া:", money(prevDue));
+
+  y += 8;
+
+  // Paid Now Box
+  const boxTop = y;
+  const boxH = cfg.paidBoxH;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pad, boxTop, contentWidth, boxH);
+  ctx.textAlign = "center";
+  ctx.font = cfg.paidLabel;
+  ctx.fillText("আজকে আদায়কৃত টাকা:", centerX, boxTop + boxH * 0.38);
+  ctx.font = cfg.paidVal;
+  ctx.fillText(money(voucher.amountPaidNow), centerX, boxTop + boxH * 0.82);
+  y += boxH + 14;
+
+  // Remaining Due line
+  ctx.textAlign = "left";
+  ctx.font = cfg.rowLabel;
+  const remDueLabel = voucher.remainingDue > 0 ? "বর্তমান অবশিষ্ট বকেয়া:" : "পরিশোধ স্ট্যাটাস:";
+  const remDueVal = voucher.remainingDue > 0 ? money(voucher.remainingDue) : "পরিশোধিত (Cleared)";
+  ctx.fillText(remDueLabel, pad, y + cfg.rowLineH * 0.75);
+  ctx.textAlign = "right";
+  ctx.font = cfg.paidLabel;
+  ctx.fillText(remDueVal, targetWidth - pad, y + cfg.rowLineH * 0.75);
+  y += cfg.rowLineH + 8;
+
+  drawDashed(y);
+  y += 18;
+
+  // Signatures
+  const sigW = (contentWidth - 20) / 2;
+  drawDashed(y + 20); // signature line placeholder
+  ctx.textAlign = "center";
+  ctx.font = cfg.footer;
+  ctx.fillText("গ্রাহকের স্বাক্ষর", pad + sigW / 2, y + 22);
+  ctx.fillText("আদায়কারীর স্বাক্ষর", targetWidth - pad - sigW / 2, y + 22);
+  y += 42;
+
+  // Footer
+  ctx.font = cfg.footer;
+  ctx.textAlign = "center";
+  ctx.fillText("শেখ ফার্মার সাথে থাকার জন্য ধন্যবাদ!", centerX, y + cfg.footerLineH * 0.75);
+
+  return canvas;
+}
+
 class ThermalPrinterManager {
   private bleDevice: any = null;
   private bleCharacteristic: any = null;
@@ -402,10 +650,12 @@ class ThermalPrinterManager {
     this.restoreLastPrinter();
   }
 
-  public subscribe(listener: (info: ConnectedPrinterInfo | null) => void) {
+  public subscribe(listener: (info: ConnectedPrinterInfo | null) => void): () => void {
     this.listeners.add(listener);
     listener(this.currentPrinter);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private notify() {
@@ -633,6 +883,17 @@ class ThermalPrinterManager {
    * Direct, robust receipt printing using native 2D Canvas (No HTML/CSS parser, immune to oklch bugs)
    */
   /**
+   * Print any arbitrary 2D canvas directly to the thermal printer
+   */
+  public async printCanvasDirect(
+    canvas: HTMLCanvasElement,
+    targetWidthDots = 384
+  ): Promise<void> {
+    const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
+    await this.writeRaw(escPosBytes);
+  }
+
+  /**
    * Direct, robust receipt printing using native 2D Canvas (No HTML/CSS parser, immune to oklch bugs)
    * Supports 'normal', 'large', and 'xlarge' font sizes
    */
@@ -643,8 +904,105 @@ class ThermalPrinterManager {
     fontSizeMode: ReceiptFontSize = "large"
   ): Promise<void> {
     const canvas = renderReceiptToCanvas(sale, header, targetWidthDots, fontSizeMode);
-    const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
-    await this.writeRaw(escPosBytes);
+    await this.printCanvasDirect(canvas, targetWidthDots);
+  }
+
+  /**
+   * Direct Due Voucher printing using native 2D Canvas
+   */
+  public async printDueVoucherDirect(
+    voucher: DueVoucherData,
+    targetWidthDots = 384,
+    fontSizeMode: ReceiptFontSize = "large"
+  ): Promise<void> {
+    const canvas = renderDueVoucherToCanvas(voucher, targetWidthDots, fontSizeMode);
+    await this.printCanvasDirect(canvas, targetWidthDots);
+  }
+
+  /**
+   * Hardware ESC/POS Direct Text Mode for Due Voucher
+   */
+  public async printDueVoucherEscPosText(
+    voucher: DueVoucherData,
+    cols = 32
+  ): Promise<void> {
+    const encoder = new TextEncoder();
+    const parts: Uint8Array[] = [];
+
+    const text = (str: string) => parts.push(encoder.encode(str));
+    const raw = (...bytes: number[]) => parts.push(new Uint8Array(bytes));
+
+    // ESC @: Init
+    raw(0x1b, 0x40);
+
+    // ESC a 1: Center
+    raw(0x1b, 0x61, 0x01);
+
+    // GS ! 0x11: Double Width + Double Height
+    raw(0x1d, 0x21, 0x11);
+    text(`${voucher.business?.name || "Sheikh Pharma"}\n`);
+
+    // GS ! 0x00: Normal
+    raw(0x1d, 0x21, 0x00);
+    if (voucher.business?.address) text(`${voucher.business.address}\n`);
+    if (voucher.business?.notify_phone) text(`Phone: ${voucher.business.notify_phone}\n`);
+
+    text("=".repeat(cols) + "\n");
+    raw(0x1b, 0x45, 0x01); // Bold
+    text("DUE COLLECTION VOUCHER\n");
+    raw(0x1b, 0x45, 0x00);
+    text("=".repeat(cols) + "\n");
+
+    raw(0x1b, 0x61, 0x00); // Left
+    const row2 = (left: string, right: string) => {
+      const space = cols - left.length - right.length;
+      if (space >= 1) {
+        text(left + " ".repeat(space) + right + "\n");
+      } else {
+        text(left + "\n" + right.padStart(cols) + "\n");
+      }
+    };
+
+    row2("Voucher No:", voucher.voucherNo);
+    row2("Date:", voucher.date);
+    row2("Original Inv:", voucher.invoiceNo);
+    row2("Method:", (voucher.paymentMethod || "CASH").toUpperCase());
+    row2("Customer:", voucher.customerName || "Walk-in");
+    if (voucher.customerMobile) row2("Mobile:", voucher.customerMobile);
+
+    text("-".repeat(cols) + "\n");
+    row2("Total Bill:", `Tk ${Number(voucher.totalBill).toFixed(2)}`);
+    row2("Previously Paid:", `Tk ${Number(voucher.previouslyPaid).toFixed(2)}`);
+    const prevDue = Math.max(0, voucher.totalBill - voucher.previouslyPaid);
+    row2("Previous Due:", `Tk ${Number(prevDue).toFixed(2)}`);
+    text("=".repeat(cols) + "\n");
+
+    // Paid Now (Double Height + Bold)
+    raw(0x1d, 0x21, 0x01);
+    raw(0x1b, 0x45, 0x01);
+    row2("COLLECTED NOW:", `Tk ${Number(voucher.amountPaidNow).toFixed(2)}`);
+    raw(0x1b, 0x45, 0x00);
+    raw(0x1d, 0x21, 0x00);
+
+    text("-".repeat(cols) + "\n");
+    row2("Remaining Due:", voucher.remainingDue > 0 ? `Tk ${Number(voucher.remainingDue).toFixed(2)}` : "CLEARED");
+    text("=".repeat(cols) + "\n\n");
+
+    // Signatures
+    row2("Customer Sign", "Cashier Sign");
+    text("\n");
+    raw(0x1b, 0x61, 0x01);
+    text("Thank you for your business!\n\n\n\n");
+
+    const totalLen = parts.reduce((acc, p) => acc + p.length, 0);
+    const combined = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const p of parts) {
+      combined.set(p, offset);
+      offset += p.length;
+    }
+
+    await this.writeRaw(combined);
   }
 
   /**

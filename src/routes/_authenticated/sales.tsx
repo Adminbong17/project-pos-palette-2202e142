@@ -7,6 +7,8 @@ import { useCurrentBusiness } from "@/hooks/use-current-business";
 import { Button } from "@/components/ui/button";
 import { Plus, Receipt, Printer, Trash2, Pencil, Search, X } from "lucide-react";
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
+import { UniversalReceiptModal } from "@/components/UniversalReceiptModal";
+import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
 import { printHrmReport } from "@/lib/hrm-print";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
@@ -46,6 +48,12 @@ function SalesPage() {
   const qc = useQueryClient();
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
+  const [selectedReceiptSale, setSelectedReceiptSale] = useState<ReceiptSale | null>(null);
+  const [headerInfo, setHeaderInfo] = useState<{
+    businessName: string;
+    businessAddress: string;
+    businessMobile: string;
+  }>({ businessName: "", businessAddress: "", businessMobile: "" });
   const [range, setRange] = useState<RangeKey>("thisMonth");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
@@ -156,11 +164,12 @@ function SalesPage() {
         customer_name: tx.contact?.name ?? null,
         date: fmtDateTime(tx.transaction_date),
       };
-      printReceiptInWhitePage(sale, printWidth, {
+      setHeaderInfo({
         businessName: bizRes.data?.name ?? "",
         businessAddress: address,
         businessMobile: mobile,
       });
+      setSelectedReceiptSale(sale);
     } catch (e: any) {
       toast.error(e.message ?? "Failed to reprint");
     } finally {
@@ -339,6 +348,7 @@ function SalesPage() {
             <Printer className="h-4 w-4" />
             <span>Print A4 Statement</span>
           </button>
+          <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
           <select value={printWidth} onChange={(e) => setPrintWidth(e.target.value as "58" | "80" | "A4")}
             className="h-9 rounded-lg border border-border bg-input px-2 text-sm"
             title="Default receipt width for reprint buttons"
@@ -505,6 +515,16 @@ function SalesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UniversalReceiptModal
+        open={!!selectedReceiptSale}
+        onClose={() => setSelectedReceiptSale(null)}
+        sale={selectedReceiptSale}
+        businessName={headerInfo.businessName || business?.name || "Sheikh Pharma"}
+        businessAddress={headerInfo.businessAddress}
+        businessMobile={headerInfo.businessMobile}
+        initialWidth={printWidth}
+      />
     </div>
   );
 }

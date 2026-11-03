@@ -10,6 +10,7 @@ import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 import { LogOut, ArrowLeft, ShoppingCart, ShieldCheck } from "lucide-react";
 import { LogoutConfirm } from "@/components/logout-confirm";
+import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -150,6 +151,7 @@ function AuthedLayout() {
                 <span>Admin Hub</span>
               </button>
             )}
+            <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
             {(canUsePos || isSuperAdmin) && (
               <button
                 onClick={() => navigate({ to: "/pos" })}

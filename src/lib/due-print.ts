@@ -18,40 +18,31 @@ export type DueVoucherData = {
   business?: { name?: string | null; address?: string | null; notify_phone?: string | null } | null;
 };
 
-export function printDueVoucher(data: DueVoucherData, width: "58" | "80" | "A4" = "80") {
-  const isA4 = width === "A4";
-  const is58 = width === "58";
-  const contentWidth = is58 ? "48mm" : width === "80" ? "72mm" : "190mm";
-  const pageSize = isA4 ? "A4" : is58 ? "58mm auto" : "80mm auto";
-  const pageMargin = isA4 ? "12mm" : "0mm";
-  const fontSize = is58 ? "11px" : width === "80" ? "12px" : "13px";
+export function dueVoucherCss(scopeClass = ".due-voucher-preview-clone", fontSize = "12px", width = "300px") {
+  return `
+    ${scopeClass} {
+      display: block !important;
+      width: ${width};
+      max-width: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #000;
+      background: #fff;
+      margin: 0 auto;
+      padding: 8px 4mm;
+      box-sizing: border-box;
+      font-size: ${fontSize};
+      line-height: 1.35;
+    }
+    ${scopeClass} table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+    ${scopeClass} td { padding: 3px 2px; }
+  `;
+}
 
+export function getDueVoucherHtml(data: DueVoucherData, width: "58" | "80" | "A4" = "80"): string {
+  const isA4 = width === "A4";
   const bizName = data.business?.name ?? SHEIKH_PHARMA_DETAILS.nameEnglish;
   const bizAddr = data.business?.address ?? SHEIKH_PHARMA_DETAILS.address;
   const bizPhone = data.business?.notify_phone ?? SHEIKH_PHARMA_DETAILS.phones;
-
-  const styleId = "due-voucher-print-style";
-  document.getElementById(styleId)?.remove();
-  const st = document.createElement("style");
-  st.id = styleId;
-  st.textContent = `
-    #due-voucher-print-page { display:none; }
-    @media print {
-      @page { size: ${pageSize}; margin: ${pageMargin}; }
-      body * { visibility: hidden !important; }
-      #due-voucher-print-page, #due-voucher-print-page * { visibility: visible !important; }
-      #due-voucher-print-page { display:block !important; position:absolute; left:0; top:0; width:100%; background:#fff; color:#000; }
-    }
-    .receipt-preview-clone.due-voucher { display:block !important; width:${contentWidth}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:#000; background:#fff; margin:0 auto; padding:${is58 ? "2px 1mm" : "6px 2mm"}; box-sizing:border-box; font-size:${fontSize}; }
-    .receipt-preview-clone.due-voucher table { width:100%; border-collapse:collapse; margin:6px 0; }
-    .receipt-preview-clone.due-voucher td { padding:3px 2px; }
-  `;
-  document.head.appendChild(st);
-
-  const page = document.createElement("div");
-  page.id = "due-voucher-print-page";
-  page.className = "due-voucher";
-  page.style.cssText = `font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:#000; background:#fff; padding:${is58 ? "2px 1mm" : "8px 4mm"}; width:${contentWidth}; max-width:${contentWidth}; margin:0 auto; box-sizing:border-box; font-size:${fontSize};`;
 
   const money = (n: number) => `৳ ${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -127,7 +118,7 @@ export function printDueVoucher(data: DueVoucherData, width: "58" | "80" | "A4" 
   `;
 
   if (isA4 && isSheikhPharma(bizName)) {
-    page.innerHTML = `
+    return `
       <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:265mm;">
         <div>
           ${getSheikhPharmaHeaderHtml({ title: "বকেয়া আদায় রশিদ / Due Voucher", metaRight: `তারিখ: ${data.date}` })}
@@ -138,9 +129,43 @@ export function printDueVoucher(data: DueVoucherData, width: "58" | "80" | "A4" 
         ${getSheikhPharmaFooterHtml()}
       </div>
     `;
-  } else {
-    page.innerHTML = bodyContent;
   }
+
+  return bodyContent;
+}
+
+export function printDueVoucher(data: DueVoucherData, width: "58" | "80" | "A4" = "80") {
+  const isA4 = width === "A4";
+  const is58 = width === "58";
+  const contentWidth = is58 ? "48mm" : width === "80" ? "72mm" : "190mm";
+  const pageSize = isA4 ? "A4" : is58 ? "58mm auto" : "80mm auto";
+  const pageMargin = isA4 ? "12mm" : "0mm";
+  const fontSize = is58 ? "11px" : width === "80" ? "12px" : "13px";
+
+  const styleId = "due-voucher-print-style";
+  document.getElementById(styleId)?.remove();
+  const st = document.createElement("style");
+  st.id = styleId;
+  st.textContent = `
+    #due-voucher-print-page { display:none; }
+    @media print {
+      @page { size: ${pageSize}; margin: ${pageMargin}; }
+      body * { visibility: hidden !important; }
+      #due-voucher-print-page, #due-voucher-print-page * { visibility: visible !important; }
+      #due-voucher-print-page { display:block !important; position:absolute; left:0; top:0; width:100%; background:#fff; color:#000; }
+    }
+    .receipt-preview-clone.due-voucher { display:block !important; width:${contentWidth}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:#000; background:#fff; margin:0 auto; padding:${is58 ? "2px 1mm" : "6px 2mm"}; box-sizing:border-box; font-size:${fontSize}; }
+    .receipt-preview-clone.due-voucher table { width:100%; border-collapse:collapse; margin:6px 0; }
+    .receipt-preview-clone.due-voucher td { padding:3px 2px; }
+  `;
+  document.head.appendChild(st);
+
+  const page = document.createElement("div");
+  page.id = "due-voucher-print-page";
+  page.className = "due-voucher";
+  page.style.cssText = `font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color:#000; background:#fff; padding:${is58 ? "2px 1mm" : "8px 4mm"}; width:${contentWidth}; max-width:${contentWidth}; margin:0 auto; box-sizing:border-box; font-size:${fontSize};`;
+
+  page.innerHTML = getDueVoucherHtml(data, width);
 
   document.body.appendChild(page);
   const cleanup = () => { page.remove(); };

@@ -17,6 +17,9 @@ import { DATE_PRESETS, resolvePresetRange, type DatePresetKey } from "@/lib/date
 import { printHrmReport } from "@/lib/hrm-print";
 import { printDueVoucher, type DueVoucherData } from "@/lib/due-print";
 import { printReceiptInWhitePage, type ReceiptSale } from "@/lib/receipt-print";
+import { UniversalReceiptModal } from "@/components/UniversalReceiptModal";
+import { DueVoucherModal } from "@/components/DueVoucherModal";
+import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
 import { toast } from "sonner";
 import {
   HandCoins,
@@ -133,9 +136,16 @@ function DueManagementPage() {
   // Payment History Dialog
   const [historyRow, setHistoryRow] = useState<DueSaleRow | null>(null);
 
-  // Voucher print state
+  // Voucher and Receipt print state
   const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
   const [lastVoucher, setLastVoucher] = useState<DueVoucherData | null>(null);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [selectedReceiptSale, setSelectedReceiptSale] = useState<ReceiptSale | null>(null);
+  const [headerInfo, setHeaderInfo] = useState<{
+    businessName: string;
+    businessAddress: string;
+    businessMobile: string;
+  }>({ businessName: "", businessAddress: "", businessMobile: "" });
 
   // Fetch Business Locations
   const { data: locations = [] } = useQuery({
@@ -459,6 +469,7 @@ function DueManagementPage() {
       };
 
       setLastVoucher(voucher);
+      setShowVoucherModal(true);
 
       toast.success(
         `৳${res.amountNum.toFixed(2)} বকেয়া সফলভাবে আদায় ও টোটাল ক্যাশে যুক্ত হয়েছে! (স্ট্যাটাস: ${
@@ -545,7 +556,25 @@ function DueManagementPage() {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["contacts"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      qc.invalidateQueries({ queryKey: ["get_business_sales_total"] });
+      if (bulkCustomer) {
+        const bulkVoucher: DueVoucherData = {
+          voucherNo: `DV-BULK-${Date.now().toString().slice(-6)}`,
+          invoiceNo: `Bulk (${res.updatedCount} Invoices)`,
+          date: fmtDateTime(new Date()),
+          customerName: bulkCustomer.name,
+          customerMobile: bulkCustomer.mobile ?? null,
+          customerAddress: (bulkCustomer as any).address ?? null,
+          totalBill: bulkCustomer.totalDue,
+          previouslyPaid: 0,
+          amountPaidNow: res.totalPaid,
+          remainingDue: Math.max(0, bulkCustomer.totalDue - res.totalPaid),
+          paymentMethod: bulkMethod,
+          note: bulkNote || "বকেয়া এককালীন সমন্বয়",
+          business,
+        };
+        setLastVoucher(bulkVoucher);
+        setShowVoucherModal(true);
+      }
       setBulkCustomer(null);
     },
     onError: (e: any) => {
@@ -648,11 +677,12 @@ function DueManagementPage() {
         customer_name: tx.contact?.name ?? null,
         date: fmtDateTime(tx.transaction_date),
       };
-      printReceiptInWhitePage(sale, printWidth, {
+      setHeaderInfo({
         businessName: bizRes.data?.name ?? "",
         businessAddress: address,
         businessMobile: mobile,
       });
+      setSelectedReceiptSale(sale);
     } catch (e: any) {
       toast.error(e.message ?? "রশিদ প্রিন্ট করা যায়নি");
     }
@@ -686,13 +716,15 @@ function DueManagementPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => printDueVoucher(lastVoucher, printWidth)}
+              onClick={() => setShowVoucherModal(true)}
               className="border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/20 gap-1.5"
             >
               <Printer className="h-4 w-4" />
               <span>শেষ রসিদ প্রিন্ট ({lastVoucher.voucherNo})</span>
             </Button>
           )}
+
+          <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
 
           <select
             value={printWidth}
@@ -1543,6 +1575,23 @@ function DueManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UniversalReceiptModal
+        open={!!selectedReceiptSale}
+        onClose={() => setSelectedReceiptSale(null)}
+        sale={selectedReceiptSale}
+        businessName={headerInfo.businessName || business?.name || "Sheikh Pharma"}
+        businessAddress={headerInfo.businessAddress}
+        businessMobile={headerInfo.businessMobile}
+        initialWidth={printWidth}
+      />
+
+      <DueVoucherModal
+        open={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        voucher={lastVoucher}
+        initialWidth={printWidth}
+      />
     </div>
   );
 }

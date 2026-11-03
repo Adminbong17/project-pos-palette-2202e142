@@ -30,6 +30,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { PrintSizeButton, type PrintSize } from "@/components/print-size-select";
+import { PrescriptionPrintModal } from "@/components/PrescriptionPrintModal";
+import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
+import { Bluetooth } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/prescriptions")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -346,6 +349,8 @@ function PrescriptionsPage() {
   const navigate = Route.useNavigate();
 
   const [search, setSearch] = useState("");
+  const [printModalRx, setPrintModalRx] = useState<Rx | null>(null);
+  const [printModalSize, setPrintModalSize] = useState<PrintSize>("58mm");
 
   // "Own pad" mode: doctor prints on a pre-printed letterhead, so A4 print/PDF
   // keeps a 2 inch (50.8mm) blank top area and skips the printed header block.
@@ -1178,6 +1183,7 @@ function PrescriptionsPage() {
               <Input placeholder="Search patient / Rx no / phone / patient ID…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
             </div>
           </FloatingSearch>
+          <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
           <Button onClick={openNew} disabled={rxBilling.blocked}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
         </div>
       </div>
@@ -1214,7 +1220,17 @@ function PrescriptionsPage() {
                 <TableCell className="text-sm max-w-[240px] truncate">{rx.diagnosis ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex items-center gap-2">
-                    <PrintSizeButton onPrint={(s) => printRx(rx, s)} label="Print" />
+                    <PrintSizeButton onPrint={(s) => { setPrintModalRx(rx); setPrintModalSize(s); }} label="Print" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-xs border-blue-500/30 text-blue-600 hover:bg-blue-500/10 cursor-pointer"
+                      onClick={() => { setPrintModalRx(rx); setPrintModalSize("58mm"); }}
+                      title="58mm ব্লুটুথ থার্মাল স্লিপ প্রিন্ট"
+                    >
+                      <Bluetooth className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">BT Slip</span>
+                    </Button>
                     <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => savePdf(rx)}>
                       <FileText className="h-3.5 w-3.5" /> PDF
                     </Button>
@@ -1610,6 +1626,17 @@ function PrescriptionsPage() {
         patientWeight={vitals.weight}
         initialMode={childDoseMode}
         onAddMedicine={handleAddChildMedicine}
+      />
+
+      <PrescriptionPrintModal
+        open={!!printModalRx}
+        onClose={() => setPrintModalRx(null)}
+        rx={printModalRx}
+        buildRxHtml={buildRxHtml}
+        printRx={printRx}
+        savePdf={savePdf}
+        initialSize={printModalSize}
+        businessName={business?.name || "Sheikh Pharma"}
       />
     </div>
   );
