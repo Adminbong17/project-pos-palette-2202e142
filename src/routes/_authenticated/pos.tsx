@@ -2130,19 +2130,18 @@ function ReceiptModal({
     }
     setBtPrinting(true);
     try {
-      const el = document.getElementById("receipt-print");
-      if (!el) throw new Error("রসিদ এলিমেন্ট পাওয়া যায়নি");
-      el.classList.remove("hidden");
-      await thermalPrinter.printElementAsBitmap(el, 384);
-      el.classList.add("hidden");
-      toast.success(`রসিদ ব্লুটুথ প্রিন্টারে (${connectedPrinter?.name}) পাঠানো হয়েছে!`);
+      // Direct, robust 2D Canvas ESC/POS printer - zero CSS / oklch dependencies
+      await thermalPrinter.printReceiptDirect(
+        toSharedSale(sale),
+        { businessName, businessAddress, businessMobile },
+        384
+      );
+      toast.success(`রসিদ ব্লুটুথ প্রিন্টারে (${connectedPrinter?.name}) প্রিন্ট সম্পন্ন হয়েছে!`);
       onClose();
     } catch (err: any) {
       toast.error(err.message || "ব্লুটুথ প্রিন্ট ব্যর্থ হয়েছে");
     } finally {
       setBtPrinting(false);
-      const el = document.getElementById("receipt-print");
-      if (el) el.classList.add("hidden");
     }
   };
 
@@ -2193,17 +2192,18 @@ function ReceiptModal({
             </button>
           </div>
           <div
-            className="rounded-lg border border-border bg-white text-black p-3 max-h-80 overflow-auto"
-            style={{ width: width === "A4" ? "100%" : mm, fontSize, fontFamily: "ui-monospace, monospace", margin: "0 auto" }}
+            className="rounded-lg border border-border bg-white text-black p-3 max-h-80 overflow-y-auto overflow-x-hidden shadow-inner flex justify-center"
           >
-            <Receipt
-              sale={sale}
-              businessName={businessName}
-              businessAddress={businessAddress}
-              businessMobile={businessMobile}
-              businessEmail={businessEmail}
-              width={width}
-            />
+            <div style={{ width: width === "A4" ? "100%" : width === "58" ? "260px" : "320px", maxWidth: "100%" }}>
+              <Receipt
+                sale={sale}
+                businessName={businessName}
+                businessAddress={businessAddress}
+                businessMobile={businessMobile}
+                businessEmail={businessEmail}
+                width={width}
+              />
+            </div>
           </div>
 
           <div className="space-y-2 pt-1">
@@ -2309,9 +2309,9 @@ function Receipt({
   width?: "58" | "80" | "A4";
 }) {
   const html = sharedReceiptHtml(toSharedSale(sale), { businessName, businessAddress, businessMobile }, width);
-  const mm = width === "58" ? "48mm" : width === "80" ? "72mm" : "100%";
-  const fontSize = width === "58" ? "11px" : "13px";
-  const css = receiptCss(".receipt-preview-clone", fontSize, mm);
+  const previewMm = width === "58" ? "250px" : width === "80" ? "300px" : "100%";
+  const fontSize = width === "58" ? "12px" : "13px";
+  const css = receiptCss(".receipt-preview-clone", fontSize, previewMm);
   return (
     <>
       <style>{css}</style>

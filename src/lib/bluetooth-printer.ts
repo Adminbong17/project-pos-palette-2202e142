@@ -3,9 +3,11 @@
  * Supports:
  * 1. Web Bluetooth API (GATT BLE) - Direct zero-driver wireless connection
  * 2. Web Serial API (Bluetooth Virtual COM / USB) - Windows Bluetooth SPP pairing (Baud: 115200)
- * 3. High-Fidelity Canvas Rasterization (GS v 0) - 100% crystal clear Bengali & English text
- * 4. Ultra-fast direct text ESC/POS mode
+ * 3. Pure 2D Canvas ESC/POS Rasterization (GS v 0) - Zero CSS / oklch dependency, 100% reliable
+ * 4. html-to-image fallback for custom DOM elements
  */
+
+import type { ReceiptSale, ReceiptHeader } from "./receipt-print";
 
 export type PrinterConnectionType = "bluetooth" | "serial";
 
@@ -26,6 +28,280 @@ const KNOWN_PRINTER_SERVICES = [
   "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART
 ];
+
+export function renderReceiptToCanvas(
+  sale: ReceiptSale,
+  header: ReceiptHeader,
+  targetWidth = 384
+): HTMLCanvasElement {
+  const pad = 10;
+  const contentWidth = targetWidth - pad * 2; // 364px
+
+  // Measurement canvas to calculate dynamic height accurately
+  const measureCanvas = document.createElement("canvas");
+  const mctx = measureCanvas.getContext("2d")!;
+
+  const wrap = (text: string, font: string, maxW: number): string[] => {
+    mctx.font = font;
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let cur = words[0] || "";
+    for (let i = 1; i < words.length; i++) {
+      const w = words[i];
+      const test = cur + " " + w;
+      if (mctx.measureText(test).width <= maxW) {
+        cur = test;
+      } else {
+        lines.push(cur);
+        cur = w;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  };
+
+  const nameLines = wrap(header.businessName || "Sheikh Pharma", "bold 20px sans-serif", contentWidth);
+  const addrLines = header.businessAddress ? wrap(header.businessAddress, "12px sans-serif", contentWidth) : [];
+  const phoneLines = header.businessMobile ? wrap(`Phone: ${header.businessMobile}`, "12px sans-serif", contentWidth) : [];
+
+  const itemLineRows: { nameLines: string[]; qtyRate: string; total: string }[] = [];
+  for (const l of sale.lines) {
+    const iNameLines = wrap(`${l.name}`, "bold 13px sans-serif", contentWidth);
+    const qtyRate = `${l.quantity} × ${Number(l.unit_price).toFixed(2)}`;
+    const total = `${Number(l.total_amount).toFixed(2)}`;
+    itemLineRows.push({ nameLines: iNameLines, qtyRate, total });
+  }
+
+  // Calculate total height needed:
+  let totalHeight = 15; // top margin
+  totalHeight += nameLines.length * 24 + 4;
+  totalHeight += addrLines.length * 16;
+  totalHeight += phoneLines.length * 16 + 10;
+
+  totalHeight += 12; // divider
+  totalHeight += 20 + 20; // Bill No, Date
+  if (sale.served_by || sale.counter_id) totalHeight += 20;
+  if (sale.customer_name) totalHeight += 20;
+
+  totalHeight += 12; // divider
+  totalHeight += 20; // Table header
+
+  for (const r of itemLineRows) {
+    totalHeight += r.nameLines.length * 18 + 18 + 4;
+  }
+
+  totalHeight += 12; // divider
+  totalHeight += 20; // Subtotal
+  if (sale.discount > 0) totalHeight += 20;
+  if (sale.vat) totalHeight += 20;
+  totalHeight += 20; // Total Qty
+  totalHeight += 26; // Net Total
+
+  // Payment Box
+  totalHeight += 12 + 65 + 10;
+
+  // Footer & Tear Feed
+  totalHeight += 20 + 16 + 45;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = totalHeight;
+  const ctx = canvas.getContext("2d")!;
+
+  // Fill crisp white background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, targetWidth, totalHeight);
+  ctx.fillStyle = "#000000";
+
+  let y = 20;
+
+  // 1. Header (Centered)
+  ctx.textAlign = "center";
+  ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  for (const nl of nameLines) {
+    ctx.fillText(nl, targetWidth / 2, y);
+    y += 24;
+  }
+
+  ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  for (const al of addrLines) {
+    ctx.fillText(al, targetWidth / 2, y);
+    y += 16;
+  }
+  for (const pl of phoneLines) {
+    ctx.fillText(pl, targetWidth / 2, y);
+    y += 16;
+  }
+
+  y += 4;
+  const drawDotted = (lineY: number) => {
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, lineY);
+    ctx.lineTo(targetWidth - pad, lineY);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  drawDotted(y);
+  y += 16;
+
+  // 2. Meta Info (Bill No, Date, etc.)
+  ctx.textAlign = "left";
+  ctx.font = "bold 13px monospace, 'Courier New', monospace";
+  ctx.fillText("Bill No:", pad, y);
+  ctx.textAlign = "right";
+  ctx.fillText(sale.invoice_no, targetWidth - pad, y);
+  y += 20;
+
+  ctx.textAlign = "left";
+  ctx.font = "12px monospace, 'Courier New', monospace";
+  ctx.fillText("Date:", pad, y);
+  ctx.textAlign = "right";
+  ctx.fillText(sale.date, targetWidth - pad, y);
+  y += 20;
+
+  if (sale.served_by || sale.counter_id) {
+    ctx.textAlign = "left";
+    ctx.fillText("Cashier:", pad, y);
+    ctx.textAlign = "right";
+    ctx.fillText(`${sale.served_by ?? ""}${sale.counter_id ? ` (${sale.counter_id})` : ""}`, targetWidth - pad, y);
+    y += 20;
+  }
+
+  if (sale.customer_name) {
+    ctx.textAlign = "left";
+    ctx.fillText("Customer:", pad, y);
+    ctx.textAlign = "right";
+    ctx.fillText(sale.customer_name, targetWidth - pad, y);
+    y += 20;
+  }
+
+  drawDotted(y);
+  y += 16;
+
+  // 3. Table Header
+  ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Item / Qty × Rate", pad, y);
+  ctx.textAlign = "right";
+  ctx.fillText("Total (৳)", targetWidth - pad, y);
+  y += 16;
+  drawDotted(y);
+  y += 16;
+
+  // 4. Items List
+  for (let idx = 0; idx < itemLineRows.length; idx++) {
+    const row = itemLineRows[idx];
+    ctx.textAlign = "left";
+    ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+    for (let lIdx = 0; lIdx < row.nameLines.length; lIdx++) {
+      const prefix = lIdx === 0 ? `${idx + 1}. ` : "   ";
+      ctx.fillText(prefix + row.nameLines[lIdx], pad, y);
+      y += 17;
+    }
+
+    ctx.font = "12px monospace, 'Courier New', monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(`   ${row.qtyRate}`, pad, y);
+    ctx.textAlign = "right";
+    ctx.font = "bold 13px monospace, 'Courier New', monospace";
+    ctx.fillText(row.total, targetWidth - pad, y);
+    y += 20;
+  }
+
+  drawDotted(y);
+  y += 16;
+
+  // 5. Totals
+  ctx.font = "13px monospace, 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("Subtotal:", pad, y);
+  ctx.textAlign = "right";
+  ctx.fillText(Number(sale.subtotal).toFixed(2), targetWidth - pad, y);
+  y += 19;
+
+  if (sale.discount > 0) {
+    ctx.textAlign = "left";
+    ctx.fillText("Discount:", pad, y);
+    ctx.textAlign = "right";
+    ctx.fillText(`-${Number(sale.discount).toFixed(2)}`, targetWidth - pad, y);
+    y += 19;
+  }
+
+  if (sale.vat) {
+    ctx.textAlign = "left";
+    ctx.fillText("VAT:", pad, y);
+    ctx.textAlign = "right";
+    ctx.fillText(Number(sale.vat).toFixed(2), targetWidth - pad, y);
+    y += 19;
+  }
+
+  const netQty = sale.lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
+  ctx.textAlign = "left";
+  ctx.fillText("Total Qty:", pad, y);
+  ctx.textAlign = "right";
+  ctx.fillText(String(netQty), targetWidth - pad, y);
+  y += 18;
+
+  // Solid line
+  ctx.save();
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad, y);
+  ctx.lineTo(targetWidth - pad, y);
+  ctx.stroke();
+  ctx.restore();
+  y += 20;
+
+  // Net Total
+  ctx.textAlign = "left";
+  ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.fillText("Net Total:", pad, y);
+  ctx.textAlign = "right";
+  ctx.font = "bold 17px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.fillText(`৳${Number(sale.total).toFixed(2)}`, targetWidth - pad, y);
+  y += 22;
+
+  // 6. Payment Box
+  const boxTop = y;
+  const boxHeight = 60;
+  ctx.strokeRect(pad, boxTop, targetWidth - pad * 2, boxHeight);
+
+  const payLabel = (sale.payment_method || "CASH").toUpperCase();
+  ctx.font = "bold 12px monospace, 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.fillText(`Paid (${payLabel})`, pad + 8, y + 17);
+  ctx.textAlign = "right";
+  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, y + 17);
+
+  ctx.font = "12px monospace, 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("Amount Tendered", pad + 8, y + 35);
+  ctx.textAlign = "right";
+  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, y + 35);
+
+  ctx.textAlign = "left";
+  ctx.fillText(sale.change < 0 ? "Due" : "Change Due", pad + 8, y + 51);
+  ctx.textAlign = "right";
+  ctx.fillText(Math.abs(sale.change).toFixed(2), targetWidth - pad - 8, y + 51);
+  y += boxHeight + 20;
+
+  // 7. Footer
+  ctx.textAlign = "center";
+  ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.fillText("Thank You Very Much For Your Business!", targetWidth / 2, y);
+  y += 18;
+
+  ctx.font = "10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.fillText("Goods Sold Are Not Returnable", targetWidth / 2, y);
+
+  return canvas;
+}
 
 class ThermalPrinterManager {
   private bleDevice: any = null;
@@ -64,7 +340,6 @@ class ThermalPrinterManager {
       const saved = localStorage.getItem("last_pos_thermal_printer");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Note: browser security prevents auto-opening without user gesture, but we keep the name
         this.currentPrinter = { ...parsed, connectedAt: Date.now() };
       }
     } catch (_) {}
@@ -81,7 +356,6 @@ class ThermalPrinterManager {
     }
 
     try {
-      // Prompt user to select device
       const device = await (navigator as any).bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: KNOWN_PRINTER_SERVICES,
@@ -92,10 +366,8 @@ class ThermalPrinterManager {
       const server = await device.gatt?.connect();
       if (!server) throw new Error("ব্লুটুথ কানেকশন পাওয়া যায়নি");
 
-      // Auto-discover writable characteristic
       let writeChar: any = null;
 
-      // Try known services first
       for (const serviceUuid of KNOWN_PRINTER_SERVICES) {
         try {
           const service = await server.getPrimaryService(serviceUuid);
@@ -110,7 +382,6 @@ class ThermalPrinterManager {
         if (writeChar) break;
       }
 
-      // Fallback: search all primary services if permitted
       if (!writeChar) {
         try {
           const services = await server.getPrimaryServices();
@@ -245,13 +516,11 @@ class ThermalPrinterManager {
    */
   public async writeRaw(data: Uint8Array, chunkSize = 100, delayMs = 15): Promise<void> {
     if (this.serialWriter) {
-      // Web Serial handles large buffers directly
       await this.serialWriter.write(data);
       return;
     }
 
     if (this.bleCharacteristic) {
-      // BLE GATT characteristics need small chunking to prevent MTU / buffer overflow
       for (let i = 0; i < data.length; i += chunkSize) {
         const chunk = data.slice(i, i + chunkSize);
         try {
@@ -261,7 +530,6 @@ class ThermalPrinterManager {
             await this.bleCharacteristic.writeValue(chunk);
           }
         } catch (_) {
-          // Fallback to writeValue without response if needed
           await this.bleCharacteristic.writeValue(chunk);
         }
         if (delayMs > 0) {
@@ -275,39 +543,31 @@ class ThermalPrinterManager {
   }
 
   /**
-   * Convert an HTML DOM element (e.g. Receipt preview) into a crisp 58mm / 384-dot ESC/POS monochrome bitmap
+   * Direct, robust receipt printing using native 2D Canvas (No HTML/CSS parser, immune to oklch bugs)
+   */
+  public async printReceiptDirect(
+    sale: ReceiptSale,
+    header: ReceiptHeader,
+    targetWidthDots = 384
+  ): Promise<void> {
+    const canvas = renderReceiptToCanvas(sale, header, targetWidthDots);
+    const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
+    await this.writeRaw(escPosBytes);
+  }
+
+  /**
+   * Fallback DOM element rasterizer using html-to-image (does not throw oklch errors)
    */
   public async printElementAsBitmap(
     element: HTMLElement,
     targetWidthDots = 384
   ): Promise<void> {
-    const html2canvas = (await import("html2canvas")).default;
-
-    // Clone and prepare element in isolated offscreen container
-    const container = document.createElement("div");
-    container.style.cssText = `position:fixed;left:-9999px;top:0;width:${targetWidthDots}px;background:#ffffff;color:#000000;box-sizing:border-box;`;
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.style.width = `${targetWidthDots}px`;
-    clone.style.maxWidth = `${targetWidthDots}px`;
-    clone.style.margin = "0";
-    clone.style.background = "#ffffff";
-    clone.style.color = "#000000";
-    container.appendChild(clone);
-    document.body.appendChild(container);
-
-    let canvas: HTMLCanvasElement;
-    try {
-      canvas = await html2canvas(clone, {
-        width: targetWidthDots,
-        scale: 1,
-        backgroundColor: "#ffffff",
-        logging: false,
-        useCORS: true,
-      });
-    } finally {
-      container.remove();
-    }
-
+    const { toCanvas } = await import("html-to-image");
+    const canvas = await toCanvas(element, {
+      backgroundColor: "#ffffff",
+      pixelRatio: 1,
+      skipFonts: true,
+    });
     const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
     await this.writeRaw(escPosBytes);
   }
@@ -333,7 +593,7 @@ class ThermalPrinterManager {
     // Center alignment
     commands.push(0x1b, 0x61, 0x01);
 
-    // Slice image into vertical blocks (e.g. 64 rows per slice) to prevent buffer overflows
+    // Slice image into vertical blocks (64 rows per slice) to prevent buffer overflows
     const sliceHeight = 64;
     for (let y = 0; y < height; y += sliceHeight) {
       const currentSlice = Math.min(sliceHeight, height - y);
@@ -358,10 +618,8 @@ class ThermalPrinterManager {
               const b = pixels[idx + 2];
               const a = pixels[idx + 3];
 
-              // Luminance calculation
               const luminance = a < 128 ? 255 : 0.299 * r + 0.587 * g + 0.114 * b;
               if (luminance < 175) {
-                // Black pixel
                 byte |= 1 << (7 - bit);
               }
             }
