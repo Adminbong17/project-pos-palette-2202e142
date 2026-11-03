@@ -32,10 +32,14 @@ import {
   LayoutGrid,
   Calendar,
   HandCoins,
+  Bluetooth,
+  RefreshCw,
 } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
 import { OcrScanner } from "@/components/OcrScanner";
+import { BluetoothPrinterModal } from "@/components/BluetoothPrinterModal";
+import { thermalPrinter, type ConnectedPrinterInfo } from "@/lib/bluetooth-printer";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -134,7 +138,15 @@ function PosScreen() {
   const [phoneScanOpen, setPhoneScanOpen] = useState(false);
   const [ocrOpen, setOcrOpen] = useState(false);
   const [lastSale, setLastSale] = useState<SaleSnapshot | null>(null);
-  const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("80");
+  const [printWidth, setPrintWidth] = useState<"58" | "80" | "A4">("58");
+  const [btModalOpen, setBtModalOpen] = useState(false);
+  const [connectedBtPrinter, setConnectedBtPrinter] = useState<ConnectedPrinterInfo | null>(
+    thermalPrinter.getConnectedPrinter()
+  );
+
+  useEffect(() => {
+    return thermalPrinter.subscribe(setConnectedBtPrinter);
+  }, []);
 
   // Sale Date State (Today or Previous Day / Backdated Entry)
   const getTodayStr = () => {
@@ -985,6 +997,27 @@ function PosScreen() {
                 <Clock className="h-3.5 w-3.5 text-blue-600" />
                 <span>Recent Invoices</span>
               </Button>
+
+              {/* Bluetooth Thermal Printer Quick Toggle */}
+              <button
+                type="button"
+                onClick={() => setBtModalOpen(true)}
+                className={`inline-flex h-8.5 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold cursor-pointer transition-colors ${
+                  connectedBtPrinter
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
+                    : "border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-200 hover:bg-blue-500/20"
+                }`}
+                title="58mm ব্লুটুথ থার্মাল প্রিন্টার (PT-220)"
+              >
+                <Bluetooth className="h-3.5 w-3.5 text-blue-600" />
+                <span className="hidden sm:inline">
+                  {connectedBtPrinter ? connectedBtPrinter.name : "ব্লুটুথ প্রিন্টার"}
+                </span>
+                <span className="sm:hidden">প্রিন্টার</span>
+                {connectedBtPrinter && (
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </button>
 
               {/* Due Management / বকেয়া খাতা Button */}
               <Link
@@ -2035,14 +2068,22 @@ function PosScreen() {
         <ReceiptModal
           sale={lastSale}
           width={printWidth}
-          businessName={business.name ?? "Sheikh Pharma"}
+          businessName={business?.name ?? "Sheikh Pharma"}
           businessAddress={locAddress}
           businessMobile={locMobile}
           businessEmail={currentLocation?.email ?? ""}
           onWidthChange={setPrintWidth}
           onClose={() => setLastSale(null)}
+          onOpenBtModal={() => setBtModalOpen(true)}
         />
       )}
+
+      {/* BLUETOOTH PRINTER MODAL */}
+      <BluetoothPrinterModal
+        open={btModalOpen}
+        onOpenChange={setBtModalOpen}
+        businessName={business?.name ?? "Sheikh Pharma"}
+      />
     </div>
   );
 }
@@ -2056,6 +2097,7 @@ function ReceiptModal({
   businessEmail,
   onWidthChange,
   onClose,
+  onOpenBtModal,
 }: {
   sale: SaleSnapshot;
   width: "58" | "80" | "A4";
@@ -2065,11 +2107,54 @@ function ReceiptModal({
   businessEmail: string;
   onWidthChange: (w: "58" | "80" | "A4") => void;
   onClose: () => void;
+  onOpenBtModal: () => void;
 }) {
   const mm = width === "58" ? "48mm" : width === "80" ? "72mm" : "210mm";
   const fontSize = width === "58" ? "11px" : width === "80" ? "13px" : "13px";
+  const [btPrinting, setBtPrinting] = useState(false);
+  const [connectedPrinter, setConnectedPrinter] = useState<ConnectedPrinterInfo | null>(
+    thermalPrinter.getConnectedPrinter()
+  );
+
+  useEffect(() => {
+    return thermalPrinter.subscribe(setConnectedPrinter);
+  }, []);
+
   const handlePrint = () =>
     printReceiptInWhitePage(sale, width, { businessName, businessAddress, businessMobile, businessEmail });
+
+  const handleBluetoothPrint = async () => {
+    if (!thermalPrinter.isConnected()) {
+      onOpenBtModal();
+      return;
+    }
+    setBtPrinting(true);
+    try {
+      const el = document.getElementById("receipt-print");
+      if (!el) throw new Error("রসিদ এলিমেন্ট পাওয়া যায়নি");
+      el.classList.remove("hidden");
+      await thermalPrinter.printElementAsBitmap(el, 384);
+      el.classList.add("hidden");
+      toast.success(`রসিদ ব্লুটুথ প্রিন্টারে (${connectedPrinter?.name}) পাঠানো হয়েছে!`);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "ব্লুটুথ প্রিন্ট ব্যর্থ হয়েছে");
+    } finally {
+      setBtPrinting(false);
+      const el = document.getElementById("receipt-print");
+      if (el) el.classList.add("hidden");
+    }
+  };
+
+  useEffect(() => {
+    const isAuto = localStorage.getItem("pos_auto_bt_print") === "true";
+    if (isAuto && thermalPrinter.isConnected()) {
+      const t = setTimeout(() => {
+        handleBluetoothPrint();
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4">
@@ -2120,13 +2205,34 @@ function ReceiptModal({
               width={width}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={onClose} className="h-10 rounded-xl">
-              Skip
+
+          <div className="space-y-2 pt-1">
+            <Button
+              type="button"
+              onClick={handleBluetoothPrint}
+              disabled={btPrinting}
+              className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-2 shadow-md cursor-pointer"
+            >
+              {btPrinting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bluetooth className="h-4 w-4" />
+              )}
+              <span>
+                {connectedPrinter
+                  ? `⚡ Bluetooth Print (${connectedPrinter.name})`
+                  : "⚡ Bluetooth প্রিন্টারে পাঠান (PT-220)"}
+              </span>
             </Button>
-            <Button onClick={handlePrint} className="h-10 rounded-xl bg-primary text-primary-foreground font-semibold">
-              <Printer className="h-4 w-4 mr-1.5" /> Print
-            </Button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={onClose} className="h-9 rounded-xl text-xs">
+                Skip
+              </Button>
+              <Button onClick={handlePrint} variant="outline" className="h-9 rounded-xl text-xs">
+                <Printer className="h-3.5 w-3.5 mr-1" /> Regular Print
+              </Button>
+            </div>
           </div>
         </div>
       </div>
