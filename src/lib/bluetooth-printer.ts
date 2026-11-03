@@ -29,13 +29,16 @@ const KNOWN_PRINTER_SERVICES = [
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART
 ];
 
+export type ReceiptFontSize = "normal" | "large" | "xlarge";
+
 export function renderReceiptToCanvas(
   sale: ReceiptSale,
   header: ReceiptHeader,
-  targetWidth = 384
+  targetWidth = 384,
+  fontSizeMode: ReceiptFontSize = "large"
 ): HTMLCanvasElement {
-  const pad = 10;
-  const contentWidth = targetWidth - pad * 2; // 364px
+  const pad = 8;
+  const contentWidth = targetWidth - pad * 2; // 368px for 58mm
 
   // Measurement canvas to calculate dynamic height accurately
   const measureCanvas = document.createElement("canvas");
@@ -45,9 +48,13 @@ export function renderReceiptToCanvas(
     mctx.font = font;
     const words = text.split(" ");
     const lines: string[] = [];
-    let cur = words[0] || "";
-    for (let i = 1; i < words.length; i++) {
+    let cur = "";
+    for (let i = 0; i < words.length; i++) {
       const w = words[i];
+      if (!cur) {
+        cur = w;
+        continue;
+      }
       const test = cur + " " + w;
       if (mctx.measureText(test).width <= maxW) {
         cur = test;
@@ -60,48 +67,129 @@ export function renderReceiptToCanvas(
     return lines;
   };
 
-  const nameLines = wrap(header.businessName || "Sheikh Pharma", "bold 20px sans-serif", contentWidth);
-  const addrLines = header.businessAddress ? wrap(header.businessAddress, "12px sans-serif", contentWidth) : [];
-  const phoneLines = header.businessMobile ? wrap(`Phone: ${header.businessMobile}`, "12px sans-serif", contentWidth) : [];
+  // Font presets: 'large' is default for crisp, easily readable receipts on 203 DPI 58mm heads
+  const cfg = {
+    normal: {
+      title: "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 30,
+      sub: "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 22,
+      meta: "bold 18px 'Courier New', Consolas, monospace",
+      metaLineH: 24,
+      tableHead: "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      tableHeadLineH: 24,
+      itemName: "bold 19px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      itemNameLineH: 25,
+      itemCalc: "bold 18px 'Courier New', Consolas, monospace",
+      itemCalcLineH: 24,
+      totals: "bold 18px 'Courier New', Consolas, monospace",
+      totalsLineH: 24,
+      netTotalLabel: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      netTotalVal: "bold 28px 'Courier New', Consolas, monospace",
+      netTotalLineH: 34,
+      box: "bold 18px 'Courier New', Consolas, monospace",
+      boxH: 80,
+      footer: "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 22,
+      footerSub: "bold 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerSubLineH: 19,
+    },
+    large: {
+      title: "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 35,
+      sub: "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 25,
+      meta: "bold 20px 'Courier New', Consolas, monospace",
+      metaLineH: 26,
+      tableHead: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      tableHeadLineH: 26,
+      itemName: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      itemNameLineH: 28,
+      itemCalc: "bold 20px 'Courier New', Consolas, monospace",
+      itemCalcLineH: 26,
+      totals: "bold 20px 'Courier New', Consolas, monospace",
+      totalsLineH: 26,
+      netTotalLabel: "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      netTotalVal: "bold 32px 'Courier New', Consolas, monospace",
+      netTotalLineH: 38,
+      box: "bold 20px 'Courier New', Consolas, monospace",
+      boxH: 88,
+      footer: "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 24,
+      footerSub: "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerSubLineH: 20,
+    },
+    xlarge: {
+      title: "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      titleLineH: 38,
+      sub: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      subLineH: 27,
+      meta: "bold 22px 'Courier New', Consolas, monospace",
+      metaLineH: 28,
+      tableHead: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      tableHeadLineH: 28,
+      itemName: "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      itemNameLineH: 30,
+      itemCalc: "bold 22px 'Courier New', Consolas, monospace",
+      itemCalcLineH: 28,
+      totals: "bold 22px 'Courier New', Consolas, monospace",
+      totalsLineH: 28,
+      netTotalLabel: "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      netTotalVal: "bold 36px 'Courier New', Consolas, monospace",
+      netTotalLineH: 42,
+      box: "bold 22px 'Courier New', Consolas, monospace",
+      boxH: 96,
+      footer: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerLineH: 26,
+      footerSub: "bold 17px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      footerSubLineH: 22,
+    },
+  }[fontSizeMode];
+
+  const nameLines = wrap(header.businessName || "Sheikh Pharma", cfg.title, contentWidth);
+  const addrLines = header.businessAddress ? wrap(header.businessAddress, cfg.sub, contentWidth) : [];
+  const phoneLines = header.businessMobile ? wrap(`Phone: ${header.businessMobile}`, cfg.sub, contentWidth) : [];
 
   const itemLineRows: { nameLines: string[]; qtyRate: string; total: string }[] = [];
   for (const l of sale.lines) {
-    const iNameLines = wrap(`${l.name}`, "bold 13px sans-serif", contentWidth);
+    const iNameLines = wrap(`${l.name}`, cfg.itemName, contentWidth);
     const qtyRate = `${l.quantity} × ${Number(l.unit_price).toFixed(2)}`;
     const total = `${Number(l.total_amount).toFixed(2)}`;
     itemLineRows.push({ nameLines: iNameLines, qtyRate, total });
   }
 
-  // Calculate total height needed:
-  let totalHeight = 15; // top margin
-  totalHeight += nameLines.length * 24 + 4;
-  totalHeight += addrLines.length * 16;
-  totalHeight += phoneLines.length * 16 + 10;
+  // Calculate total height needed dynamically
+  let totalHeight = 20; // top margin
+  totalHeight += nameLines.length * cfg.titleLineH + 4;
+  totalHeight += addrLines.length * cfg.subLineH;
+  totalHeight += phoneLines.length * cfg.subLineH + 8;
 
-  totalHeight += 12; // divider
-  totalHeight += 20 + 20; // Bill No, Date
-  if (sale.served_by || sale.counter_id) totalHeight += 20;
-  if (sale.customer_name) totalHeight += 20;
+  totalHeight += 18; // divider
+  totalHeight += cfg.metaLineH * 2; // Bill No, Date
+  if (sale.served_by || sale.counter_id) totalHeight += cfg.metaLineH;
+  if (sale.customer_name) totalHeight += cfg.metaLineH;
 
-  totalHeight += 12; // divider
-  totalHeight += 20; // Table header
+  totalHeight += 18; // divider
+  totalHeight += cfg.tableHeadLineH; // Table header
+  totalHeight += 18; // divider
 
   for (const r of itemLineRows) {
-    totalHeight += r.nameLines.length * 18 + 18 + 4;
+    totalHeight += r.nameLines.length * cfg.itemNameLineH + cfg.itemCalcLineH + 6;
   }
 
-  totalHeight += 12; // divider
-  totalHeight += 20; // Subtotal
-  if (sale.discount > 0) totalHeight += 20;
-  if (sale.vat) totalHeight += 20;
-  totalHeight += 20; // Total Qty
-  totalHeight += 26; // Net Total
+  totalHeight += 18; // divider
+  totalHeight += cfg.totalsLineH; // Subtotal
+  if (sale.discount > 0) totalHeight += cfg.totalsLineH;
+  if (sale.vat) totalHeight += cfg.totalsLineH;
+  totalHeight += cfg.totalsLineH; // Total Qty
+  totalHeight += 20; // solid separator
+  totalHeight += cfg.netTotalLineH + 10; // Net Total
 
   // Payment Box
-  totalHeight += 12 + 65 + 10;
+  totalHeight += cfg.boxH + 20;
 
   // Footer & Tear Feed
-  totalHeight += 20 + 16 + 45;
+  totalHeight += cfg.footerLineH + cfg.footerSubLineH + 55;
 
   const canvas = document.createElement("canvas");
   canvas.width = targetWidth;
@@ -113,32 +201,32 @@ export function renderReceiptToCanvas(
   ctx.fillRect(0, 0, targetWidth, totalHeight);
   ctx.fillStyle = "#000000";
 
-  let y = 20;
+  let y = 26;
 
   // 1. Header (Centered)
   ctx.textAlign = "center";
-  ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.title;
   for (const nl of nameLines) {
     ctx.fillText(nl, targetWidth / 2, y);
-    y += 24;
+    y += cfg.titleLineH;
   }
 
-  ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.sub;
   for (const al of addrLines) {
     ctx.fillText(al, targetWidth / 2, y);
-    y += 16;
+    y += cfg.subLineH;
   }
   for (const pl of phoneLines) {
     ctx.fillText(pl, targetWidth / 2, y);
-    y += 16;
+    y += cfg.subLineH;
   }
 
   y += 4;
   const drawDotted = (lineY: number) => {
     ctx.save();
-    ctx.setLineDash([4, 4]);
+    ctx.setLineDash([5, 5]);
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(pad, lineY);
     ctx.lineTo(targetWidth - pad, lineY);
@@ -147,29 +235,28 @@ export function renderReceiptToCanvas(
   };
 
   drawDotted(y);
-  y += 16;
+  y += 20;
 
   // 2. Meta Info (Bill No, Date, etc.)
   ctx.textAlign = "left";
-  ctx.font = "bold 13px monospace, 'Courier New', monospace";
+  ctx.font = cfg.meta;
   ctx.fillText("Bill No:", pad, y);
   ctx.textAlign = "right";
   ctx.fillText(sale.invoice_no, targetWidth - pad, y);
-  y += 20;
+  y += cfg.metaLineH;
 
   ctx.textAlign = "left";
-  ctx.font = "12px monospace, 'Courier New', monospace";
   ctx.fillText("Date:", pad, y);
   ctx.textAlign = "right";
   ctx.fillText(sale.date, targetWidth - pad, y);
-  y += 20;
+  y += cfg.metaLineH;
 
   if (sale.served_by || sale.counter_id) {
     ctx.textAlign = "left";
     ctx.fillText("Cashier:", pad, y);
     ctx.textAlign = "right";
     ctx.fillText(`${sale.served_by ?? ""}${sale.counter_id ? ` (${sale.counter_id})` : ""}`, targetWidth - pad, y);
-    y += 20;
+    y += cfg.metaLineH;
   }
 
   if (sale.customer_name) {
@@ -177,59 +264,58 @@ export function renderReceiptToCanvas(
     ctx.fillText("Customer:", pad, y);
     ctx.textAlign = "right";
     ctx.fillText(sale.customer_name, targetWidth - pad, y);
-    y += 20;
+    y += cfg.metaLineH;
   }
 
   drawDotted(y);
-  y += 16;
+  y += 20;
 
   // 3. Table Header
-  ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.tableHead;
   ctx.textAlign = "left";
   ctx.fillText("Item / Qty × Rate", pad, y);
   ctx.textAlign = "right";
   ctx.fillText("Total (৳)", targetWidth - pad, y);
-  y += 16;
+  y += cfg.tableHeadLineH;
   drawDotted(y);
-  y += 16;
+  y += 22;
 
   // 4. Items List
   for (let idx = 0; idx < itemLineRows.length; idx++) {
     const row = itemLineRows[idx];
     ctx.textAlign = "left";
-    ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+    ctx.font = cfg.itemName;
     for (let lIdx = 0; lIdx < row.nameLines.length; lIdx++) {
       const prefix = lIdx === 0 ? `${idx + 1}. ` : "   ";
       ctx.fillText(prefix + row.nameLines[lIdx], pad, y);
-      y += 17;
+      y += cfg.itemNameLineH;
     }
 
-    ctx.font = "12px monospace, 'Courier New', monospace";
+    ctx.font = cfg.itemCalc;
     ctx.textAlign = "left";
     ctx.fillText(`   ${row.qtyRate}`, pad, y);
     ctx.textAlign = "right";
-    ctx.font = "bold 13px monospace, 'Courier New', monospace";
     ctx.fillText(row.total, targetWidth - pad, y);
-    y += 20;
+    y += cfg.itemCalcLineH + 6;
   }
 
   drawDotted(y);
-  y += 16;
+  y += 20;
 
   // 5. Totals
-  ctx.font = "13px monospace, 'Courier New', monospace";
+  ctx.font = cfg.totals;
   ctx.textAlign = "left";
   ctx.fillText("Subtotal:", pad, y);
   ctx.textAlign = "right";
   ctx.fillText(Number(sale.subtotal).toFixed(2), targetWidth - pad, y);
-  y += 19;
+  y += cfg.totalsLineH;
 
   if (sale.discount > 0) {
     ctx.textAlign = "left";
     ctx.fillText("Discount:", pad, y);
     ctx.textAlign = "right";
     ctx.fillText(`-${Number(sale.discount).toFixed(2)}`, targetWidth - pad, y);
-    y += 19;
+    y += cfg.totalsLineH;
   }
 
   if (sale.vat) {
@@ -237,7 +323,7 @@ export function renderReceiptToCanvas(
     ctx.fillText("VAT:", pad, y);
     ctx.textAlign = "right";
     ctx.fillText(Number(sale.vat).toFixed(2), targetWidth - pad, y);
-    y += 19;
+    y += cfg.totalsLineH;
   }
 
   const netQty = sale.lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
@@ -245,59 +331,60 @@ export function renderReceiptToCanvas(
   ctx.fillText("Total Qty:", pad, y);
   ctx.textAlign = "right";
   ctx.fillText(String(netQty), targetWidth - pad, y);
-  y += 18;
+  y += cfg.totalsLineH;
 
   // Solid line
   ctx.save();
   ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(pad, y);
   ctx.lineTo(targetWidth - pad, y);
   ctx.stroke();
   ctx.restore();
-  y += 20;
+  y += 24;
 
   // Net Total
   ctx.textAlign = "left";
-  ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.netTotalLabel;
   ctx.fillText("Net Total:", pad, y);
   ctx.textAlign = "right";
-  ctx.font = "bold 17px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.netTotalVal;
   ctx.fillText(`৳${Number(sale.total).toFixed(2)}`, targetWidth - pad, y);
-  y += 22;
+  y += cfg.netTotalLineH;
 
   // 6. Payment Box
   const boxTop = y;
-  const boxHeight = 60;
+  const boxHeight = cfg.boxH;
+  ctx.lineWidth = 2;
   ctx.strokeRect(pad, boxTop, targetWidth - pad * 2, boxHeight);
 
   const payLabel = (sale.payment_method || "CASH").toUpperCase();
-  ctx.font = "bold 12px monospace, 'Courier New', monospace";
+  const rowStep = (boxHeight - 16) / 3;
+  ctx.font = cfg.box;
   ctx.textAlign = "left";
-  ctx.fillText(`Paid (${payLabel})`, pad + 8, y + 17);
+  ctx.fillText(`Paid (${payLabel})`, pad + 8, boxTop + rowStep);
   ctx.textAlign = "right";
-  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, y + 17);
-
-  ctx.font = "12px monospace, 'Courier New', monospace";
-  ctx.textAlign = "left";
-  ctx.fillText("Amount Tendered", pad + 8, y + 35);
-  ctx.textAlign = "right";
-  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, y + 35);
+  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, boxTop + rowStep);
 
   ctx.textAlign = "left";
-  ctx.fillText(sale.change < 0 ? "Due" : "Change Due", pad + 8, y + 51);
+  ctx.fillText("Amount Tendered", pad + 8, boxTop + rowStep * 2);
   ctx.textAlign = "right";
-  ctx.fillText(Math.abs(sale.change).toFixed(2), targetWidth - pad - 8, y + 51);
-  y += boxHeight + 20;
+  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, boxTop + rowStep * 2);
+
+  ctx.textAlign = "left";
+  ctx.fillText(sale.change < 0 ? "Due" : "Change Due", pad + 8, boxTop + rowStep * 3);
+  ctx.textAlign = "right";
+  ctx.fillText(Math.abs(sale.change).toFixed(2), targetWidth - pad - 8, boxTop + rowStep * 3);
+  y += boxHeight + 24;
 
   // 7. Footer
   ctx.textAlign = "center";
-  ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.footer;
   ctx.fillText("Thank You Very Much For Your Business!", targetWidth / 2, y);
-  y += 18;
+  y += cfg.footerLineH;
 
-  ctx.font = "10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
+  ctx.font = cfg.footerSub;
   ctx.fillText("Goods Sold Are Not Returnable", targetWidth / 2, y);
 
   return canvas;
@@ -545,14 +632,131 @@ class ThermalPrinterManager {
   /**
    * Direct, robust receipt printing using native 2D Canvas (No HTML/CSS parser, immune to oklch bugs)
    */
+  /**
+   * Direct, robust receipt printing using native 2D Canvas (No HTML/CSS parser, immune to oklch bugs)
+   * Supports 'normal', 'large', and 'xlarge' font sizes
+   */
   public async printReceiptDirect(
     sale: ReceiptSale,
     header: ReceiptHeader,
-    targetWidthDots = 384
+    targetWidthDots = 384,
+    fontSizeMode: ReceiptFontSize = "large"
   ): Promise<void> {
-    const canvas = renderReceiptToCanvas(sale, header, targetWidthDots);
+    const canvas = renderReceiptToCanvas(sale, header, targetWidthDots, fontSizeMode);
     const escPosBytes = this.canvasToEscPosRaster(canvas, targetWidthDots);
     await this.writeRaw(escPosBytes);
+  }
+
+  /**
+   * Hardware ESC/POS Direct Text Mode
+   * Prints instantly using printer ROM fonts (Ultra-crisp, native hardware density)
+   */
+  public async printReceiptEscPosText(
+    sale: ReceiptSale,
+    header: ReceiptHeader,
+    cols = 32
+  ): Promise<void> {
+    const encoder = new TextEncoder();
+    const parts: Uint8Array[] = [];
+
+    const text = (str: string) => parts.push(encoder.encode(str));
+    const raw = (...bytes: number[]) => parts.push(new Uint8Array(bytes));
+
+    // ESC @: Init
+    raw(0x1b, 0x40);
+
+    // ESC a 1: Center
+    raw(0x1b, 0x61, 0x01);
+
+    // GS ! 0x11: Double Width + Double Height
+    raw(0x1d, 0x21, 0x11);
+    text(`${header.businessName || "Sheikh Pharma"}\n`);
+
+    // GS ! 0x00: Normal
+    raw(0x1d, 0x21, 0x00);
+    if (header.businessAddress) text(`${header.businessAddress}\n`);
+    if (header.businessMobile) text(`Phone: ${header.businessMobile}\n`);
+
+    text("-".repeat(cols) + "\n");
+
+    // ESC a 0: Left
+    raw(0x1b, 0x61, 0x00);
+
+    const row2 = (left: string, right: string) => {
+      const space = cols - left.length - right.length;
+      if (space >= 1) {
+        text(left + " ".repeat(space) + right + "\n");
+      } else {
+        text(left + "\n" + right.padStart(cols) + "\n");
+      }
+    };
+
+    row2("Bill No:", sale.invoice_no);
+    row2("Date:", sale.date);
+    if (sale.served_by || sale.counter_id) {
+      row2("Cashier:", `${sale.served_by || ""}${sale.counter_id ? ` (${sale.counter_id})` : ""}`);
+    }
+    if (sale.customer_name) {
+      row2("Customer:", sale.customer_name);
+    }
+
+    text("-".repeat(cols) + "\n");
+    row2("Item / Qty x Rate", "Total");
+    text("-".repeat(cols) + "\n");
+
+    for (let i = 0; i < sale.lines.length; i++) {
+      const item = sale.lines[i];
+      text(`${i + 1}. ${item.name}\n`);
+      const qtyRate = `   ${item.quantity} x ${Number(item.unit_price).toFixed(2)}`;
+      const lineTot = Number(item.total_amount).toFixed(2);
+      row2(qtyRate, lineTot);
+    }
+
+    text("-".repeat(cols) + "\n");
+    row2("Subtotal:", Number(sale.subtotal).toFixed(2));
+    if (sale.discount > 0) {
+      row2("Discount:", `-${Number(sale.discount).toFixed(2)}`);
+    }
+    if (sale.vat) {
+      row2("VAT:", Number(sale.vat).toFixed(2));
+    }
+    const netQty = sale.lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
+    row2("Total Qty:", String(netQty));
+
+    text("=".repeat(cols) + "\n");
+
+    // Net Total (Double Height)
+    raw(0x1d, 0x21, 0x01);
+    raw(0x1b, 0x45, 0x01); // Bold
+    row2("NET TOTAL:", `Tk ${Number(sale.total).toFixed(2)}`);
+    raw(0x1b, 0x45, 0x00);
+    raw(0x1d, 0x21, 0x00);
+
+    text("-".repeat(cols) + "\n");
+
+    const payLabel = (sale.payment_method || "CASH").toUpperCase();
+    row2(`Paid (${payLabel}):`, Number(sale.paid).toFixed(2));
+    row2("Amount Tendered:", Number(sale.paid).toFixed(2));
+    row2(sale.change < 0 ? "Due:" : "Change Due:", Math.abs(sale.change).toFixed(2));
+
+    text("=".repeat(cols) + "\n");
+
+    // Footer (Center)
+    raw(0x1b, 0x61, 0x01);
+    raw(0x1b, 0x45, 0x01);
+    text("Thank You Very Much!\n");
+    raw(0x1b, 0x45, 0x00);
+    text("Goods Sold Are Not Returnable\n\n\n\n");
+
+    const totalLen = parts.reduce((acc, p) => acc + p.length, 0);
+    const combined = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const p of parts) {
+      combined.set(p, offset);
+      offset += p.length;
+    }
+
+    await this.writeRaw(combined);
   }
 
   /**
@@ -574,6 +778,7 @@ class ThermalPrinterManager {
 
   /**
    * Converts a canvas into ESC/POS GS v 0 raster bit image commands
+   * Uses luminance threshold 195 for rich, dark, solid thermal strokes
    */
   private canvasToEscPosRaster(canvas: HTMLCanvasElement, targetWidth = 384): Uint8Array {
     const ctx = canvas.getContext("2d");
@@ -618,8 +823,9 @@ class ThermalPrinterManager {
               const b = pixels[idx + 2];
               const a = pixels[idx + 3];
 
+              // Luminance < 195 gives richer, thicker, bolder thermal head burn
               const luminance = a < 128 ? 255 : 0.299 * r + 0.587 * g + 0.114 * b;
-              if (luminance < 175) {
+              if (luminance < 195) {
                 byte |= 1 << (7 - bit);
               }
             }

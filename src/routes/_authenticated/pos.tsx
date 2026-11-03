@@ -34,12 +34,13 @@ import {
   HandCoins,
   Bluetooth,
   RefreshCw,
+  Type,
 } from "lucide-react";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { PhoneScanDialog } from "@/components/PhoneScanDialog";
 import { OcrScanner } from "@/components/OcrScanner";
 import { BluetoothPrinterModal } from "@/components/BluetoothPrinterModal";
-import { thermalPrinter, type ConnectedPrinterInfo } from "@/lib/bluetooth-printer";
+import { thermalPrinter, type ConnectedPrinterInfo, type ReceiptFontSize } from "@/lib/bluetooth-printer";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -2110,11 +2111,26 @@ function ReceiptModal({
   onOpenBtModal: () => void;
 }) {
   const mm = width === "58" ? "48mm" : width === "80" ? "72mm" : "210mm";
-  const fontSize = width === "58" ? "11px" : width === "80" ? "13px" : "13px";
   const [btPrinting, setBtPrinting] = useState(false);
   const [connectedPrinter, setConnectedPrinter] = useState<ConnectedPrinterInfo | null>(
     thermalPrinter.getConnectedPrinter()
   );
+  const [btFontSize, setBtFontSize] = useState<ReceiptFontSize>(() => {
+    return (localStorage.getItem("pos_bt_font_size") as ReceiptFontSize) || "large";
+  });
+  const [btPrintMode, setBtPrintMode] = useState<"canvas" | "text">(() => {
+    return (localStorage.getItem("pos_bt_print_mode") as "canvas" | "text") || "canvas";
+  });
+
+  const handleFontSizeChange = (size: ReceiptFontSize) => {
+    setBtFontSize(size);
+    localStorage.setItem("pos_bt_font_size", size);
+  };
+
+  const handlePrintModeChange = (mode: "canvas" | "text") => {
+    setBtPrintMode(mode);
+    localStorage.setItem("pos_bt_print_mode", mode);
+  };
 
   useEffect(() => {
     return thermalPrinter.subscribe(setConnectedPrinter);
@@ -2130,12 +2146,21 @@ function ReceiptModal({
     }
     setBtPrinting(true);
     try {
-      // Direct, robust 2D Canvas ESC/POS printer - zero CSS / oklch dependencies
-      await thermalPrinter.printReceiptDirect(
-        toSharedSale(sale),
-        { businessName, businessAddress, businessMobile },
-        384
-      );
+      const targetDots = width === "80" ? 576 : 384;
+      if (btPrintMode === "text") {
+        await thermalPrinter.printReceiptEscPosText(
+          toSharedSale(sale),
+          { businessName, businessAddress, businessMobile },
+          width === "80" ? 48 : 32
+        );
+      } else {
+        await thermalPrinter.printReceiptDirect(
+          toSharedSale(sale),
+          { businessName, businessAddress, businessMobile },
+          targetDots,
+          btFontSize
+        );
+      }
       toast.success(`রসিদ ব্লুটুথ প্রিন্টারে (${connectedPrinter?.name}) প্রিন্ট সম্পন্ন হয়েছে!`);
       onClose();
     } catch (err: any) {
@@ -2155,44 +2180,125 @@ function ReceiptModal({
     }
   }, []);
 
+  const previewFontSize =
+    width === "A4"
+      ? "13px"
+      : btFontSize === "xlarge"
+        ? "15px"
+        : btFontSize === "large"
+          ? "13.5px"
+          : "12px";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4">
       <div className="bg-card rounded-2xl border border-border w-full max-w-sm overflow-hidden print:hidden shadow-2xl">
         <div className="p-4 border-b border-border flex items-center justify-between">
           <h3 className="font-semibold text-sm">Print Receipt</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="p-4 space-y-3">
+          {/* Paper Width Selection */}
           <div className="flex gap-2">
             <button
               onClick={() => onWidthChange("58")}
-              className={`flex-1 h-9 rounded-lg border text-sm font-medium ${
-                width === "58" ? "border-primary bg-primary/10 text-primary" : "border-border"
+              className={`flex-1 h-9 rounded-lg border text-sm font-medium cursor-pointer ${
+                width === "58" ? "border-primary bg-primary/10 text-primary font-bold" : "border-border"
               }`}
             >
               58 mm
             </button>
             <button
               onClick={() => onWidthChange("80")}
-              className={`flex-1 h-9 rounded-lg border text-sm font-medium ${
-                width === "80" ? "border-primary bg-primary/10 text-primary" : "border-border"
+              className={`flex-1 h-9 rounded-lg border text-sm font-medium cursor-pointer ${
+                width === "80" ? "border-primary bg-primary/10 text-primary font-bold" : "border-border"
               }`}
             >
               80 mm
             </button>
             <button
               onClick={() => onWidthChange("A4")}
-              className={`flex-1 h-9 rounded-lg border text-sm font-medium ${
-                width === "A4" ? "border-primary bg-primary/10 text-primary" : "border-border"
+              className={`flex-1 h-9 rounded-lg border text-sm font-medium cursor-pointer ${
+                width === "A4" ? "border-primary bg-primary/10 text-primary font-bold" : "border-border"
               }`}
             >
               A4
             </button>
           </div>
+
+          {/* Font Size & Print Mode bar for Bluetooth */}
+          <div className="bg-muted/40 rounded-xl p-2.5 border border-border/70 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground font-semibold flex items-center gap-1">
+                <Type className="h-3.5 w-3.5 text-primary" /> ফন্ট সাইজ:
+              </span>
+              <div className="inline-flex rounded-lg border border-border/80 bg-background p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => handleFontSizeChange("normal")}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                    btFontSize === "normal"
+                      ? "bg-muted text-foreground font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  স্বাভাবিক
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizeChange("large")}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition cursor-pointer ${
+                    btFontSize === "large"
+                      ? "bg-primary text-primary-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  বড় (স্পষ্ট)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizeChange("xlarge")}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                    btFontSize === "xlarge"
+                      ? "bg-primary text-primary-foreground shadow-2xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  অনেক বড়
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+              <span className="text-muted-foreground">প্রিন্ট মোড:</span>
+              <div className="inline-flex rounded-md border border-border/60 bg-background p-0.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => handlePrintModeChange("canvas")}
+                  className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                    btPrintMode === "canvas" ? "bg-primary/20 text-primary font-bold" : "text-muted-foreground"
+                  }`}
+                  title="বাংলা ও ৳ সহ স্পষ্ট ও বড় গ্রাফিক রসিদ"
+                >
+                  Graphic (বড় ও স্পষ্ট)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrintModeChange("text")}
+                  className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                    btPrintMode === "text" ? "bg-primary/20 text-primary font-bold" : "text-muted-foreground"
+                  }`}
+                  title="প্রিন্টারের নিজস্ব দ্রুত হার্ডওয়্যার টেক্সট"
+                >
+                  Text (দ্রুত)
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div
-            className="rounded-lg border border-border bg-white text-black p-3 max-h-80 overflow-y-auto overflow-x-hidden shadow-inner flex justify-center"
+            className="rounded-lg border border-border bg-white text-black p-3 max-h-72 overflow-y-auto overflow-x-hidden shadow-inner flex justify-center"
           >
             <div style={{ width: width === "A4" ? "100%" : width === "58" ? "260px" : "320px", maxWidth: "100%" }}>
               <Receipt
@@ -2202,6 +2308,7 @@ function ReceiptModal({
                 businessMobile={businessMobile}
                 businessEmail={businessEmail}
                 width={width}
+                fontSize={previewFontSize}
               />
             </div>
           </div>
@@ -2226,10 +2333,10 @@ function ReceiptModal({
             </Button>
 
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={onClose} className="h-9 rounded-xl text-xs">
+              <Button variant="outline" onClick={onClose} className="h-9 rounded-xl text-xs cursor-pointer">
                 Skip
               </Button>
-              <Button onClick={handlePrint} variant="outline" className="h-9 rounded-xl text-xs">
+              <Button onClick={handlePrint} variant="outline" className="h-9 rounded-xl text-xs cursor-pointer">
                 <Printer className="h-3.5 w-3.5 mr-1" /> Regular Print
               </Button>
             </div>
@@ -2240,7 +2347,7 @@ function ReceiptModal({
       <div
         id="receipt-print"
         className="hidden"
-        style={{ width: mm, fontSize, fontFamily: "ui-monospace, monospace", color: "#000", background: "#fff", padding: "4px" }}
+        style={{ width: mm, fontSize: previewFontSize, fontFamily: "ui-monospace, monospace", color: "#000", background: "#fff", padding: "4px" }}
       >
         <Receipt
           sale={sale}
@@ -2249,6 +2356,7 @@ function ReceiptModal({
           businessMobile={businessMobile}
           businessEmail={businessEmail}
           width={width}
+          fontSize={previewFontSize}
         />
       </div>
     </div>
@@ -2300,6 +2408,7 @@ function Receipt({
   businessAddress,
   businessMobile,
   width = "80",
+  fontSize: customFontSize,
 }: {
   sale: SaleSnapshot;
   businessName: string;
@@ -2307,10 +2416,11 @@ function Receipt({
   businessMobile: string;
   businessEmail: string;
   width?: "58" | "80" | "A4";
+  fontSize?: string;
 }) {
   const html = sharedReceiptHtml(toSharedSale(sale), { businessName, businessAddress, businessMobile }, width);
-  const previewMm = width === "58" ? "250px" : width === "80" ? "300px" : "100%";
-  const fontSize = width === "58" ? "12px" : "13px";
+  const previewMm = width === "58" ? "260px" : width === "80" ? "300px" : "100%";
+  const fontSize = customFontSize || (width === "58" ? "13px" : "13px");
   const css = receiptCss(".receipt-preview-clone", fontSize, previewMm);
   return (
     <>
