@@ -70,7 +70,7 @@ export const CAT_COMMANDS = {
  * Sets print energy / darkness
  * Cat printer BLE requires a 4-byte little-endian payload
  */
-export function catSetEnergy(energy = 28000): Uint8Array {
+export function catSetEnergy(energy = 20000): Uint8Array {
   return buildCatPacket(
     0xaf,
     new Uint8Array([
@@ -83,16 +83,17 @@ export function catSetEnergy(energy = 28000): Uint8Array {
 }
 
 /**
- * Sets motor speed (lower = slower feed = deeper thermal heat burn = rich jet-black output)
+ * Sets motor speed.
+ * 32-40 provides smooth, fast printing without thermal blur.
  */
-export function catSetSpeed(speed = 16): Uint8Array {
+export function catSetSpeed(speed = 36): Uint8Array {
   return buildCatPacket(0xbd, new Uint8Array([speed & 0xff]));
 }
 
 /**
  * Feeds paper forward by specified lines (Command 0xA1)
  */
-export function catFeedPaper(lines = 70): Uint8Array {
+export function catFeedPaper(lines = 60): Uint8Array {
   return buildCatPacket(0xa1, new Uint8Array([lines & 0xff, (lines >> 8) & 0xff]));
 }
 
@@ -127,10 +128,11 @@ export function buildCatRowPacket(row: Uint8Array): Uint8Array {
 
 /**
  * Encodes a 384px wide 2D HTML Canvas into a series of Cat Printer BLE packets.
+ * Optimized for high speed, zero-smudge print quality, and trailing whitespace trimming.
  */
 export function canvasToCatPrinterPackets(
   canvas: HTMLCanvasElement,
-  energy = 28000
+  energy = 20000
 ): Uint8Array[] {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas 2D context");
@@ -140,19 +142,42 @@ export function canvasToCatPrinterPackets(
   const imgData = ctx.getImageData(0, 0, width, height);
   const pixels = imgData.data;
 
+  // Trim useless trailing blank rows to accelerate transmission
+  let lastContentY = height - 1;
+  while (lastContentY > 20) {
+    let hasBlackPixel = false;
+    const rowOffset = lastContentY * width * 4;
+    for (let x = 0; x < width; x++) {
+      const idx = rowOffset + x * 4;
+      const a = pixels[idx + 3];
+      if (a >= 128) {
+        const lum = (pixels[idx] * 299 + pixels[idx + 1] * 587 + pixels[idx + 2] * 114) / 1000;
+        if (lum < 180) {
+          hasBlackPixel = true;
+          break;
+        }
+      }
+    }
+    if (hasBlackPixel) break;
+    lastContentY--;
+  }
+
+  // Allow a tiny 10px buffer after content, the rest is handled by fast hardware feed 0xA1
+  const effectiveHeight = Math.min(height, lastContentY + 10);
+
   const packets: Uint8Array[] = [];
 
-  // 1. Initial Wakeup & Deep Thermal Contrast Configuration
+  // 1. Initial Wakeup & Fast Thermal Contrast Configuration
   packets.push(CAT_COMMANDS.GET_DEV_STATE);
   packets.push(CAT_COMMANDS.SET_QUALITY_200_DPI);
-  packets.push(catSetSpeed(16)); // Slow steady motor speed for dark, crisp burn
-  packets.push(catSetEnergy(energy)); // High energy (28000) for jet-black text
+  packets.push(catSetSpeed(36)); // Fast motor speed (3-4 seconds total print)
+  packets.push(catSetEnergy(energy)); // Crisp 20000 energy (no ink bleeding/smudge)
   packets.push(CAT_COMMANDS.APPLY_ENERGY);
   packets.push(CAT_COMMANDS.LATTICE_START);
 
   // 2. Row by row pixel encoding (pure 0xA2 raw bitmap across all 384 dots)
   const rowBuffer = new Uint8Array(width);
-  for (let y = 0; y < height; y++) {
+  for (let y = 0; y < effectiveHeight; y++) {
     const rowOffset = y * width * 4;
     for (let x = 0; x < width; x++) {
       const idx = rowOffset + x * 4;
@@ -161,16 +186,16 @@ export function canvasToCatPrinterPackets(
       const b = pixels[idx + 2];
       const a = pixels[idx + 3];
 
-      // High-contrast thresholding: Solid black if lum < 205 (prevents thin antialiasing dropouts)
+      // High-contrast thresholding: Solid black if lum < 180 (prevents antialiasing blur/fat letters)
       const lum = a < 128 ? 255 : (r * 299 + g * 587 + b * 114) / 1000;
-      rowBuffer[x] = lum < 205 ? 1 : 0;
+      rowBuffer[x] = lum < 180 ? 1 : 0;
     }
     packets.push(buildCatRowPacket(rowBuffer));
   }
 
-  // 3. Finalize lattice, paper feed & device state
+  // 3. Finalize lattice, fast hardware paper feed & device state
   packets.push(CAT_COMMANDS.LATTICE_END);
-  packets.push(catFeedPaper(70)); // Clean paper feed so receipt clears tear cutter
+  packets.push(catFeedPaper(60)); // Fast hardware motor feed past tear bar
   packets.push(CAT_COMMANDS.GET_DEV_STATE);
 
   return packets;
@@ -196,11 +221,11 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
 
   // 1. Business Header (Big, bold, authentic POS title)
   ctx.textAlign = "center";
-  ctx.font = "900 34px 'Courier New', Consolas, sans-serif";
+  ctx.font = "900 32px Consolas, 'Roboto Mono', monospace";
   ctx.fillText("SHEIKH PHARMA", width / 2, y);
   y += 28;
 
-  ctx.font = "bold 20px 'Courier New', Consolas, monospace";
+  ctx.font = "bold 19px Consolas, 'Roboto Mono', monospace";
   ctx.fillText("Hospital Road, Cumilla", width / 2, y);
   y += 24;
   ctx.fillText("Mob: 01700-000000", width / 2, y);
@@ -209,12 +234,12 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
   // Double Line Divider
   const drawDoubleLine = (currY: number) => {
     ctx.save();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(8, currY);
-    ctx.lineTo(width - 8, currY);
-    ctx.moveTo(8, currY + 4);
-    ctx.lineTo(width - 8, currY + 4);
+    ctx.moveTo(8, currY - 2);
+    ctx.lineTo(width - 8, currY - 2);
+    ctx.moveTo(8, currY + 2);
+    ctx.lineTo(width - 8, currY + 2);
     ctx.stroke();
     ctx.restore();
   };
@@ -222,7 +247,7 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
   const drawDashed = (currY: number) => {
     ctx.save();
     ctx.setLineDash([5, 4]);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(8, currY);
     ctx.lineTo(width - 8, currY);
@@ -231,17 +256,17 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
   };
 
   drawDoubleLine(y);
-  y += 24;
+  y += 22;
 
   // Banner
-  ctx.font = "900 22px 'Courier New', Consolas, monospace";
-  ctx.fillText("*** TEST RECEIPT / পরীক্ষা রসিদ ***", width / 2, y);
-  y += 20;
+  ctx.font = "900 20px Consolas, 'Roboto Mono', monospace";
+  ctx.fillText("*** TEST RECEIPT / পরীক্ষা ***", width / 2, y);
+  y += 18;
   drawDashed(y);
   y += 22;
 
   // Meta rows
-  ctx.font = "bold 21px 'Courier New', Consolas, monospace";
+  ctx.font = "bold 20px Consolas, 'Roboto Mono', monospace";
   const row = (left: string, right: string) => {
     ctx.textAlign = "left";
     ctx.fillText(left, 10, y);
@@ -252,24 +277,24 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
 
   row("Printer :", "MX04 Cat Ear (58mm)");
   row("Driver  :", "384-Dot Direct BLE");
-  row("Density :", "High Energy (28000)");
+  row("Speed   :", "Fast Mode (Speed 36)");
   row("Time    :", new Date().toLocaleTimeString());
 
   drawDashed(y);
-  y += 22;
+  y += 20;
 
   // Table Header
-  ctx.font = "900 21px 'Courier New', Consolas, monospace";
+  ctx.font = "900 20px Consolas, 'Roboto Mono', monospace";
   ctx.textAlign = "left";
-  ctx.fillText("Item / বিবরণ", 10, y);
+  ctx.fillText("Item / Qty x Rate", 10, y);
   ctx.textAlign = "right";
-  ctx.fillText("Total (৳)", width - 10, y);
+  ctx.fillText("Total", width - 10, y);
   y += 22;
   drawDashed(y);
   y += 22;
 
   // Sample items
-  ctx.font = "bold 21px 'Courier New', Consolas, monospace";
+  ctx.font = "bold 20px Consolas, 'Roboto Mono', monospace";
   const itemRow = (name: string, calc: string, total: string) => {
     ctx.textAlign = "left";
     ctx.fillText(name, 10, y);
@@ -280,27 +305,27 @@ export function renderCatTestSlipCanvas(businessName = "শেখ ফার্�
     y += 25;
   };
 
-  itemRow("1. Napa Extra 500mg", "2 × 2.50", "5.00");
-  itemRow("2. Seclo 20mg Cap", "5 × 7.00", "35.00");
+  itemRow("1. Napa Extra 500mg", "2 x 2.50", "5.00");
+  itemRow("2. Seclo 20mg Cap", "5 x 7.00", "35.00");
 
   drawDashed(y);
   y += 18;
 
   // Grand Total Box
   drawDoubleLine(y);
-  y += 26;
-  ctx.font = "900 28px 'Courier New', Consolas, monospace";
+  y += 24;
+  ctx.font = "900 27px Consolas, 'Roboto Mono', monospace";
   ctx.textAlign = "left";
   ctx.fillText("NET TOTAL:", 10, y);
   ctx.textAlign = "right";
-  ctx.fillText("৳40.00", width - 10, y);
-  y += 12;
+  ctx.fillText("Tk 40.00", width - 10, y);
+  y += 10;
   drawDoubleLine(y);
   y += 26;
 
   // Footer
   ctx.textAlign = "center";
-  ctx.font = "900 20px 'Courier New', Consolas, monospace";
+  ctx.font = "900 20px Consolas, 'Roboto Mono', monospace";
   ctx.fillText("WIRELESS POS PRINTING OK!", width / 2, y);
   y += 22;
   ctx.font = "bold 18px 'Courier New', Consolas, monospace";

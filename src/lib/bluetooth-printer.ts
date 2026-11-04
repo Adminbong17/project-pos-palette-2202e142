@@ -81,82 +81,81 @@ export function renderReceiptToCanvas(
     return lines;
   };
 
-  // Font presets: authentic, bold POS styling optimized for 58mm / 203 DPI heads
+  const POS_FONT = "Consolas, 'Roboto Mono', 'SF Mono', 'Segoe UI Mono', monospace";
+
+  // Font presets: Clean, authentic monospace POS typography matching PT-220 ESC/POS hardware text
   const cfg = {
     normal: {
-      title: "900 30px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
-      titleLineH: 38,
-      sub: "bold 20px 'Courier New', Consolas, monospace",
-      subLineH: 26,
-      meta: "bold 22px 'Courier New', Consolas, monospace",
-      metaLineH: 28,
-      tableHead: "bold 22px 'Courier New', Consolas, monospace",
-      tableHeadLineH: 28,
-      itemName: "900 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      itemNameLineH: 30,
-      itemCalc: "bold 22px 'Courier New', Consolas, monospace",
-      itemCalcLineH: 28,
-      totals: "bold 22px 'Courier New', Consolas, monospace",
-      totalsLineH: 28,
-      netTotalLabel: "900 26px 'Courier New', Consolas, monospace",
-      netTotalVal: "900 36px 'Courier New', Consolas, monospace",
-      netTotalLineH: 42,
-      box: "bold 22px 'Courier New', Consolas, monospace",
-      boxH: 90,
-      footer: "bold 20px 'Courier New', Consolas, monospace",
-      footerLineH: 26,
-      footerSub: "bold 17px 'Courier New', Consolas, monospace",
+      title: `900 28px ${POS_FONT}`,
+      titleLineH: 34,
+      sub: `bold 18px ${POS_FONT}`,
+      subLineH: 22,
+      meta: `bold 19px ${POS_FONT}`,
+      metaLineH: 24,
+      tableHead: `bold 19px ${POS_FONT}`,
+      tableHeadLineH: 24,
+      itemName: `bold 19px ${POS_FONT}`,
+      itemNameLineH: 23,
+      itemCalc: `bold 19px ${POS_FONT}`,
+      itemCalcLineH: 23,
+      totals: `bold 19px ${POS_FONT}`,
+      totalsLineH: 24,
+      netTotal: `900 25px ${POS_FONT}`,
+      netTotalLineH: 32,
+      payment: `bold 19px ${POS_FONT}`,
+      paymentLineH: 24,
+      footerTitle: `900 20px ${POS_FONT}`,
+      footerTitleLineH: 26,
+      footerSub: `bold 17px ${POS_FONT}`,
       footerSubLineH: 22,
     },
     large: {
-      title: "900 36px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
-      titleLineH: 44,
-      sub: "bold 22px 'Courier New', Consolas, monospace",
-      subLineH: 28,
-      meta: "bold 24px 'Courier New', Consolas, monospace",
-      metaLineH: 30,
-      tableHead: "900 24px 'Courier New', Consolas, monospace",
-      tableHeadLineH: 30,
-      itemName: "900 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      itemNameLineH: 32,
-      itemCalc: "bold 24px 'Courier New', Consolas, monospace",
-      itemCalcLineH: 30,
-      totals: "bold 24px 'Courier New', Consolas, monospace",
-      totalsLineH: 30,
-      netTotalLabel: "900 30px 'Courier New', Consolas, monospace",
-      netTotalVal: "900 42px 'Courier New', Consolas, monospace",
-      netTotalLineH: 48,
-      box: "bold 24px 'Courier New', Consolas, monospace",
-      boxH: 100,
-      footer: "bold 22px 'Courier New', Consolas, monospace",
-      footerLineH: 28,
-      footerSub: "bold 18px 'Courier New', Consolas, monospace",
-      footerSubLineH: 24,
+      title: `900 32px ${POS_FONT}`,
+      titleLineH: 38,
+      sub: `bold 19px ${POS_FONT}`,
+      subLineH: 24,
+      meta: `bold 20px ${POS_FONT}`,
+      metaLineH: 26,
+      tableHead: `bold 20px ${POS_FONT}`,
+      tableHeadLineH: 26,
+      itemName: `bold 20px ${POS_FONT}`,
+      itemNameLineH: 25,
+      itemCalc: `bold 20px ${POS_FONT}`,
+      itemCalcLineH: 25,
+      totals: `bold 20px ${POS_FONT}`,
+      totalsLineH: 26,
+      netTotal: `900 28px ${POS_FONT}`,
+      netTotalLineH: 36,
+      payment: `bold 20px ${POS_FONT}`,
+      paymentLineH: 26,
+      footerTitle: `900 21px ${POS_FONT}`,
+      footerTitleLineH: 28,
+      footerSub: `bold 18px ${POS_FONT}`,
+      footerSubLineH: 23,
     },
     xlarge: {
-      title: "900 42px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
-      titleLineH: 50,
-      sub: "bold 24px 'Courier New', Consolas, monospace",
-      subLineH: 30,
-      meta: "bold 26px 'Courier New', Consolas, monospace",
-      metaLineH: 32,
-      tableHead: "900 26px 'Courier New', Consolas, monospace",
-      tableHeadLineH: 32,
-      itemName: "900 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      itemNameLineH: 34,
-      itemCalc: "bold 26px 'Courier New', Consolas, monospace",
-      itemCalcLineH: 32,
-      totals: "bold 26px 'Courier New', Consolas, monospace",
-      totalsLineH: 32,
-      netTotalLabel: "900 34px 'Courier New', Consolas, monospace",
-      netTotalVal: "900 46px 'Courier New', Consolas, monospace",
-      netTotalLineH: 54,
-      box: "bold 26px 'Courier New', Consolas, monospace",
-      boxH: 110,
-      footer: "bold 24px 'Courier New', Consolas, monospace",
-      footerLineH: 30,
-      footerSub: "bold 20px 'Courier New', Consolas, monospace",
-      footerSubLineH: 26,
+      title: `900 36px ${POS_FONT}`,
+      titleLineH: 42,
+      sub: `bold 21px ${POS_FONT}`,
+      subLineH: 26,
+      meta: `bold 22px ${POS_FONT}`,
+      metaLineH: 28,
+      tableHead: `bold 22px ${POS_FONT}`,
+      tableHeadLineH: 28,
+      itemName: `bold 22px ${POS_FONT}`,
+      itemNameLineH: 27,
+      itemCalc: `bold 22px ${POS_FONT}`,
+      itemCalcLineH: 27,
+      totals: `bold 22px ${POS_FONT}`,
+      totalsLineH: 28,
+      netTotal: `900 31px ${POS_FONT}`,
+      netTotalLineH: 40,
+      payment: `bold 22px ${POS_FONT}`,
+      paymentLineH: 28,
+      footerTitle: `900 23px ${POS_FONT}`,
+      footerTitleLineH: 30,
+      footerSub: `bold 19px ${POS_FONT}`,
+      footerSubLineH: 24,
     },
   }[fontSizeMode];
 
@@ -165,59 +164,62 @@ export function renderReceiptToCanvas(
   const phoneLines = header.businessMobile ? wrap(`Phone: ${header.businessMobile}`, cfg.sub, contentWidth) : [];
 
   const itemLineRows: { nameLines: string[]; qtyRate: string; total: string }[] = [];
-  for (const l of sale.lines) {
-    const iNameLines = wrap(`${l.name}`, cfg.itemName, contentWidth);
-    const qtyRate = `${l.quantity} × ${Number(l.unit_price).toFixed(2)}`;
+  for (let idx = 0; idx < sale.lines.length; idx++) {
+    const l = sale.lines[idx];
+    const iNameLines = wrap(`${idx + 1}. ${l.name}`, cfg.itemName, contentWidth);
+    const qtyRate = `   ${l.quantity} x ${Number(l.unit_price).toFixed(2)}`;
     const total = `${Number(l.total_amount).toFixed(2)}`;
     itemLineRows.push({ nameLines: iNameLines, qtyRate, total });
   }
 
-  // Calculate total height needed dynamically
-  let totalHeight = 20; // top margin
-  totalHeight += nameLines.length * cfg.titleLineH + 4;
+  // Calculate dynamic canvas height with minimal margins for fast printing
+  let totalHeight = 16;
+  totalHeight += nameLines.length * cfg.titleLineH;
   totalHeight += addrLines.length * cfg.subLineH;
-  totalHeight += phoneLines.length * cfg.subLineH + 8;
+  totalHeight += phoneLines.length * cfg.subLineH + 6;
 
-  totalHeight += 18; // divider
+  totalHeight += 16; // divider
   totalHeight += cfg.metaLineH * 2; // Bill No, Date
   if (sale.served_by || sale.counter_id) totalHeight += cfg.metaLineH;
   if (sale.customer_name) totalHeight += cfg.metaLineH;
 
-  totalHeight += 18; // divider
+  totalHeight += 16; // divider
   totalHeight += cfg.tableHeadLineH; // Table header
-  totalHeight += 18; // divider
+  totalHeight += 16; // divider
 
   for (const r of itemLineRows) {
-    totalHeight += r.nameLines.length * cfg.itemNameLineH + cfg.itemCalcLineH + 6;
+    totalHeight += r.nameLines.length * cfg.itemNameLineH + cfg.itemCalcLineH + 4;
   }
 
-  totalHeight += 18; // divider
+  totalHeight += 16; // divider
   totalHeight += cfg.totalsLineH; // Subtotal
   if (sale.discount > 0) totalHeight += cfg.totalsLineH;
   if (sale.vat) totalHeight += cfg.totalsLineH;
   totalHeight += cfg.totalsLineH; // Total Qty
-  totalHeight += 20; // solid separator
-  totalHeight += cfg.netTotalLineH + 10; // Net Total
 
-  // Payment Box
-  totalHeight += cfg.boxH + 20;
+  totalHeight += 18; // double line divider
+  totalHeight += cfg.netTotalLineH; // NET TOTAL
 
-  // Footer & Tear Feed
-  totalHeight += cfg.footerLineH + cfg.footerSubLineH + 55;
+  totalHeight += 16; // divider
+  totalHeight += cfg.paymentLineH * 3; // Paid, Amount Tendered, Change Due / Due
+  totalHeight += 18; // double line divider
+
+  totalHeight += cfg.footerTitleLineH + cfg.footerSubLineH + 40; // footer & tear margin
 
   const canvas = document.createElement("canvas");
   canvas.width = targetWidth;
-  canvas.height = totalHeight;
+  canvas.height = Math.ceil(totalHeight);
   const ctx = canvas.getContext("2d")!;
 
-  // Fill crisp white background
+  // Fill solid white background
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, targetWidth, totalHeight);
+  ctx.fillRect(0, 0, targetWidth, canvas.height);
   ctx.fillStyle = "#000000";
+  ctx.strokeStyle = "#000000";
 
   let y = 26;
 
-  // 1. Header (Centered)
+  // 1. Business Header (Centered)
   ctx.textAlign = "center";
   ctx.font = cfg.title;
   for (const nl of nameLines) {
@@ -236,167 +238,111 @@ export function renderReceiptToCanvas(
   }
 
   y += 4;
-  const drawDotted = (lineY: number) => {
+
+  const drawDotted = (currY: number) => {
     ctx.save();
-    ctx.setLineDash([5, 5]);
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.5;
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(pad, lineY);
-    ctx.lineTo(targetWidth - pad, lineY);
+    ctx.moveTo(pad, currY);
+    ctx.lineTo(targetWidth - pad, currY);
     ctx.stroke();
     ctx.restore();
   };
 
+  const drawDoubleLine = (currY: number) => {
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#000000";
+    ctx.beginPath();
+    ctx.moveTo(pad, currY - 2);
+    ctx.lineTo(targetWidth - pad, currY - 2);
+    ctx.moveTo(pad, currY + 2);
+    ctx.lineTo(targetWidth - pad, currY + 2);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  const drawRow2 = (left: string, right: string, font: string, lineH: number) => {
+    ctx.font = font;
+    ctx.textAlign = "left";
+    ctx.fillText(left, pad, y);
+    ctx.textAlign = "right";
+    ctx.fillText(right, targetWidth - pad, y);
+    y += lineH;
+  };
+
   drawDotted(y);
-  y += 20;
+  y += 18;
 
   // 2. Meta Info (Bill No, Date, etc.)
-  ctx.textAlign = "left";
-  ctx.font = cfg.meta;
-  ctx.fillText("Bill No:", pad, y);
-  ctx.textAlign = "right";
-  ctx.fillText(sale.invoice_no, targetWidth - pad, y);
-  y += cfg.metaLineH;
-
-  ctx.textAlign = "left";
-  ctx.fillText("Date:", pad, y);
-  ctx.textAlign = "right";
-  ctx.fillText(sale.date, targetWidth - pad, y);
-  y += cfg.metaLineH;
-
+  drawRow2("Bill No:", sale.invoice_no, cfg.meta, cfg.metaLineH);
+  drawRow2("Date:", sale.date, cfg.meta, cfg.metaLineH);
   if (sale.served_by || sale.counter_id) {
-    ctx.textAlign = "left";
-    ctx.fillText("Cashier:", pad, y);
-    ctx.textAlign = "right";
-    ctx.fillText(`${sale.served_by ?? ""}${sale.counter_id ? ` (${sale.counter_id})` : ""}`, targetWidth - pad, y);
-    y += cfg.metaLineH;
+    drawRow2("Cashier:", `${sale.served_by ?? ""}${sale.counter_id ? ` (${sale.counter_id})` : ""}`, cfg.meta, cfg.metaLineH);
   }
-
   if (sale.customer_name) {
-    ctx.textAlign = "left";
-    ctx.fillText("Customer:", pad, y);
-    ctx.textAlign = "right";
-    ctx.fillText(sale.customer_name, targetWidth - pad, y);
-    y += cfg.metaLineH;
+    drawRow2("Customer:", sale.customer_name, cfg.meta, cfg.metaLineH);
   }
 
   drawDotted(y);
-  y += 20;
+  y += 18;
 
   // 3. Table Header
-  ctx.font = cfg.tableHead;
-  ctx.textAlign = "left";
-  ctx.fillText("Item / Qty × Rate", pad, y);
-  ctx.textAlign = "right";
-  ctx.fillText("Total (৳)", targetWidth - pad, y);
-  y += cfg.tableHeadLineH;
-  drawDotted(y);
-  y += 22;
-
-  // 4. Items List
-  for (let idx = 0; idx < itemLineRows.length; idx++) {
-    const row = itemLineRows[idx];
-    ctx.textAlign = "left";
-    ctx.font = cfg.itemName;
-    for (let lIdx = 0; lIdx < row.nameLines.length; lIdx++) {
-      const prefix = lIdx === 0 ? `${idx + 1}. ` : "   ";
-      ctx.fillText(prefix + row.nameLines[lIdx], pad, y);
-      y += cfg.itemNameLineH;
-    }
-
-    ctx.font = cfg.itemCalc;
-    ctx.textAlign = "left";
-    ctx.fillText(`   ${row.qtyRate}`, pad, y);
-    ctx.textAlign = "right";
-    ctx.fillText(row.total, targetWidth - pad, y);
-    y += cfg.itemCalcLineH + 6;
-  }
-
+  drawRow2("Item / Qty x Rate", "Total", cfg.tableHead, cfg.tableHeadLineH);
   drawDotted(y);
   y += 20;
 
+  // 4. Items List
+  for (const r of itemLineRows) {
+    ctx.font = cfg.itemName;
+    ctx.textAlign = "left";
+    for (const line of r.nameLines) {
+      ctx.fillText(line, pad, y);
+      y += cfg.itemNameLineH;
+    }
+    drawRow2(r.qtyRate, r.total, cfg.itemCalc, cfg.itemCalcLineH);
+    y += 4;
+  }
+
+  drawDotted(y);
+  y += 18;
+
   // 5. Totals
-  ctx.font = cfg.totals;
-  ctx.textAlign = "left";
-  ctx.fillText("Subtotal:", pad, y);
-  ctx.textAlign = "right";
-  ctx.fillText(Number(sale.subtotal).toFixed(2), targetWidth - pad, y);
-  y += cfg.totalsLineH;
-
+  drawRow2("Subtotal:", Number(sale.subtotal).toFixed(2), cfg.totals, cfg.totalsLineH);
   if (sale.discount > 0) {
-    ctx.textAlign = "left";
-    ctx.fillText("Discount:", pad, y);
-    ctx.textAlign = "right";
-    ctx.fillText(`-${Number(sale.discount).toFixed(2)}`, targetWidth - pad, y);
-    y += cfg.totalsLineH;
+    drawRow2("Discount:", `-${Number(sale.discount).toFixed(2)}`, cfg.totals, cfg.totalsLineH);
   }
-
   if (sale.vat) {
-    ctx.textAlign = "left";
-    ctx.fillText("VAT:", pad, y);
-    ctx.textAlign = "right";
-    ctx.fillText(Number(sale.vat).toFixed(2), targetWidth - pad, y);
-    y += cfg.totalsLineH;
+    drawRow2("VAT:", Number(sale.vat).toFixed(2), cfg.totals, cfg.totalsLineH);
   }
-
   const netQty = sale.lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
-  ctx.textAlign = "left";
-  ctx.fillText("Total Qty:", pad, y);
-  ctx.textAlign = "right";
-  ctx.fillText(String(netQty), targetWidth - pad, y);
-  y += cfg.totalsLineH;
+  drawRow2("Total Qty:", String(netQty), cfg.totals, cfg.totalsLineH);
 
-  // Solid line
-  ctx.save();
-  ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(pad, y);
-  ctx.lineTo(targetWidth - pad, y);
-  ctx.stroke();
-  ctx.restore();
-  y += 24;
+  drawDoubleLine(y);
+  y += 20;
 
-  // Net Total
-  ctx.textAlign = "left";
-  ctx.font = cfg.netTotalLabel;
-  ctx.fillText("Net Total:", pad, y);
-  ctx.textAlign = "right";
-  ctx.font = cfg.netTotalVal;
-  ctx.fillText(`৳${Number(sale.total).toFixed(2)}`, targetWidth - pad, y);
-  y += cfg.netTotalLineH;
+  // 6. Net Total (Prominent, Bold, matching PT-220 GS ! 0x01)
+  drawRow2("NET TOTAL:", `Tk ${Number(sale.total).toFixed(2)}`, cfg.netTotal, cfg.netTotalLineH);
 
-  // 6. Payment Box
-  const boxTop = y;
-  const boxHeight = cfg.boxH;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(pad, boxTop, targetWidth - pad * 2, boxHeight);
+  drawDotted(y);
+  y += 18;
 
+  // 7. Payment Info (Clean text rows, NO BOX!)
   const payLabel = (sale.payment_method || "CASH").toUpperCase();
-  const rowStep = (boxHeight - 16) / 3;
-  ctx.font = cfg.box;
-  ctx.textAlign = "left";
-  ctx.fillText(`Paid (${payLabel})`, pad + 8, boxTop + rowStep);
-  ctx.textAlign = "right";
-  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, boxTop + rowStep);
+  drawRow2(`Paid (${payLabel}):`, Number(sale.paid).toFixed(2), cfg.payment, cfg.paymentLineH);
+  drawRow2("Amount Tendered:", Number(sale.paid).toFixed(2), cfg.payment, cfg.paymentLineH);
+  drawRow2(sale.change < 0 ? "Due:" : "Change Due:", Math.abs(sale.change).toFixed(2), cfg.payment, cfg.paymentLineH);
 
-  ctx.textAlign = "left";
-  ctx.fillText("Amount Tendered", pad + 8, boxTop + rowStep * 2);
-  ctx.textAlign = "right";
-  ctx.fillText(Number(sale.paid).toFixed(2), targetWidth - pad - 8, boxTop + rowStep * 2);
+  drawDoubleLine(y);
+  y += 22;
 
-  ctx.textAlign = "left";
-  ctx.fillText(sale.change < 0 ? "Due" : "Change Due", pad + 8, boxTop + rowStep * 3);
-  ctx.textAlign = "right";
-  ctx.fillText(Math.abs(sale.change).toFixed(2), targetWidth - pad - 8, boxTop + rowStep * 3);
-  y += boxHeight + 24;
-
-  // 7. Footer
+  // 8. Footer (Centered)
   ctx.textAlign = "center";
-  ctx.font = cfg.footer;
-  ctx.fillText("Thank You Very Much For Your Business!", targetWidth / 2, y);
-  y += cfg.footerLineH;
+  ctx.font = cfg.footerTitle;
+  ctx.fillText("Thank You Very Much!", targetWidth / 2, y);
+  y += cfg.footerTitleLineH;
 
   ctx.font = cfg.footerSub;
   ctx.fillText("Goods Sold Are Not Returnable", targetWidth / 2, y);
@@ -433,54 +379,56 @@ export function renderDueVoucherToCanvas(
     return lines.length ? lines : [""];
   };
 
+  const POS_FONT = "Consolas, 'Roboto Mono', 'SF Mono', 'Segoe UI Mono', monospace";
+
   const cfg = {
     normal: {
-      title: "900 28px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
+      title: `900 28px ${POS_FONT}`,
       titleLineH: 34,
-      sub: "bold 18px 'Courier New', Consolas, monospace",
-      subLineH: 24,
-      meta: "bold 20px 'Courier New', Consolas, monospace",
-      metaLineH: 26,
-      rowLabel: "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      rowVal: "bold 22px 'Courier New', Consolas, monospace",
-      rowLineH: 28,
-      paidLabel: "900 24px 'Courier New', Consolas, monospace",
-      paidVal: "900 30px 'Courier New', Consolas, monospace",
-      paidBoxH: 84,
-      footer: "bold 20px 'Courier New', Consolas, monospace",
-      footerLineH: 26,
+      sub: `bold 18px ${POS_FONT}`,
+      subLineH: 22,
+      meta: `bold 19px ${POS_FONT}`,
+      metaLineH: 24,
+      rowLabel: `bold 19px ${POS_FONT}`,
+      rowVal: `bold 19px ${POS_FONT}`,
+      rowLineH: 25,
+      paidLabel: `900 22px ${POS_FONT}`,
+      paidVal: `900 26px ${POS_FONT}`,
+      paidBoxH: 76,
+      footer: `bold 19px ${POS_FONT}`,
+      footerLineH: 24,
     },
     large: {
-      title: "900 34px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
-      titleLineH: 42,
-      sub: "bold 22px 'Courier New', Consolas, monospace",
-      subLineH: 28,
-      meta: "bold 24px 'Courier New', Consolas, monospace",
-      metaLineH: 30,
-      rowLabel: "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      rowVal: "bold 26px 'Courier New', Consolas, monospace",
-      rowLineH: 32,
-      paidLabel: "900 28px 'Courier New', Consolas, monospace",
-      paidVal: "900 38px 'Courier New', Consolas, monospace",
-      paidBoxH: 98,
-      footer: "bold 22px 'Courier New', Consolas, monospace",
-      footerLineH: 28,
+      title: `900 32px ${POS_FONT}`,
+      titleLineH: 38,
+      sub: `bold 19px ${POS_FONT}`,
+      subLineH: 24,
+      meta: `bold 20px ${POS_FONT}`,
+      metaLineH: 26,
+      rowLabel: `bold 20px ${POS_FONT}`,
+      rowVal: `bold 20px ${POS_FONT}`,
+      rowLineH: 27,
+      paidLabel: `900 24px ${POS_FONT}`,
+      paidVal: `900 30px ${POS_FONT}`,
+      paidBoxH: 84,
+      footer: `bold 20px ${POS_FONT}`,
+      footerLineH: 26,
     },
     xlarge: {
-      title: "900 40px 'Courier New', Consolas, 'Segoe UI', monospace, sans-serif",
-      titleLineH: 48,
-      sub: "bold 24px 'Courier New', Consolas, monospace",
-      subLineH: 30,
-      meta: "bold 26px 'Courier New', Consolas, monospace",
-      metaLineH: 32,
-      rowLabel: "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      rowVal: "bold 28px 'Courier New', Consolas, monospace",
-      rowLineH: 36,
-      paidLabel: "900 32px 'Courier New', Consolas, monospace",
-      paidVal: "900 44px 'Courier New', Consolas, monospace",
-      paidBoxH: 110,
-      footer: "bold 24px 'Courier New', Consolas, monospace",
-      footerLineH: 30,
+      title: `900 36px ${POS_FONT}`,
+      titleLineH: 42,
+      sub: `bold 21px ${POS_FONT}`,
+      subLineH: 26,
+      meta: `bold 22px ${POS_FONT}`,
+      metaLineH: 28,
+      rowLabel: `bold 22px ${POS_FONT}`,
+      rowVal: `bold 22px ${POS_FONT}`,
+      rowLineH: 29,
+      paidLabel: `900 26px ${POS_FONT}`,
+      paidVal: `900 34px ${POS_FONT}`,
+      paidBoxH: 94,
+      footer: `bold 22px ${POS_FONT}`,
+      footerLineH: 28,
     },
   }[fontSizeMode];
 
@@ -1054,7 +1002,7 @@ class ThermalPrinterManager {
   public async printCanvasCat(canvas: HTMLCanvasElement): Promise<void> {
     const packets = canvasToCatPrinterPackets(canvas);
     for (const packet of packets) {
-      await this.writeRaw(packet, 64, 8);
+      await this.writeRaw(packet, 64, 2);
     }
   }
 
