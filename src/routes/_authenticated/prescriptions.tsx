@@ -16,6 +16,8 @@ import { fetchAll } from "@/lib/fetch-all";
 import { useRxPresets } from "@/hooks/use-rx-presets";
 import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
 import { RxPresetCombo } from "@/components/rx-preset-combo";
+import { useBusinessDoctors } from "@/hooks/use-business-doctors";
+import { formatDoctorDisplayName, shouldShowClinicHeader } from "@/lib/doctor-format";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -493,6 +495,24 @@ function PrescriptionsPage() {
     },
   });
 
+  const businessDoctors = useBusinessDoctors(businessId);
+
+  // When doctor profile finishes loading, auto-populate the form if not editing
+  useEffect(() => {
+    if (!editing && me.data) {
+      setForm((prev) => {
+        if (!prev.doctor_name && !prev.doctor_qualification) {
+          return {
+            ...prev,
+            doctor_name: me.data.doctor_name || "",
+            doctor_qualification: me.data.doctor_qualification || "",
+          };
+        }
+        return prev;
+      });
+    }
+  }, [me.data, editing]);
+
 
   const list = useQuery({
     queryKey: ["prescriptions", businessId, search],
@@ -834,7 +854,7 @@ function PrescriptionsPage() {
         patient_type: form.patient_type || "new",
         fee_amount: form.fee_amount.trim() === "" ? null : Number(form.fee_amount),
         contact_id: form.contact_id || null,
-        doctor_name: (form.doctor_name || me.data?.doctor_name || "").trim() || null,
+        doctor_name: formatDoctorDisplayName(form.doctor_name || me.data?.doctor_name || "") || null,
         doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
         diagnosis: composeCc(cc) || null,
@@ -844,6 +864,25 @@ function PrescriptionsPage() {
         next_visit: nextVisitDate || null,
         notes: form.notes.trim() || null,
       };
+
+      // Save qualification & formatted doctor name to profile if entered
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) {
+          const qTrim = (form.doctor_qualification || "").trim();
+          const nTrim = (form.doctor_name || "").trim();
+          if (qTrim && (!me.data?.doctor_qualification || qTrim !== me.data?.doctor_qualification)) {
+            await supabase
+              .from("profiles")
+              .update({
+                doctor_qualification: qTrim,
+                ...(nTrim ? { doctor_name: formatDoctorDisplayName(nTrim) } : {}),
+              } as any)
+              .eq("id", authData.user.id);
+            qc.invalidateQueries({ queryKey: ["my-doctor-profile"] });
+          }
+        }
+      } catch {}
 
       let rxId = editing?.id;
       if (editing) {
@@ -933,11 +972,15 @@ function PrescriptionsPage() {
       })()
       : "";
 
+    const docDisplayName = formatDoctorDisplayName(rx.doctor_name || me.data?.doctor_name);
+    const docQualification = (rx.doctor_qualification || me.data?.doctor_qualification || "").trim();
+    const showClinic = shouldShowClinicHeader(clinicName, docDisplayName);
+
     const headerHtml = `
       <div class="header center">
-        ${clinicName ? `<div style="font-size:0.95em;letter-spacing:.4px;">${esc(clinicName)}</div>` : ""}
-        <h2>${rx.doctor_name ? `Dr. ${nl(rx.doctor_name)}` : "&nbsp;"}</h2>
-        ${rx.doctor_qualification ? `<div class="desig">${nl(rx.doctor_qualification)}</div>` : ""}
+        ${showClinic ? `<div style="font-size:0.95em;letter-spacing:.4px;font-weight:600;margin-bottom:2px;">${esc(clinicName)}</div>` : ""}
+        <h2>${docDisplayName ? nl(docDisplayName) : "&nbsp;"}</h2>
+        ${docQualification ? `<div class="desig">${nl(docQualification)}</div>` : ""}
         ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
         ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
       </div>`;
@@ -1022,9 +1065,10 @@ function PrescriptionsPage() {
               ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
               ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
               <div class="sign">Doctor's signature: ______________________</div>
-              ${ownPad
-    ? `<div class="sign-name">${rx.doctor_name ? `<strong>Dr. ${nl(rx.doctor_name)}</strong>` : ""}${rx.doctor_qualification ? `<div>${nl(rx.doctor_qualification)}</div>` : ""}</div>`
-    : ""}
+              <div class="sign-name">
+                ${docDisplayName ? `<strong>${nl(docDisplayName)}</strong>` : ""}
+                ${docQualification ? `<div>${nl(docQualification)}</div>` : ""}
+              </div>
             </div>
           </div>
         </div>
@@ -1262,23 +1306,44 @@ function PrescriptionsPage() {
               <Input type="datetime-local" value={form.rx_date} onChange={(e) => setForm({ ...form, rx_date: e.target.value })} />
             </div>
             <div>
-              <Label>Doctor</Label>
-              <Textarea
+              <div className="flex items-center justify-between">
+                <Label>Doctor</Label>
+                {businessDoctors.data && businessDoctors.data.length > 0 && (
+                  <select
+                    className="text-[11px] text-primary border rounded px-1.5 py-0.5 bg-background cursor-pointer"
+                    onChange={(e) => {
+                      const doc = businessDoctors.data?.find((d) => d.name === e.target.value);
+                      if (doc) {
+                        setForm((prev) => ({
+                          ...prev,
+                          doctor_name: doc.name,
+                          doctor_qualification: doc.qualification || prev.doctor_qualification,
+                        }));
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>ডাক্তার নির্বাচন...</option>
+                    {businessDoctors.data.map((d) => (
+                      <option key={d.user_id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <Input
                 value={form.doctor_name}
-                readOnly
-                rows={2}
-                className="bg-muted/50 resize-none"
-                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+                onChange={(e) => setForm({ ...form, doctor_name: e.target.value })}
+                placeholder={me.isLoading ? "Loading…" : "e.g. Dr. Mehedi Hasan"}
+                className="mt-1 h-9 text-xs"
               />
             </div>
             <div>
               <Label>Qualification</Label>
-              <Textarea
+              <Input
                 value={form.doctor_qualification}
-                readOnly
-                rows={2}
-                className="bg-muted/50 resize-none"
-                placeholder={me.isLoading ? "Loading…" : "Set by admin"}
+                onChange={(e) => setForm({ ...form, doctor_qualification: e.target.value })}
+                placeholder={me.isLoading ? "Loading…" : "e.g. MBBS, FCPS, MD"}
+                className="mt-1 h-9 text-xs"
               />
             </div>
           </div>

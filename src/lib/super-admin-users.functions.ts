@@ -16,6 +16,7 @@ export type SuperAdminUser = {
   username: string | null;
   name: string;
   doctor_name: string | null;
+  doctor_qualification?: string | null;
   phone: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
@@ -66,7 +67,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
 
     const [{ data: profiles }, { data: members }, { data: businesses }, { data: roles }, { data: userRoles }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, email, username, first_name, last_name, doctor_name, phone, current_business_id"),
+        supabaseAdmin.from("profiles").select("id, email, username, first_name, last_name, doctor_name, doctor_qualification, phone, current_business_id"),
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
         supabaseAdmin.from("businesses").select("id, name"),
         supabaseAdmin.from("roles").select("id, name"),
@@ -129,6 +130,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
           username: p.username ?? null,
           name,
           doctor_name: p.doctor_name ?? null,
+          doctor_qualification: p.doctor_qualification ?? null,
           phone: p.phone ?? u.phone ?? null,
           created_at: u.created_at ?? null,
           last_sign_in_at: u.last_sign_in_at ?? null,
@@ -278,6 +280,7 @@ export const updateSuperAdminUser = createServerFn({ method: "POST" })
       email?: string;
       username?: string;
       name?: string;
+      doctor_qualification?: string;
       phone?: string;
       business_id?: string;
       role?: string;
@@ -343,6 +346,16 @@ export const updateSuperAdminUser = createServerFn({ method: "POST" })
             name: cleanName,
             doctor_name: cleanName,
           },
+        });
+      } catch {}
+    }
+
+    if (data.doctor_qualification !== undefined) {
+      const cleanQual = data.doctor_qualification.trim() || null;
+      profUpdates.doctor_qualification = cleanQual;
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+          user_metadata: { doctor_qualification: cleanQual },
         });
       } catch {}
     }

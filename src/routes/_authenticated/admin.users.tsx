@@ -143,6 +143,7 @@ function Page() {
     email: "",
     username: "",
     name: "",
+    doctor_qualification: "",
     phone: "",
     business_id: "",
     role: "Admin",
@@ -162,6 +163,7 @@ function Page() {
       email: u.email !== "—" ? u.email : "",
       username: u.username ?? "",
       name: (u.doctor_name || u.name) !== "—" ? (u.doctor_name || u.name) : "",
+      doctor_qualification: u.doctor_qualification ?? "",
       phone: u.phone ?? "",
       business_id: u.primary_business_id || matchedBiz?.id || allBusinesses[0]?.id || "",
       role: u.primary_role || u.roles[0] || "Admin",
@@ -177,6 +179,7 @@ function Page() {
           email: userFormData.email,
           username: userFormData.username,
           name: userFormData.name,
+          doctor_qualification: userFormData.doctor_qualification,
           phone: userFormData.phone,
           business_id: userFormData.business_id,
           role: userFormData.role,
@@ -273,16 +276,21 @@ function Page() {
                     </td>
                     <td className="p-2">
                       <div className="flex items-center gap-1.5 group">
-                        <span>{u.doctor_name || u.name}</span>
+                        <span className="font-medium">{u.doctor_name || u.name}</span>
                         <button
                           type="button"
                           onClick={() => openEditUser(u)}
                           className="opacity-40 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
-                          title="নাম ও ফোন নম্বর এডিট করুন"
+                          title="নাম ও পদবি/যোগ্যতা এডিট করুন"
                         >
                           <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
                         </button>
                       </div>
+                      {u.doctor_qualification && (
+                        <div className="text-[11px] text-muted-foreground font-medium truncate max-w-[220px]" title={u.doctor_qualification}>
+                          🎓 {u.doctor_qualification}
+                        </div>
+                      )}
                       {u.phone && <div className="text-xs text-muted-foreground">{u.phone}</div>}
                     </td>
                     <td className="p-2 text-xs align-top">
@@ -562,6 +570,20 @@ function Page() {
                 value={userFormData.name}
                 onChange={(e) => setUserFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="পূর্ণ নাম"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Doctor Qualification */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                শিক্ষাগত যোগ্যতা / পদবি (Doctor Qualification)
+              </label>
+              <Input
+                type="text"
+                value={userFormData.doctor_qualification}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, doctor_qualification: e.target.value }))}
+                placeholder="e.g. MBBS, FCPS, MD, BCS (Health)"
                 className="h-9 text-sm"
               />
             </div>
