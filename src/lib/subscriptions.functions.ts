@@ -12,6 +12,7 @@ export type BusinessSubscriptionRow = {
   account_id: string | null;
   mode: "subscription" | "free";
   monthly_amount: number;
+  due_day: number; // e.g. 7, 10, 15, 20
   helpline: string | null;
   current_bill: {
     id: string;
@@ -29,6 +30,7 @@ export type CurrentSubscriptionStatus = {
   business_name: string;
   mode: "subscription" | "free";
   monthly_amount: number;
+  due_day: number;
   is_free: boolean;
   is_paid: boolean;
   is_locked: boolean;
@@ -38,7 +40,28 @@ export type CurrentSubscriptionStatus = {
   helpline: string;
 };
 
-function getDhakaMonthDates() {
+export function parseBillingConfig(notes: string | null | undefined): { dueDay: number; note: string } {
+  let dueDay = 7;
+  let note = "";
+  if (notes) {
+    try {
+      const parsed = JSON.parse(notes);
+      if (typeof parsed.due_day === "number" && parsed.due_day >= 1 && parsed.due_day <= 28) {
+        dueDay = parsed.due_day;
+      }
+      if (typeof parsed.note === "string") {
+        note = parsed.note;
+      }
+    } catch {
+      const n = parseInt(notes, 10);
+      if (!isNaN(n) && n >= 1 && n <= 28) dueDay = n;
+      else note = notes;
+    }
+  }
+  return { dueDay, note };
+}
+
+function getDhakaMonthDates(customDueDay: number = 7) {
   const now = new Date();
   // Get date in Asia/Dhaka (+6 hrs)
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -47,22 +70,23 @@ function getDhakaMonthDates() {
   const y = dhakaNow.getFullYear();
   const m = String(dhakaNow.getMonth() + 1).padStart(2, "0");
   const periodStart = `${y}-${m}-01`;
-  const dueDate = `${y}-${m}-07`;
+  const safeDay = Math.min(28, Math.max(1, customDueDay));
+  const dueDate = `${y}-${m}-${String(safeDay).padStart(2, "0")}`;
   const todayStr = `${y}-${m}-${String(dhakaNow.getDate()).padStart(2, "0")}`;
 
-  return { periodStart, dueDate, todayStr };
+  return { y, m, periodStart, dueDate, todayStr };
 }
 
 /**
  * Super Admin: List all businesses with their subscription configuration,
- * current month bill, and status (Free / Paid / Due by 7th / Locked).
+ * custom billing due day, current month bill, and status.
  */
 export const listAllSubscriptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { periodStart, dueDate, todayStr } = getDhakaMonthDates();
+    const { y, m, periodStart, todayStr } = getDhakaMonthDates();
 
     // 1. Fetch businesses & active members
     const [{ data: businesses }, { data: members }, { data: accounts }, { data: bills }] =
@@ -77,7 +101,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
           .eq("is_active", true),
         supabaseAdmin
           .from("rx_billing_accounts")
-          .select("id, business_id, user_id, mode, monthly_amount, helpline")
+          .select("id, business_id, user_id, mode, monthly_amount, helpline, notes")
           .is("user_id", null),
         supabaseAdmin
           .from("rx_bills")
@@ -116,12 +140,16 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
             user_id: null,
             mode: "subscription",
             monthly_amount: 800,
+            notes: JSON.stringify({ due_day: 7 }),
             helpline: "01712472839",
           } as never)
-          .select("id, business_id, user_id, mode, monthly_amount, helpline")
+          .select("id, business_id, user_id, mode, monthly_amount, helpline, notes")
           .single();
         acc = createdAcc as any;
       }
+
+      const { dueDay } = parseBillingConfig(acc?.notes);
+      const clientDueDate = `${y}-${m}-${String(dueDay).padStart(2, "0")}`;
 
       const mode = (acc?.mode === "free" ? "free" : "subscription") as "subscription" | "free";
       const monthlyAmount = Number(acc?.monthly_amount ?? 800);
@@ -136,7 +164,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
             business_id: b.id,
             user_id: null,
             period_start: periodStart,
-            due_date: dueDate,
+            due_date: clientDueDate,
             amount: monthlyAmount,
             status: "unpaid",
           } as never)
@@ -153,7 +181,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
         status = "paid";
       } else {
         // Unpaid
-        const effectiveDue = currentBill?.due_date || dueDate;
+        const effectiveDue = currentBill?.due_date || clientDueDate;
         if (todayStr > effectiveDue) {
           status = "locked";
         } else {
@@ -178,6 +206,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
         account_id: acc?.id || null,
         mode,
         monthly_amount: monthlyAmount,
+        due_day: dueDay,
         helpline: acc?.helpline || "01712472839",
         current_bill: currentBill
           ? {
@@ -195,7 +224,6 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
 
     return {
       periodStart,
-      dueDate,
       todayStr,
       subscriptions: result,
     };
@@ -236,6 +264,75 @@ export const updateSubscriptionPrice = createServerFn({ method: "POST" })
       .eq("status", "unpaid");
 
     return { ok: true, monthly_amount: data.monthly_amount };
+  });
+
+/**
+ * Super Admin: Update recurring billing day of month for a client (e.g., 1 to 28).
+ */
+export const updateSubscriptionDueDay = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { business_id: string; due_day: number }) => {
+    if (!input?.business_id) throw new Error("business_id required");
+    const dueDay = Math.min(28, Math.max(1, Math.trunc(Number(input.due_day) || 7)));
+    return { business_id: input.business_id, due_day: dueDay };
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { y, m, periodStart } = getDhakaMonthDates(data.due_day);
+    const newDueDate = `${y}-${m}-${String(data.due_day).padStart(2, "0")}`;
+
+    // 1. Get existing notes
+    const { data: existing } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("id, notes")
+      .eq("business_id", data.business_id)
+      .is("user_id", null)
+      .maybeSingle();
+
+    const currentNotes = parseBillingConfig((existing as any)?.notes);
+    const updatedNotes = JSON.stringify({ ...currentNotes, due_day: data.due_day });
+
+    const { error: accErr } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .update({ notes: updatedNotes } as never)
+      .eq("business_id", data.business_id)
+      .is("user_id", null);
+    if (accErr) throw new Error(accErr.message);
+
+    // 2. Also update current unpaid month bill's due_date
+    await supabaseAdmin
+      .from("rx_bills")
+      .update({ due_date: newDueDate } as never)
+      .eq("business_id", data.business_id)
+      .is("user_id", null)
+      .eq("period_start", periodStart)
+      .eq("status", "unpaid");
+
+    return { ok: true, due_day: data.due_day, new_due_date: newDueDate };
+  });
+
+/**
+ * Super Admin: Update the exact due date for a specific bill (Custom Date Picker).
+ */
+export const updateBillExactDueDate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { bill_id: string; due_date: string }) => {
+    if (!input?.bill_id) throw new Error("bill_id required");
+    if (!input?.due_date) throw new Error("due_date required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error } = await supabaseAdmin
+      .from("rx_bills")
+      .update({ due_date: data.due_date } as never)
+      .eq("id", data.bill_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true, due_date: data.due_date };
   });
 
 /**
@@ -356,31 +453,39 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
     const businessId = member.business_id;
     const businessName = (member as any)?.businesses?.name || "Sheikh Pharma";
 
-    const { periodStart, dueDate, todayStr } = getDhakaMonthDates();
-
     // 2. Fetch business account & current bill
     const [{ data: acc }, { data: bills }] = await Promise.all([
       supabaseAdmin
         .from("rx_billing_accounts")
-        .select("id, mode, monthly_amount, helpline")
+        .select("id, mode, monthly_amount, helpline, notes")
         .eq("business_id", businessId)
         .is("user_id", null)
         .maybeSingle(),
       supabaseAdmin
         .from("rx_bills")
-        .select("id, amount, due_date, status, paid_at")
+        .select("id, amount, due_date, status, paid_at, period_start")
         .eq("business_id", businessId)
         .is("user_id", null)
-        .eq("period_start", periodStart)
+        .order("period_start", { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ]);
+
+    const { dueDay } = parseBillingConfig((acc as any)?.notes);
+    const { y, m, periodStart, todayStr } = getDhakaMonthDates(dueDay);
+    const clientDueDate = `${y}-${m}-${String(dueDay).padStart(2, "0")}`;
 
     const mode = (acc?.mode === "free" ? "free" : "subscription") as "subscription" | "free";
     const monthlyAmount = Number(acc?.monthly_amount ?? 800);
     const helpline = acc?.helpline || "01712472839";
 
-    // Auto-create bill if in subscription mode and monthly_amount > 0 and bill missing
+    // Check if current month bill exists
     let currentBill = bills as any;
+    if (currentBill && currentBill.period_start !== periodStart) {
+      // Need a new bill for the new month
+      currentBill = null;
+    }
+
     if (!currentBill && mode === "subscription" && monthlyAmount > 0) {
       const { data: createdBill } = await supabaseAdmin
         .from("rx_bills")
@@ -388,7 +493,7 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
           business_id: businessId,
           user_id: null,
           period_start: periodStart,
-          due_date: dueDate,
+          due_date: clientDueDate,
           amount: monthlyAmount,
           status: "unpaid",
         } as never)
@@ -403,6 +508,7 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
         business_name: businessName,
         mode: "free",
         monthly_amount: 0,
+        due_day: dueDay,
         is_free: true,
         is_paid: true,
         is_locked: false,
@@ -414,7 +520,7 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
     }
 
     const isPaid = currentBill?.status === "paid";
-    const effectiveDue = currentBill?.due_date || dueDate;
+    const effectiveDue = currentBill?.due_date || clientDueDate;
     const isOverdue = !isPaid && todayStr > effectiveDue;
     const isDueWarning = !isPaid && todayStr <= effectiveDue;
 
@@ -423,6 +529,7 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
       business_name: businessName,
       mode: "subscription",
       monthly_amount: Number(currentBill?.amount ?? monthlyAmount),
+      due_day: dueDay,
       is_free: false,
       is_paid: isPaid,
       is_locked: isOverdue,

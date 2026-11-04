@@ -18,12 +18,15 @@ import {
   Smartphone,
   RefreshCw,
   ExternalLink,
+  CalendarDays,
 } from "lucide-react";
 
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 import {
   listAllSubscriptions,
   updateSubscriptionPrice,
+  updateSubscriptionDueDay,
+  updateBillExactDueDate,
   setSubscriptionMode,
   markSubscriptionBillPaid,
   extendSubscriptionGrace,
@@ -41,12 +44,14 @@ export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
       {
         name: "description",
         content:
-          "Manage monthly subscription prices for shops, doctors, and clinics. Automatic lock on 7th, 1-click Free, manual paid, and grace periods.",
+          "Manage monthly subscription prices, custom due dates per client, automatic lock, 1-click Free, and bKash tracking.",
       },
     ],
   }),
   component: AdminSubscriptionsMasterPage,
 });
+
+const POPULAR_DUE_DAYS = [1, 5, 7, 10, 12, 15, 20, 25, 28];
 
 function AdminSubscriptionsMasterPage() {
   const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
@@ -54,6 +59,8 @@ function AdminSubscriptionsMasterPage() {
 
   const loadSubscriptions = useServerFn(listAllSubscriptions);
   const savePrice = useServerFn(updateSubscriptionPrice);
+  const saveDueDay = useServerFn(updateSubscriptionDueDay);
+  const saveExactDate = useServerFn(updateBillExactDueDate);
   const saveMode = useServerFn(setSubscriptionMode);
   const markPaid = useServerFn(markSubscriptionBillPaid);
   const extendGrace = useServerFn(extendSubscriptionGrace);
@@ -61,6 +68,7 @@ function AdminSubscriptionsMasterPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "due" | "locked" | "free">("all");
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
+  const [editingDates, setEditingDates] = useState<Record<string, string>>({});
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-all-subscriptions"],
@@ -79,6 +87,30 @@ function AdminSubscriptionsMasterPage() {
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
     },
     onError: (e: any) => toast.error(e?.message || "ফি পরিবর্তন করা সম্ভব হয়নি"),
+  });
+
+  // Recurring Due Day mutation
+  const dueDayMutation = useMutation({
+    mutationFn: async ({ businessId, dueDay }: { businessId: string; dueDay: number }) => {
+      return await saveDueDay({ data: { business_id: businessId, due_day: dueDay } });
+    },
+    onSuccess: (res) => {
+      toast.success(`বিল পরিশোধের নির্ধারিত মাসিক দিন পরিবর্তন হয়েছে (${res.due_day} তারিখ)`);
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "দিন পরিবর্তন ব্যর্থ হয়েছে"),
+  });
+
+  // Exact custom due date mutation
+  const exactDateMutation = useMutation({
+    mutationFn: async ({ billId, dueDate }: { billId: string; dueDate: string }) => {
+      return await saveExactDate({ data: { bill_id: billId, due_date: dueDate } });
+    },
+    onSuccess: (res) => {
+      toast.success(`চলতি মাসের শেষ তারিখ পরিবর্তন হয়েছে (${res.due_date})`);
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "তারিখ পরিবর্তন ব্যর্থ হয়েছে"),
   });
 
   // Free / Subscription toggle mutation
@@ -187,7 +219,7 @@ function AdminSubscriptionsMasterPage() {
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            প্রতিটি দোকান, ডাক্তার ও ক্লিনিকের মাসিক ফি নিয়ন্ত্রণ, ৭ তারিখে অটো-লক, ১-ক্লিকে ফ্রি এবং বিকাশ গেটওয়ে ট্র্যাকিং।
+            প্রতিটি ক্লায়েন্টের আলাদা মাসিক ফি ও নির্ধারিত তারিখ (Due Date), অটো-লক, ১-ক্লিকে ফ্রি এবং বিকাশ গেটওয়ে ট্র্যাকিং।
           </p>
         </div>
 
@@ -253,7 +285,7 @@ function AdminSubscriptionsMasterPage() {
               <Clock className="h-3.5 w-3.5" /> বকেয়া নোটিশ
             </span>
             <div className="text-2xl font-black text-amber-600 font-mono">{stats.due}</div>
-            <p className="text-[10px] text-muted-foreground">০৭ তারিখের মধ্যে প্রদেয়</p>
+            <p className="text-[10px] text-muted-foreground">নির্ধারিত তারিখের মধ্যে</p>
           </CardContent>
         </Card>
 
@@ -268,7 +300,7 @@ function AdminSubscriptionsMasterPage() {
               <Lock className="h-3.5 w-3.5" /> স্থগিত / লকড
             </span>
             <div className="text-2xl font-black text-destructive font-mono">{stats.locked}</div>
-            <p className="text-[10px] text-muted-foreground">০৭ তারিখ পার হয়েছে</p>
+            <p className="text-[10px] text-muted-foreground">তারিখ পার হয়েছে</p>
           </CardContent>
         </Card>
 
@@ -336,21 +368,22 @@ function AdminSubscriptionsMasterPage() {
                 <th className="p-3.5">ব্যবসার নাম ও ধরণ</th>
                 <th className="p-3.5">ওনারের তথ্য</th>
                 <th className="p-3.5">মাসিক ফি (৳)</th>
-                <th className="p-3.5">চলতি মাসের স্ট্যাটাস</th>
+                <th className="p-3.5">নির্ধারিত তারিখ (Due Day/Date)</th>
+                <th className="p-3.5">স্ট্যাটাস</th>
                 <th className="p-3.5 text-right">সুপার অ্যাডমিন অ্যাকশন</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary" />
                     লোড হচ্ছে…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     কোনো ক্লায়েন্ট পাওয়া যায়নি।
                   </td>
                 </tr>
@@ -363,6 +396,9 @@ function AdminSubscriptionsMasterPage() {
                   const isPriceDirty =
                     editingPrices[s.business_id] !== undefined &&
                     editingPrices[s.business_id] !== s.monthly_amount;
+
+                  const currentBillDue = s.current_bill?.due_date || "";
+                  const exactDateVal = editingDates[s.business_id] ?? currentBillDue;
 
                   return (
                     <tr key={s.business_id} className="hover:bg-muted/30 transition-colors">
@@ -437,7 +473,70 @@ function AdminSubscriptionsMasterPage() {
                         )}
                       </td>
 
-                      {/* Status & Bill info */}
+                      {/* Due Day / Custom Date Control */}
+                      <td className="p-3.5">
+                        <div className="space-y-1.5">
+                          {/* Recurring Due Day Selector */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-muted-foreground">প্রতি মাসের:</span>
+                            <select
+                              value={s.due_day || 7}
+                              disabled={s.mode === "free" || dueDayMutation.isPending}
+                              onChange={(e) =>
+                                dueDayMutation.mutate({
+                                  businessId: s.business_id,
+                                  dueDay: Number(e.target.value) || 7,
+                                })
+                              }
+                              className="h-7 px-2 rounded-lg border border-border bg-input text-xs font-bold font-mono outline-none cursor-pointer focus:border-primary"
+                              title="প্রতি মাসের নির্ধারিত দিন নির্বাচন করুন"
+                            >
+                              {POPULAR_DUE_DAYS.map((day) => (
+                                <option key={day} value={day}>
+                                  {day} তারিখ
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Specific Bill Date Picker */}
+                          {s.current_bill && s.mode !== "free" && (
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <input
+                                type="date"
+                                value={exactDateVal}
+                                onChange={(e) =>
+                                  setEditingDates({
+                                    ...editingDates,
+                                    [s.business_id]: e.target.value,
+                                  })
+                                }
+                                className="h-7 px-1.5 rounded-lg border border-border bg-input text-[11px] font-mono outline-none focus:border-primary"
+                                title="এই মাসের জন্য নির্দিষ্ট তারিখ দিন"
+                              />
+                              {exactDateVal !== currentBillDue && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={exactDateMutation.isPending}
+                                  onClick={() =>
+                                    exactDateMutation.mutate({
+                                      billId: s.current_bill!.id,
+                                      dueDate: exactDateVal,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground cursor-pointer shadow-xs"
+                                  title="নির্দিষ্ট তারিখ সেভ করুন"
+                                >
+                                  <Save className="h-3 w-3 mr-0.5" /> Set
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
                       <td className="p-3.5">
                         {s.status === "free" ? (
                           <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 gap-1 font-bold">
@@ -460,7 +559,7 @@ function AdminSubscriptionsMasterPage() {
                               <Clock className="h-3 w-3" /> বকেয়া (Due)
                             </Badge>
                             <div className="text-[10px] text-amber-800 dark:text-amber-300">
-                              পরিশোধের শেষ তারিখ: {s.current_bill?.due_date || "০৭ তারিখ"}
+                              পরিশোধের শেষ তারিখ: {s.current_bill?.due_date || `${s.due_day} তারিখ`}
                             </div>
                           </div>
                         ) : (
@@ -476,7 +575,7 @@ function AdminSubscriptionsMasterPage() {
                       </td>
 
                       {/* Super Admin Quick Actions */}
-                      <td className="p-3.5 text-right space-x-1">
+                      <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
                         {/* Toggle Free Mode */}
                         <Button
                           type="button"
