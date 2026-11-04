@@ -197,6 +197,69 @@ function navHue(to: string) {
   return NAV_HUE[to] ?? 250;
 }
 
+function SuperAdminSidebar({ pathname }: { pathname: string }) {
+  return (
+    <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center gap-2.5 px-3 py-3 border-b border-border/40">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold shadow-md shadow-primary/20">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-bold text-foreground">Super Admin</div>
+            <div className="text-[10px] text-muted-foreground font-mono">Platform Control</div>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        {SUPER_ADMIN_SECTIONS.map((sec) => (
+          <SidebarGroup key={sec.label}>
+            <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              {sec.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {sec.items.map((item) => {
+                  const active = pathname === item.to || (item.to !== "/admin" && pathname.startsWith(item.to));
+                  return (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        className="nav-box h-auto"
+                        style={{ ["--nav-hue" as any]: navHue(item.to) }}
+                      >
+                        <Link to={item.to as any}>
+                          <span className="nav-box-icon">
+                            <item.icon className="h-4 w-4" />
+                          </span>
+                          <span className="truncate font-medium">{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="px-3 py-2.5 flex flex-col gap-2 border-t border-border/40">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Theme</span>
+            <ThemeToggle />
+          </div>
+          <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
+            <span>Platform Core</span>
+            <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v{APP_VERSION}</span>
+          </div>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, sections: allowed, isLoading } = useAllowedSections();
@@ -210,79 +273,13 @@ export function AppSidebar() {
   // Clinic doctors see their pool status (read-only), independent doctors buy credits.
   const doctorPaths = DOCTOR_PATHS;
 
-  // Dedicated, uncluttered Super Admin Navigation
-  if (isSuperAdmin) {
-    return (
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2.5 px-3 py-3 border-b border-border/40">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold shadow-md shadow-primary/20">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div className="leading-tight">
-              <div className="text-sm font-bold text-foreground">Super Admin</div>
-              <div className="text-[10px] text-muted-foreground font-mono">Platform Control</div>
-            </div>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          {SUPER_ADMIN_SECTIONS.map((sec) => (
-            <SidebarGroup key={sec.label}>
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                {sec.label}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {sec.items.map((item) => {
-                    const active = pathname === item.to || (item.to !== "/admin" && pathname.startsWith(item.to));
-                    return (
-                      <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          className="nav-box h-auto"
-                          style={{ ["--nav-hue" as any]: navHue(item.to) }}
-                        >
-                          <Link to={item.to as any}>
-                            <span className="nav-box-icon">
-                              <item.icon className="h-4 w-4" />
-                            </span>
-                            <span className="truncate font-medium">{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="px-3 py-2.5 flex flex-col gap-2 border-t border-border/40">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Theme</span>
-              <ThemeToggle />
-            </div>
-            <div className="flex items-center justify-between pt-1.5 border-t border-border/30 text-[10px] text-muted-foreground/80 font-mono">
-              <span>Platform Core</span>
-              <span className="font-semibold px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">v{APP_VERSION}</span>
-            </div>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-    );
-  }
-
-
-  // Visible items based on strictly marked module grants
+  // Visible items based on strictly marked module grants (ALWAYS evaluated unconditionally before any return)
   const visibleSections = useMemo(() => {
     let candidateSections: typeof sections;
 
     if (Array.isArray(allowed)) {
       // When the Super Admin has explicitly granted a set of modules (even empty []),
       // we STRICTLY display ONLY the allowed modules that were marked.
-      // No secondary domain or doctor filter should ever hide what the admin explicitly marked!
       candidateSections = sections
         .map((sec) => ({
           ...sec,
@@ -321,7 +318,14 @@ export function AppSidebar() {
         return { ...sec, items: sec.items.filter((it) => !seen.has(it.to) && seen.add(it.to)) };
       })
       .filter((sec) => sec.items.length > 0);
-  }, [allowed, isSuperAdmin, rxMode, isDoctor, isAdmin, clinicMode]);
+  }, [allowed, isSuperAdmin, rxMode, isDoctor, isAdmin, clinicMode, doctorPaths]);
+
+  // Dedicated, uncluttered Super Admin Navigation
+  if (isSuperAdmin) {
+    return <SuperAdminSidebar pathname={pathname} />;
+  }
+
+
 
   return (
     <Sidebar>
