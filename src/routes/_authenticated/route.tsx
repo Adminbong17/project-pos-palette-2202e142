@@ -76,10 +76,31 @@ function AuthedLayout() {
   const isHome = pathname === homePath;
 
   async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    try {
+      await qc.cancelQueries();
+      qc.clear();
+    } catch {}
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+    try {
+      if (typeof window !== "undefined") {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("sb-") || key.includes("supabase.auth.token"))) {
+            localStorage.removeItem(key);
+          }
+        }
+        sessionStorage.clear();
+      }
+    } catch {}
+
+    // Hard redirect: guarantees fresh JS bundle, purges old heap memory & open WebSockets
+    if (typeof window !== "undefined") {
+      window.location.replace("/auth?logged_out=1");
+    } else {
+      navigate({ to: "/auth", replace: true });
+    }
   }
 
   function goBack() {

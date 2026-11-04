@@ -16,11 +16,31 @@ export const Route = createFileRoute("/auth")({
   beforeLoad: async () => {
     // On the patient domain (pt.…) the only login is the patient portal.
     if (isPatientHost()) throw redirect({ to: "/patient" });
-    // getSession() reads the local session (no network round-trip) so the
-    // auth page paints instantly instead of waiting on the auth server.
+
+    // If arriving right after an explicit logout, never redirect back into the app!
+    if (typeof window !== "undefined") {
+      const search = window.location.search;
+      if (search.includes("logged_out=1") || search.includes("signout=1")) {
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch {}
+        return;
+      }
+    }
+
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      const email = data.session.user?.email?.toLowerCase() ?? "";
+      // Validate with getUser() to guarantee the token hasn't been revoked on the server
+      const { data: userData, error } = await supabase.auth.getUser();
+      if (error || !userData?.user) {
+        // Dead session in localStorage — purge it so we never ping-pong loop!
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch {}
+        return;
+      }
+
+      const email = userData.user.email?.toLowerCase() ?? "";
       if (isSuperAdminEmail(email)) {
         throw redirect({ to: "/admin" });
       }
@@ -29,7 +49,29 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({ meta: [{ title: "Sign in — QweekPOS" }] }),
   component: AuthPage,
+  errorComponent: AuthErrorComponent,
 });
+
+function AuthErrorComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="text-xl font-bold text-foreground">সাইন ইন পেজ লোড হচ্ছে…</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          অনুগ্রহ করে অপেক্ষা করুন অথবা নিচের বাটনে ক্লিক করুন।
+        </p>
+        <button
+          onClick={() => {
+            window.location.replace("/auth");
+          }}
+          className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+        >
+          লগইন পেজ রিফ্রেশ করুন
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -146,7 +188,11 @@ function AuthPage() {
         : isRxMode()
           ? "/prescriptions"
           : "/dashboard";
-      navigate({ to: destination, replace: true });
+      if (typeof window !== "undefined") {
+        window.location.replace(destination);
+      } else {
+        navigate({ to: destination, replace: true });
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Authentication failed");
       setLoading(false);
