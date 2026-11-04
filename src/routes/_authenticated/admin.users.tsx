@@ -19,6 +19,7 @@ import {
 } from "@/lib/super-admin-users.functions";
 import { setMemberSections } from "@/lib/admin-businesses.functions";
 import { ALL_SECTIONS, expandSections, PRESETS } from "@/hooks/use-allowed-sections";
+import { splitDoctorQualification, combineDoctorQualification } from "@/lib/doctor-format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,7 +144,8 @@ function Page() {
     email: "",
     username: "",
     name: "",
-    doctor_qualification: "",
+    doctor_degree: "",
+    doctor_designation: "",
     phone: "",
     business_id: "",
     role: "Admin",
@@ -159,11 +161,13 @@ function Page() {
   function openEditUser(u: SuperAdminUser) {
     setEditingUser(u);
     const matchedBiz = allBusinesses.find((b) => u.businesses.includes(b.name));
+    const { degree, designation } = splitDoctorQualification(u.doctor_qualification ?? "");
     setUserFormData({
       email: u.email !== "—" ? u.email : "",
       username: u.username ?? "",
       name: (u.doctor_name || u.name) !== "—" ? (u.doctor_name || u.name) : "",
-      doctor_qualification: u.doctor_qualification ?? "",
+      doctor_degree: degree,
+      doctor_designation: designation,
       phone: u.phone ?? "",
       business_id: u.primary_business_id || matchedBiz?.id || allBusinesses[0]?.id || "",
       role: u.primary_role || u.roles[0] || "Admin",
@@ -173,13 +177,17 @@ function Page() {
   const updateUserMutation = useMutation({
     mutationFn: async () => {
       if (!editingUser) return;
+      const combinedQual = combineDoctorQualification(
+        userFormData.doctor_degree,
+        userFormData.doctor_designation
+      );
       return await editUser({
         data: {
           user_id: editingUser.id,
           email: userFormData.email,
           username: userFormData.username,
           name: userFormData.name,
-          doctor_qualification: userFormData.doctor_qualification,
+          doctor_qualification: combinedQual,
           phone: userFormData.phone,
           business_id: userFormData.business_id,
           role: userFormData.role,
@@ -286,11 +294,23 @@ function Page() {
                           <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
                         </button>
                       </div>
-                      {u.doctor_qualification && (
-                        <div className="text-[11px] text-muted-foreground font-medium truncate max-w-[220px]" title={u.doctor_qualification}>
-                          🎓 {u.doctor_qualification}
-                        </div>
-                      )}
+                      {u.doctor_qualification && (() => {
+                        const { degree, designation } = splitDoctorQualification(u.doctor_qualification);
+                        return (
+                          <div className="space-y-0.5 max-w-[240px]">
+                            {degree && (
+                              <div className="text-[11px] text-sky-700 dark:text-sky-400 font-medium truncate" title={degree}>
+                                🎓 {degree}
+                              </div>
+                            )}
+                            {designation && (
+                              <div className="text-[11px] text-teal-700 dark:text-teal-400 font-medium truncate" title={designation}>
+                                💼 {designation}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {u.phone && <div className="text-xs text-muted-foreground">{u.phone}</div>}
                     </td>
                     <td className="p-2 text-xs align-top">
@@ -574,16 +594,30 @@ function Page() {
               />
             </div>
 
-            {/* Doctor Qualification */}
+            {/* Doctor Degrees */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                শিক্ষাগত যোগ্যতা / পদবি (Doctor Qualification)
+              <label className="text-xs font-semibold text-sky-700 dark:text-sky-400 uppercase tracking-wider">
+                শিক্ষাগত যোগ্যতা / ডিগ্রি (Degrees / Qualification)
               </label>
               <Input
                 type="text"
-                value={userFormData.doctor_qualification}
-                onChange={(e) => setUserFormData((prev) => ({ ...prev, doctor_qualification: e.target.value }))}
+                value={userFormData.doctor_degree}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, doctor_degree: e.target.value }))}
                 placeholder="e.g. MBBS, FCPS, MD, BCS (Health)"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Doctor Designation */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">
+                পদবি ও বিশেষজ্ঞ বিবরণ (Doctor Designation / Specialty)
+              </label>
+              <Input
+                type="text"
+                value={userFormData.doctor_designation}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, doctor_designation: e.target.value }))}
+                placeholder="e.g. সহকারী অধ্যাপক / কনসালট্যান্ট, মেডিসিন বিশেষজ্ঞ"
                 className="h-9 text-sm"
               />
             </div>

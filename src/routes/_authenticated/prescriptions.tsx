@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Search, FileText, X, Baby, Sparkles, Sliders } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, FileText, X, Baby, Sparkles, Sliders, Stethoscope } from "lucide-react";
 import { ChildDoseModal } from "@/components/ChildDoseModal";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +15,12 @@ import { useRxPresets } from "@/hooks/use-rx-presets";
 import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
 import { RxPresetCombo } from "@/components/rx-preset-combo";
 import { useBusinessDoctors } from "@/hooks/use-business-doctors";
-import { formatDoctorDisplayName, shouldShowClinicHeader } from "@/lib/doctor-format";
+import {
+  formatDoctorDisplayName,
+  shouldShowClinicHeader,
+  splitDoctorQualification,
+  combineDoctorQualification,
+} from "@/lib/doctor-format";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -386,6 +391,7 @@ function PrescriptionsPage() {
   const [nextDays, setNextDays] = useState("");
   const [childDoseOpen, setChildDoseOpen] = useState(false);
   const [childDoseMode, setChildDoseMode] = useState<"auto" | "manual">("auto");
+  const [doctorProfileModalOpen, setDoctorProfileModalOpen] = useState(false);
 
   const isChildPatient = useMemo(() => {
     const ageStr = (form.patient_age || "").toLowerCase();
@@ -970,86 +976,182 @@ function PrescriptionsPage() {
       : "";
 
     const docDisplayName = formatDoctorDisplayName(rx.doctor_name || me.data?.doctor_name);
-    const docQualification = (rx.doctor_qualification || me.data?.doctor_qualification || "").trim();
+    const rawQualification = (rx.doctor_qualification || me.data?.doctor_qualification || "").trim();
+    const { degree: docDegree, designation: docDesignation } = splitDoctorQualification(rawQualification);
     const showClinic = shouldShowClinicHeader(clinicName, docDisplayName);
 
     const headerHtml = `
-      <div class="header center">
-        ${showClinic ? `<div style="font-size:0.95em;letter-spacing:.4px;font-weight:600;margin-bottom:2px;">${esc(clinicName)}</div>` : ""}
-        <h2>${docDisplayName ? nl(docDisplayName) : "&nbsp;"}</h2>
-        ${docQualification ? `<div class="desig">${nl(docQualification)}</div>` : ""}
-        ${bizAddr ? `<div>${esc(bizAddr)}</div>` : ""}
-        ${bizPhone ? `<div>Phone: ${esc(bizPhone)}</div>` : ""}
+      <div class="header">
+        <div class="header-top-accent"></div>
+        ${showClinic ? `<div class="clinic-title">${esc(clinicName)}</div>` : ""}
+        <h2 class="doc-name">${docDisplayName ? nl(docDisplayName) : "&nbsp;"}</h2>
+        ${docDegree ? `<div class="doc-degree">${nl(docDegree)}</div>` : ""}
+        ${docDesignation ? `<div class="doc-desig">${nl(docDesignation)}</div>` : ""}
+        ${(bizAddr || bizPhone) ? `
+          <div class="doc-meta">
+            ${bizAddr ? `<span>📍 ${esc(bizAddr)}</span>` : ""}
+            ${bizPhone ? `<span>📞 সিরিয়াল/যোগাযোগ: ${esc(bizPhone)}</span>` : ""}
+          </div>
+        ` : ""}
       </div>`;
 
     const metaHtml = `
-      <div class="row">
-        <div><span class="label">Rx No:</span> ${esc(rx.rx_no ?? "—")}</div>
-        <div><span class="label">Date:</span> ${fmtDate(rx.rx_date)}</div>
-      </div>
       <div class="pbox">
-        <div class="row"><div><strong>${esc(rx.patient_name)}</strong>${(rx as any).patient_code ? ` <span class="label">(ID: ${esc((rx as any).patient_code)})</span>` : ""}</div>
-          <div>${esc(rx.patient_age ?? "")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</div></div>
-        ${rx.patient_phone ? `<div class="label">Phone: ${esc(rx.patient_phone)}</div>` : ""}
+        <div class="pbox-row">
+          <div>
+            <span class="plabel">রোগীর নাম (Patient):</span>
+            <strong class="pname">${esc(rx.patient_name)}</strong>
+            ${(rx as any).patient_code ? `<span class="pid-badge">ID: ${esc((rx as any).patient_code)}</span>` : ""}
+          </div>
+          <div>
+            <span class="plabel">Rx No:</span>
+            <strong class="rx-no">${esc(rx.rx_no ?? "—")}</strong>
+          </div>
+        </div>
+        <div class="pbox-row pbox-sub">
+          <div>
+            <span class="plabel">বয়স ও লিঙ্গ:</span>
+            <span>${esc(rx.patient_age ?? "—")}${rx.patient_gender ? ` / ${esc(rx.patient_gender)}` : ""}</span>
+            ${rx.patient_phone ? ` &nbsp;•&nbsp; <span class="plabel">মোবাইল:</span> <span>${esc(rx.patient_phone)}</span>` : ""}
+          </div>
+          <div>
+            <span class="plabel">তারিখ (Date):</span>
+            <span>${fmtDate(rx.rx_date)}</span>
+          </div>
+        </div>
       </div>`;
 
     const numbered = (s?: string | null) => {
       const items = serialItems(s);
       if (!items.length) return "";
-      return items.map((x, i) => `<div>${i + 1}. ${esc(x)}</div>`).join("");
+      return items.map((x, i) => `<div class="num-item"><span class="bullet-dot">•</span> <span>${esc(x)}</span></div>`).join("");
     };
 
     const medsHtml = rxLines.length
       ? rxLines.map((l, i) => `
         <div class="med">
-          <div class="med-name">${i + 1}. ${esc(l.medicine_name)}${l.quantity ? ` &nbsp;<span class="qty">(Qty: ${l.quantity})</span>` : ""}</div>
-          <div class="med-sub">${[l.frequency, fmtDuration(l.duration)].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
-          ${l.instructions ? `<div class="med-sub"><em>${esc(l.instructions)}</em></div>` : ""}
+          <div class="med-head">
+            <span class="med-num">${i + 1}</span>
+            <span class="med-name">${esc(l.medicine_name)}</span>
+            ${l.quantity ? `<span class="med-qty">Qty: ${esc(String(l.quantity))}</span>` : ""}
+          </div>
+          <div class="med-sched">${[l.frequency, fmtDuration(l.duration)].filter(Boolean).map((x) => esc(x!)).join(" &nbsp;—&nbsp; ")}</div>
+          ${l.instructions ? `<div class="med-inst">${esc(l.instructions)}</div>` : ""}
         </div>`).join("")
-      : `<div class="label">No medicines</div>`;
+      : `<div class="label" style="font-style:italic;color:#94a3b8;padding:8px 0;">ওষুধের তালিকা খালি / No medicines</div>`;
 
-    const creditHtml = `<div class="credit">QweekRx ${new Date().getFullYear()} - 01712472839(Phone/whatsapp)</div>`;
+    const watermarkHtml = `
+      <div class="watermark-layer">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="watermark-svg">
+          <circle cx="100" cy="100" r="88" fill="none" stroke="#0d9488" stroke-width="2" opacity="0.04" />
+          <circle cx="100" cy="100" r="78" fill="none" stroke="#0284c7" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.04" />
+          <text x="100" y="128" font-family="'Times New Roman', Georgia, serif" font-size="85" font-weight="bold" fill="#0d9488" opacity="0.045" text-anchor="middle">℞</text>
+        </svg>
+      </div>`;
+
+    const footerHtml = `
+      <div class="footer-container">
+        <div class="wish-ribbon">
+          <span class="wish-icon">🌿</span>
+          <span class="wish-bn">দ্রুত সুস্থ হয়ে উঠুন</span>
+          <span class="wish-sep">•</span>
+          <span class="wish-en">Wishing You Good Health &amp; Speedy Recovery</span>
+        </div>
+
+        <div class="sign-block">
+          <div class="sign-line"></div>
+          <div class="sign-title">চিকিৎসকের স্বাক্ষর ও সিল (Doctor's Signature)</div>
+          <div class="sign-doc-name">${docDisplayName ? nl(docDisplayName) : ""}</div>
+          ${docDegree ? `<div class="sign-doc-qual">${nl(docDegree)}</div>` : ""}
+          ${docDesignation ? `<div class="sign-doc-desig">${nl(docDesignation)}</div>` : ""}
+        </div>
+
+        <div class="footer-bottom-bar">
+          <div class="footer-left">
+            ${bizPhone ? `<span>📞 জরুরি ও সিরিয়াল: <strong>${esc(bizPhone)}</strong></span>` : `<span>জরুরি প্রয়োজনে চিকিৎসকের সাথে যোগাযোগ করুন</span>`}
+            <span>•</span>
+            <span>ঔষধ নিয়ম মেনে নিয়মিত সেবন করুন</span>
+          </div>
+          <div class="footer-right">
+            <span>Digital Rx • QweekRx Health System</span>
+          </div>
+        </div>
+        <div class="footer-accent-line"></div>
+      </div>`;
 
     if (size === "A4") {
       const styles = `
         @page { size: A4; margin: 0; }
-        html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:12px; }
-        .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "12mm"} 10mm 12mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; }
-        h2 { margin:2px 0; font-size:26px; letter-spacing:0.3px; }
-        .desig { font-size:13px; margin-bottom:3px; }
-        .center { text-align:center; }
-        .row { display:flex; justify-content:space-between; gap:8px; }
-        .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
-        .label { color:#444; font-size:0.9em; }
-        .pbox { border:1px solid #999; padding:6px; margin:6px 0 8px; border-radius:4px; }
-        .split { display:flex; flex:1 1 auto; border-top:1px solid #000; min-height:${ownPad ? "140mm" : "180mm"}; }
-        .left { width:40%; padding:6px 8px 6px 0; border-right:1.5px solid #000; box-sizing:border-box; }
-        .right { width:60%; padding:6px 0 6px 10px; box-sizing:border-box; display:flex; flex-direction:column; }
-        .sec-title { font-weight:bold; text-decoration:underline; margin:8px 0 4px; }
-        .rx-area { flex:0 0 70%; }
-        .adv-area { flex:0 0 30%; border-top:1px dashed #666; padding-top:6px; }
-        .rx-mark { font-size:24px; font-weight:bold; }
-        .med { margin:0 0 6px; }
-        .med-name { font-weight:bold; }
-        .med-sub { padding-left:14px; }
-        .qty { font-weight:normal; }
-        .sign { margin-top:10px; text-align:right; }
-        .sign-name { text-align:right; font-size:10px; line-height:1.25; margin-top:2px; }
-        .sign-name strong { font-size:11px; }
-        .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:10px; color:#333; }`;
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        html, body { margin:0; padding:0; background:#fff; color:#0f172a; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Bengali', Arial, sans-serif; font-size:12px; }
+        .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "10mm"} 10mm 8mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+        .watermark-layer { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:320px; height:320px; pointer-events:none; z-index:0; }
+        .watermark-svg { width:100%; height:100%; }
+        .header-top-accent { height:4px; background:linear-gradient(90deg, #0d9488 0%, #0284c7 50%, #3b82f6 100%); border-radius:2px; margin-bottom:8px; }
+        .header { text-align:center; border-bottom:2px solid #0d9488; padding-bottom:8px; margin-bottom:8px; position:relative; z-index:1; }
+        .clinic-title { font-size:15px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:3px; }
+        .doc-name { font-size:24px; font-weight:800; color:#0f172a; margin:2px 0; letter-spacing:0.2px; line-height:1.2; }
+        .doc-degree { font-size:13px; font-weight:600; color:#0284c7; margin-bottom:2px; line-height:1.3; }
+        .doc-desig { font-size:12px; font-weight:500; color:#0f766e; margin-bottom:2px; line-height:1.3; }
+        .doc-meta { font-size:11px; color:#64748b; margin-top:4px; display:flex; justify-content:center; gap:12px; }
+        .pbox { background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0d9488; border-radius:6px; padding:7px 10px; margin:6px 0 10px; position:relative; z-index:1; }
+        .pbox-row { display:flex; justify-content:space-between; align-items:center; }
+        .pbox-sub { font-size:11px; color:#475569; margin-top:3px; }
+        .plabel { color:#64748b; font-size:10.5px; font-weight:600; margin-right:4px; }
+        .pname { font-size:13.5px; color:#0f172a; font-weight:700; }
+        .pid-badge { font-size:10px; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; margin-left:6px; font-weight:600; }
+        .rx-no { font-family:monospace; font-size:12px; color:#0f766e; font-weight:700; }
+        .split { display:flex; flex:1 1 auto; border-top:1.5px solid #cbd5e1; min-height:${ownPad ? "140mm" : "175mm"}; position:relative; z-index:1; }
+        .left { width:38%; padding:8px 10px 8px 0; border-right:1.5px solid #cbd5e1; box-sizing:border-box; }
+        .right { width:62%; padding:8px 0 8px 12px; box-sizing:border-box; display:flex; flex-direction:column; }
+        .sec-title { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin:10px 0 4px; padding-bottom:2px; border-bottom:1.5px solid #cbd5e1; }
+        .sec-cc { color:#0284c7; border-color:#bae6fd; }
+        .sec-vitals { color:#0d9488; border-color:#99f6e4; }
+        .sec-inv { color:#7c3aed; border-color:#ddd6fe; }
+        .sec-adv { color:#0f766e; border-color:#99f6e4; margin-top:0; }
+        .num-item { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11.5px; color:#334155; }
+        .bullet-dot { color:#0d9488; font-weight:bold; }
+        .vital-row { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11.5px; color:#334155; }
+        .rx-area { flex:1 0 auto; }
+        .rx-mark { font-size:32px; font-weight:900; font-family:'Times New Roman', Georgia, serif; color:#0d9488; line-height:1; margin-bottom:8px; }
+        .med { margin:0 0 8px; padding-bottom:6px; border-bottom:1px dashed #e2e8f0; }
+        .med-head { display:flex; align-items:baseline; gap:6px; }
+        .med-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#e0f2fe; color:#0369a1; font-size:10px; font-weight:700; flex-shrink:0; }
+        .med-name { font-weight:700; font-size:13px; color:#0f172a; }
+        .med-qty { font-size:10.5px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:3px; }
+        .med-sched { padding-left:24px; color:#0284c7; font-size:11.5px; font-weight:600; margin-top:1px; }
+        .med-inst { padding-left:24px; color:#475569; font-style:italic; font-size:11px; margin-top:1px; }
+        .adv-area { border-top:1.5px dashed #cbd5e1; padding-top:8px; margin-top:auto; }
+        .rx-notes { margin-top:4px; font-size:11px; color:#475569; }
+        .next-visit-pill { background:#fefce8; border-left:3.5px solid #f59e0b; color:#92400e; padding:4px 8px; border-radius:4px; font-size:11px; margin-top:8px; font-weight:500; }
+        .wish-ribbon { margin:10px auto 6px; padding:4px 14px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:20px; color:#0f766e; font-size:11px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
+        .wish-icon { font-size:13px; }
+        .wish-sep { opacity:0.4; }
+        .sign-block { margin-top:10px; text-align:right; }
+        .sign-line { width:180px; border-bottom:1.5px dashed #0d9488; margin-left:auto; margin-bottom:4px; }
+        .sign-title { font-size:10px; color:#64748b; margin-bottom:2px; }
+        .sign-doc-name { font-weight:700; font-size:12px; color:#0f172a; }
+        .sign-doc-qual { font-size:10.5px; color:#0284c7; }
+        .sign-doc-desig { font-size:10px; color:#0f766e; }
+        .footer-container { margin-top:auto; padding-top:6px; position:relative; z-index:1; }
+        .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#64748b; padding:6px 0 4px; border-top:1px solid #e2e8f0; }
+        .footer-left { display:flex; gap:8px; align-items:center; }
+        .footer-right { color:#94a3b8; font-size:9.5px; }
+        .footer-accent-line { height:3px; background:linear-gradient(90deg, #0d9488, #0284c7, #3b82f6); border-radius:1.5px; margin-top:2px; }`;
 
       const body = `
       <div class="page">
+        ${watermarkHtml}
         ${ownPad ? "" : headerHtml}
         ${metaHtml}
         <div class="split">
           <div class="left">
-            <div class="sec-title">C/C</div>
-            <div>${numbered(rx.diagnosis) || "&nbsp;"}</div>
-            <div class="sec-title">Vitals</div>
-            <div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
-            <div class="sec-title">Investigation</div>
-            <div>${numbered(investigation) || "&nbsp;"}</div>
+            <div class="sec-title sec-cc">চিফ কমপ্লেন (C/C)</div>
+            <div>${numbered(rx.diagnosis) || `<span style="color:#94a3b8;font-style:italic;">—</span>`}</div>
+            <div class="sec-title sec-vitals">শারীরিক অবস্থা (Vitals)</div>
+            <div>${vitalsLines(rx.vitals).map((l) => `<div class="vital-row"><span class="bullet-dot">•</span> <span>${esc(l)}</span></div>`).join("") || `<span style="color:#94a3b8;font-style:italic;">—</span>`}</div>
+            <div class="sec-title sec-inv">পরীক্ষা (Investigation)</div>
+            <div>${numbered(investigation) || `<span style="color:#94a3b8;font-style:italic;">—</span>`}</div>
           </div>
           <div class="right">
             <div class="rx-area">
@@ -1057,19 +1159,14 @@ function PrescriptionsPage() {
               ${medsHtml}
             </div>
             <div class="adv-area">
-              <div class="sec-title" style="margin-top:0;">Advice</div>
-              <div>${numbered(rx.advice) || "&nbsp;"}</div>
-              ${rx.notes ? `<div style="margin-top:4px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
-              ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
-              <div class="sign">Doctor's signature: ______________________</div>
-              <div class="sign-name">
-                ${docDisplayName ? `<strong>${nl(docDisplayName)}</strong>` : ""}
-                ${docQualification ? `<div>${nl(docQualification)}</div>` : ""}
-              </div>
+              <div class="sec-title sec-adv">পরামর্শ (Advice)</div>
+              <div>${numbered(rx.advice) || `<span style="color:#94a3b8;font-style:italic;">—</span>`}</div>
+              ${rx.notes ? `<div class="rx-notes">${nl(rx.notes)}</div>` : ""}
+              ${nextVisitTxt ? `<div class="next-visit-pill">📅 <strong>পরবর্তী সাক্ষাত (Next visit):</strong> ${esc(nextVisitTxt)}</div>` : ""}
             </div>
           </div>
         </div>
-        ${creditHtml}
+        ${footerHtml}
       </div>`;
 
       return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
@@ -1080,38 +1177,57 @@ function PrescriptionsPage() {
     const fs = size === "58mm" ? "10px" : "11px";
     const styles = `
       @page { size: ${size} auto; margin: 0; }
-      html, body { margin:0; padding:0; background:#fff; color:#000; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size:${fs}; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { margin:0; padding:0; background:#fff; color:#0f172a; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Bengali', Arial, sans-serif; font-size:${fs}; }
       .page { width:${widthCss}; max-width:${widthCss}; margin:0 auto; padding:${size === "58mm" ? "2px 1mm" : "4mm"}; box-sizing:border-box; background:#fff; }
-      h2 { margin:2px 0; font-size:17px; }
-      .desig { font-size:0.9em; }
-      .center { text-align:center; }
-      .row { display:flex; justify-content:space-between; gap:8px; }
-      .header { border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:6px; }
-      .label { color:#444; font-size:0.9em; }
-      .pbox { border:1px solid #999; padding:6px; margin:6px 0; border-radius:4px; }
-      .med { margin:4px 0; padding-bottom:4px; border-bottom:1px dashed #999; }
-      .med-name { font-weight:bold; }
-      .med-sub { padding-left:10px; }
-      .rx-mark { font-size:18px; font-weight:bold; }
-      .footer { margin-top:12px; border-top:1px dashed #666; padding-top:6px; text-align:center; font-size:0.85em; }
-      .credit { margin-top:6px; padding-top:4px; border-top:1px solid #bbb; text-align:center; font-size:0.8em; }`;
+      .header-top-accent { height:3px; background:#0d9488; border-radius:1px; margin-bottom:4px; }
+      .clinic-title { font-size:0.9em; font-weight:700; color:#0f766e; text-transform:uppercase; text-align:center; }
+      .doc-name { margin:2px 0; font-size:16px; text-align:center; font-weight:800; color:#0f172a; }
+      .doc-degree { font-size:0.9em; color:#0284c7; text-align:center; font-weight:600; }
+      .doc-desig { font-size:0.85em; color:#0f766e; text-align:center; font-weight:500; }
+      .doc-meta { font-size:0.8em; color:#64748b; text-align:center; margin-top:2px; }
+      .header { border-bottom:1.5px solid #0d9488; padding-bottom:4px; margin-bottom:4px; }
+      .label { color:#475569; font-size:0.9em; }
+      .pbox { border:1px solid #cbd5e1; border-left:3px solid #0d9488; background:#f8fafc; padding:4px 6px; margin:4px 0; border-radius:4px; }
+      .pbox-row { display:flex; justify-content:space-between; }
+      .plabel { color:#64748b; font-size:0.85em; }
+      .pname { font-weight:700; color:#0f172a; }
+      .rx-no { font-family:monospace; color:#0f766e; font-weight:700; }
+      .med { margin:4px 0; padding-bottom:4px; border-bottom:1px dashed #cbd5e1; }
+      .med-head { display:flex; align-items:baseline; gap:4px; }
+      .med-num { font-weight:bold; color:#0369a1; }
+      .med-name { font-weight:bold; color:#0f172a; }
+      .med-qty { font-size:0.85em; color:#64748b; }
+      .med-sched { padding-left:12px; color:#0284c7; font-weight:600; font-size:0.95em; }
+      .med-inst { padding-left:12px; font-style:italic; color:#475569; font-size:0.9em; }
+      .rx-mark { font-size:20px; font-weight:bold; color:#0d9488; margin:4px 0 2px; }
+      .wish-ribbon { margin:6px auto 2px; text-align:center; font-size:0.85em; color:#0f766e; font-weight:600; border-top:1px dashed #cbd5e1; padding-top:4px; }
+      .footer { margin-top:8px; border-top:1px dashed #94a3b8; padding-top:4px; text-align:center; font-size:0.85em; }
+      .credit { margin-top:4px; padding-top:2px; border-top:1px solid #e2e8f0; text-align:center; font-size:0.75em; color:#64748b; }`;
 
     const body = `
     <div class="page">
       ${headerHtml}
       ${metaHtml}
-      <div class="label">Vitals:</div>${vitalsLines(rx.vitals).map((l) => `<div>${esc(l)}</div>`).join("")}
-      ${rx.diagnosis ? `<div><span class="label">C/C:</span></div>${numbered(rx.diagnosis)}` : ""}
-      ${investigation ? `<div><span class="label">Investigation:</span></div>${numbered(investigation)}` : ""}
+      ${vitalsLines(rx.vitals).length ? `<div class="label" style="font-weight:bold;margin-top:4px;color:#0d9488;">শারীরিক অবস্থা (Vitals):</div>${vitalsLines(rx.vitals).map((l) => `<div style="font-size:0.9em;">• ${esc(l)}</div>`).join("")}` : ""}
+      ${rx.diagnosis ? `<div style="margin-top:4px;"><span class="label" style="font-weight:bold;color:#0284c7;">চিফ কমপ্লেন (C/C):</span></div>${numbered(rx.diagnosis)}` : ""}
+      ${investigation ? `<div style="margin-top:4px;"><span class="label" style="font-weight:bold;color:#7c3aed;">পরীক্ষা (Investigation):</span></div>${numbered(investigation)}` : ""}
       <div class="rx-mark">℞</div>
       ${medsHtml}
-      ${rx.advice ? `<div class="pbox"><span class="label">Advice:</span>${numbered(rx.advice)}</div>` : ""}
-      ${nextVisitTxt ? `<div style="margin-top:6px;"><span class="label">Next visit:</span> ${esc(nextVisitTxt)}</div>` : ""}
-      ${rx.notes ? `<div style="margin-top:6px;font-size:0.9em;">${nl(rx.notes)}</div>` : ""}
-      <div class="footer">Doctor's signature: ______________________</div>
-      ${creditHtml}
+      ${rx.advice ? `<div class="pbox" style="margin-top:6px;"><span class="label" style="font-weight:bold;color:#0f766e;">পরামর্শ (Advice):</span>${numbered(rx.advice)}</div>` : ""}
+      ${nextVisitTxt ? `<div style="margin-top:4px;padding:3px 6px;background:#fefce8;border-left:3px solid #f59e0b;font-size:0.85em;color:#92400e;">📅 <strong>পরবর্তী সাক্ষাত:</strong> ${esc(nextVisitTxt)}</div>` : ""}
+      ${rx.notes ? `<div style="margin-top:4px;font-size:0.85em;color:#64748b;">${nl(rx.notes)}</div>` : ""}
+      <div class="wish-ribbon">
+        <span>🌿 দ্রুত সুস্থ হয়ে উঠুন • Get Well Soon</span>
+      </div>
+      <div class="footer">
+        <div style="border-bottom:1px dashed #0d9488;width:140px;margin:8px auto 2px;"></div>
+        চিকিৎসকের স্বাক্ষর
+        ${docDisplayName ? `<div style="font-weight:bold;margin-top:2px;">${nl(docDisplayName)}</div>` : ""}
+        ${docDesignation ? `<div style="font-size:0.85em;color:#0f766e;">${nl(docDesignation)}</div>` : ""}
+      </div>
+      <div class="credit">Digital Rx • ${esc(clinicName || "QweekRx")} ${bizPhone ? `• 📞 ${esc(bizPhone)}` : ""}</div>
     </div>`;
-
 
     return { styles, body, title: `Rx ${esc(rx.rx_no ?? "")}` };
   };
@@ -1225,6 +1341,15 @@ function PrescriptionsPage() {
             </div>
           </FloatingSearch>
           <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
+          <Button
+            variant="outline"
+            onClick={() => setDoctorProfileModalOpen(true)}
+            className="h-9 gap-1.5 border-teal-300 text-teal-700 bg-teal-50/50 hover:bg-teal-100 hover:text-teal-800 transition shadow-2xs font-medium cursor-pointer"
+            title="প্রেসক্রিপশনে প্রদর্শিত ডাক্তারের নাম, পদবি ও ডিগ্রি সাজান"
+          >
+            <Stethoscope className="h-4 w-4 text-teal-600" />
+            <span>ডাক্তার ও পদবি সাজান</span>
+          </Button>
           <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
         </div>
       </div>
@@ -1291,7 +1416,7 @@ function PrescriptionsPage() {
             <DialogTitle>{editing ? "Edit Prescription" : "New Prescription"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <Label>Rx No (auto)</Label>
               <Input value={form.rx_no} readOnly className="bg-muted/50 font-mono text-xs" />
@@ -1302,7 +1427,7 @@ function PrescriptionsPage() {
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <Label>Doctor</Label>
+                <Label>ডাক্তার (Doctor)</Label>
                 {businessDoctors.data && businessDoctors.data.length > 0 && (
                   <select
                     className="text-[11px] text-primary border rounded px-1.5 py-0.5 bg-background cursor-pointer"
@@ -1333,13 +1458,43 @@ function PrescriptionsPage() {
               />
             </div>
             <div>
-              <Label>Qualification</Label>
+              <Label className="text-sky-700 dark:text-sky-400">ডিগ্রি (Degrees)</Label>
               <Input
-                value={form.doctor_qualification}
-                onChange={(e) => setForm({ ...form, doctor_qualification: e.target.value })}
-                placeholder={me.isLoading ? "Loading…" : "e.g. MBBS, FCPS, MD"}
+                value={splitDoctorQualification(form.doctor_qualification).degree}
+                onChange={(e) => {
+                  const { designation } = splitDoctorQualification(form.doctor_qualification);
+                  setForm({ ...form, doctor_qualification: combineDoctorQualification(e.target.value, designation) });
+                }}
+                placeholder="e.g. MBBS, FCPS, MD, BCS"
                 className="mt-1 h-9 text-xs"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+            <div className="md:col-span-2">
+              <Label className="text-teal-700 dark:text-teal-400">পদবি ও বিশেষজ্ঞ (Designation / Specialty)</Label>
+              <Input
+                value={splitDoctorQualification(form.doctor_qualification).designation}
+                onChange={(e) => {
+                  const { degree } = splitDoctorQualification(form.doctor_qualification);
+                  setForm({ ...form, doctor_qualification: combineDoctorQualification(degree, e.target.value) });
+                }}
+                placeholder="e.g. সহকারী অধ্যাপক ও কনসালট্যান্ট, মেডিসিন বিশেষজ্ঞ"
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
+            <div className="md:col-span-2 flex items-center justify-between p-2 rounded-lg bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-800/40">
+              <div className="text-[11px] text-teal-800 dark:text-teal-300">
+                💡 পদবি বা ডিগ্রি লিখলে তা স্বয়ংক্রিয়ভাবে প্রেসক্রিপশন প্যাডের শীর্ষে সুন্দর কালারে প্রদর্শিত হবে।
+              </div>
+              <button
+                type="button"
+                onClick={() => setDoctorProfileModalOpen(true)}
+                className="text-xs text-teal-700 dark:text-teal-400 font-semibold underline shrink-0 cursor-pointer hover:text-teal-900 ml-2"
+              >
+                প্রোফাইল সেট করুন
+              </button>
             </div>
           </div>
 
@@ -1698,7 +1853,131 @@ function PrescriptionsPage() {
         initialSize={printModalSize}
         businessName={business?.name || "Sheikh Pharma"}
       />
+
+      <DoctorProfileModal
+        open={doctorProfileModalOpen}
+        onClose={() => setDoctorProfileModalOpen(false)}
+        me={me}
+        onSaved={(formattedName, combinedQual) => {
+          setForm((prev) => ({
+            ...prev,
+            doctor_name: formattedName || prev.doctor_name,
+            doctor_qualification: combinedQual || prev.doctor_qualification,
+          }));
+        }}
+      />
     </div>
+  );
+}
+
+function DoctorProfileModal({
+  open,
+  onClose,
+  me,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  me: any;
+  onSaved?: (name: string, qual: string) => void;
+}) {
+  const qc = useQueryClient();
+  const rawQual = me.data?.doctor_qualification || "";
+  const { degree: initialDegree, designation: initialDesignation } = splitDoctorQualification(rawQual);
+  const [docName, setDocName] = useState(me.data?.doctor_name || "");
+  const [deg, setDeg] = useState(initialDegree);
+  const [des, setDes] = useState(initialDesignation);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (me.data) {
+      setDocName(me.data.doctor_name || "");
+      const { degree: d, designation: ds } = splitDoctorQualification(me.data.doctor_qualification);
+      setDeg(d);
+      setDes(ds);
+    }
+  }, [me.data]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user?.id) throw new Error("ব্যবহারকারী লগইন পাওয়া যায়নি");
+      const formatted = formatDoctorDisplayName(docName);
+      const combined = combineDoctorQualification(deg, des);
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          doctor_name: formatted || null,
+          doctor_qualification: combined || null,
+        } as any)
+        .eq("id", auth.user.id);
+
+      if (error) throw error;
+      toast.success("ডাক্তার প্রোফাইল ও পদবি সফলভাবে সংরক্ষিত হয়েছে!");
+      qc.invalidateQueries({ queryKey: ["my-doctor-profile"] });
+      onSaved?.(formatted, combined);
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message || "সংরক্ষণ ব্যর্থ হয়েছে");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Stethoscope className="h-5 w-5 text-teal-600" />
+            <span>ডাক্তার প্রোফাইল ও পদবি সাজান</span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div>
+            <Label className="text-xs font-semibold">ডাক্তারের নাম (Doctor Name)</Label>
+            <Input
+              value={docName}
+              onChange={(e) => setDocName(e.target.value)}
+              placeholder="e.g. Dr. Mehedi Hasan"
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-sky-700 dark:text-sky-400">ডিগ্রি / শিক্ষাগত যোগ্যতা (Degrees)</Label>
+            <Input
+              value={deg}
+              onChange={(e) => setDeg(e.target.value)}
+              placeholder="e.g. MBBS (DMC), FCPS, MD, BCS"
+              className="mt-1 h-9 text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-teal-700 dark:text-teal-400">পদবি ও বিশেষজ্ঞ বিবরণ (Designation / Specialty)</Label>
+            <Textarea
+              value={des}
+              onChange={(e) => setDes(e.target.value)}
+              rows={2}
+              placeholder="e.g. সহকারী অধ্যাপক ও কনসালট্যান্ট, মেডিসিন বিশেষজ্ঞ"
+              className="mt-1 text-xs resize-none"
+            />
+          </div>
+          <div className="text-[11px] text-teal-900 dark:text-teal-200 bg-teal-50 dark:bg-teal-950/40 p-2.5 rounded-lg border border-teal-200 dark:border-teal-800">
+            💡 এটি সংরক্ষণ করলে আপনার নাম, ডিগ্রি ও পদবি স্বয়ংক্রিয়ভাবে প্রেসক্রিপশনের শীর্ষে সুন্দর কালারে প্রদর্শিত হবে।
+          </div>
+        </div>
+        <DialogFooter className="mt-2">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
+            বাতিল
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white font-medium">
+            {saving ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ করুন"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

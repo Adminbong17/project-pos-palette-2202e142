@@ -241,6 +241,10 @@ export function useAllowedSections() {
 
 export function isPathAllowed(pathname: string, sections: string[] | null) {
   if (sections === null) return true;
+  // Doctor profile settings should be accessible to all logged-in doctors and users
+  if (pathname === "/settings/doctor" || pathname.startsWith("/settings/doctor/")) {
+    return true;
+  }
   const expanded = expandSections(sections) ?? [];
   // Due is part of the sales / accounts domain: if allowed sales, automatically allow /due
   if (pathname === "/due" || pathname.startsWith("/due/")) {

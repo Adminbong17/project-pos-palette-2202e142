@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 const tabs = [
+  { to: "/settings/doctor", label: "Doctor & Rx Profile (ডাক্তার প্রোফাইল)" },
   { to: "/settings/business", label: "Business" },
   { to: "/settings/locations", label: "Locations" },
   { to: "/settings/tax-rates", label: "Tax Rates" },

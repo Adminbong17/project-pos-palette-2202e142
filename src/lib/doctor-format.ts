@@ -85,3 +85,39 @@ export function shouldShowClinicHeader(
   }
   return true;
 }
+
+export interface DoctorProfileDetails {
+  degree: string;
+  designation: string;
+}
+
+/**
+ * Splits a raw qualification string into separate Degree and Designation.
+ * Supports multi-line input or common delimiters like " — ", " | ", or "//".
+ */
+export function splitDoctorQualification(raw?: string | null): DoctorProfileDetails {
+  if (!raw || !raw.trim()) return { degree: "", designation: "" };
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return { degree: "", designation: "" };
+  if (lines.length === 1) {
+    const sepMatch = lines[0].match(/^(.*?)\s*(?:—|–|\||\/\/)\s*(.*)$/);
+    if (sepMatch && sepMatch[1] && sepMatch[2]) {
+      return { degree: sepMatch[1].trim(), designation: sepMatch[2].trim() };
+    }
+    return { degree: lines[0], designation: "" };
+  }
+  return {
+    degree: lines[0],
+    designation: lines.slice(1).join("\n"),
+  };
+}
+
+/**
+ * Combines Degree and Designation into a single string formatted cleanly.
+ */
+export function combineDoctorQualification(degree?: string | null, designation?: string | null): string {
+  const d = (degree ?? "").trim();
+  const des = (designation ?? "").trim();
+  if (d && des) return `${d}\n${des}`;
+  return d || des || "";
+}

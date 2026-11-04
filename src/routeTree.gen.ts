@@ -96,6 +96,7 @@ import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedSettingsBrandsRouteImport } from './routes/_authenticated/settings.brands'
 import { Route as AuthenticatedSettingsBusinessRouteImport } from './routes/_authenticated/settings.business'
 import { Route as AuthenticatedSettingsCategoriesRouteImport } from './routes/_authenticated/settings.categories'
+import { Route as AuthenticatedSettingsDoctorRouteImport } from './routes/_authenticated/settings.doctor'
 import { Route as AuthenticatedSettingsLocationsRouteImport } from './routes/_authenticated/settings.locations'
 import { Route as AuthenticatedSettingsTaxRatesRouteImport } from './routes/_authenticated/settings.tax-rates'
 import { Route as AuthenticatedSettingsUnitsRouteImport } from './routes/_authenticated/settings.units'
@@ -586,6 +587,12 @@ const AuthenticatedSettingsCategoriesRoute =
     path: '/categories',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsDoctorRoute =
+  AuthenticatedSettingsDoctorRouteImport.update({
+    id: '/doctor',
+    path: '/doctor',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsLocationsRoute =
   AuthenticatedSettingsLocationsRouteImport.update({
     id: '/locations',
@@ -716,6 +723,7 @@ export interface FileRoutesByFullPath {
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
+  '/settings/doctor': typeof AuthenticatedSettingsDoctorRoute
   '/settings/locations': typeof AuthenticatedSettingsLocationsRoute
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
@@ -805,6 +813,7 @@ export interface FileRoutesByTo {
   '/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
+  '/settings/doctor': typeof AuthenticatedSettingsDoctorRoute
   '/settings/locations': typeof AuthenticatedSettingsLocationsRoute
   '/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/settings/units': typeof AuthenticatedSettingsUnitsRoute
@@ -904,6 +913,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/brands': typeof AuthenticatedSettingsBrandsRoute
   '/_authenticated/settings/business': typeof AuthenticatedSettingsBusinessRoute
   '/_authenticated/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
+  '/_authenticated/settings/doctor': typeof AuthenticatedSettingsDoctorRoute
   '/_authenticated/settings/locations': typeof AuthenticatedSettingsLocationsRoute
   '/_authenticated/settings/tax-rates': typeof AuthenticatedSettingsTaxRatesRoute
   '/_authenticated/settings/units': typeof AuthenticatedSettingsUnitsRoute
@@ -1003,6 +1013,7 @@ export interface FileRouteTypes {
     | '/settings/brands'
     | '/settings/business'
     | '/settings/categories'
+    | '/settings/doctor'
     | '/settings/locations'
     | '/settings/tax-rates'
     | '/settings/units'
@@ -1092,6 +1103,7 @@ export interface FileRouteTypes {
     | '/settings/brands'
     | '/settings/business'
     | '/settings/categories'
+    | '/settings/doctor'
     | '/settings/locations'
     | '/settings/tax-rates'
     | '/settings/units'
@@ -1190,6 +1202,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/brands'
     | '/_authenticated/settings/business'
     | '/_authenticated/settings/categories'
+    | '/_authenticated/settings/doctor'
     | '/_authenticated/settings/locations'
     | '/_authenticated/settings/tax-rates'
     | '/_authenticated/settings/units'
@@ -1834,6 +1847,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsCategoriesRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/doctor': {
+      id: '/_authenticated/settings/doctor'
+      path: '/doctor'
+      fullPath: '/settings/doctor'
+      preLoaderRoute: typeof AuthenticatedSettingsDoctorRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/locations': {
       id: '/_authenticated/settings/locations'
       path: '/locations'
@@ -2061,6 +2081,7 @@ interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsBrandsRoute: typeof AuthenticatedSettingsBrandsRoute
   AuthenticatedSettingsBusinessRoute: typeof AuthenticatedSettingsBusinessRoute
   AuthenticatedSettingsCategoriesRoute: typeof AuthenticatedSettingsCategoriesRoute
+  AuthenticatedSettingsDoctorRoute: typeof AuthenticatedSettingsDoctorRoute
   AuthenticatedSettingsLocationsRoute: typeof AuthenticatedSettingsLocationsRoute
   AuthenticatedSettingsTaxRatesRoute: typeof AuthenticatedSettingsTaxRatesRoute
   AuthenticatedSettingsUnitsRoute: typeof AuthenticatedSettingsUnitsRoute
@@ -2072,6 +2093,7 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsBrandsRoute: AuthenticatedSettingsBrandsRoute,
   AuthenticatedSettingsBusinessRoute: AuthenticatedSettingsBusinessRoute,
   AuthenticatedSettingsCategoriesRoute: AuthenticatedSettingsCategoriesRoute,
+  AuthenticatedSettingsDoctorRoute: AuthenticatedSettingsDoctorRoute,
   AuthenticatedSettingsLocationsRoute: AuthenticatedSettingsLocationsRoute,
   AuthenticatedSettingsTaxRatesRoute: AuthenticatedSettingsTaxRatesRoute,
   AuthenticatedSettingsUnitsRoute: AuthenticatedSettingsUnitsRoute,

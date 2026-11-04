@@ -23,6 +23,7 @@ import {
   useRxUserOptionSettings,
   type RxOptionKind,
 } from "@/hooks/use-rx-option-settings";
+import { splitDoctorQualification, combineDoctorQualification } from "@/lib/doctor-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -746,9 +747,11 @@ function DoctorCard({
   onSaveIdentity: (name: string, qualification: string) => void;
 }) {
   const rxOpts = useRxUserOptionSettings(businessId, member.id);
+  const { degree: initialDegree, designation: initialDesignation } = splitDoctorQualification(member.doctorQualification);
   const [n, setN] = useState(member.doctorName);
-  const [q, setQ] = useState(member.doctorQualification);
-  const dirty = n !== member.doctorName || q !== member.doctorQualification;
+  const [deg, setDeg] = useState(initialDegree);
+  const [des, setDes] = useState(initialDesignation);
+  const dirty = n !== member.doctorName || deg !== initialDegree || des !== initialDesignation;
   const effective = expandSections(member.allowedSections) ?? expandSections(["prescriptions"])!;
 
   function toggleSection(key: string, on: boolean) {
@@ -820,24 +823,41 @@ function DoctorCard({
         )}
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <Textarea
-          className="min-h-[44px] resize-none text-sm"
-          rows={2}
-          placeholder="Doctor name (on prescription)"
-          value={n}
-          onChange={(e) => setN(e.target.value)}
-        />
-        <div className="flex gap-2">
-          <Textarea
-            className="min-h-[44px] resize-none text-sm"
-            rows={2}
-            placeholder="Qualification / designation"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground">ডাক্তারের নাম (Doctor Name)</label>
+          <Input
+            className="h-9 text-xs mt-0.5"
+            placeholder="Doctor name on prescription"
+            value={n}
+            onChange={(e) => setN(e.target.value)}
           />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-sky-700 dark:text-sky-400">শিক্ষাগত যোগ্যতা (Degrees)</label>
+          <Input
+            className="h-9 text-xs mt-0.5"
+            placeholder="e.g. MBBS, FCPS, MD, BCS"
+            value={deg}
+            onChange={(e) => setDeg(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="text-[11px] font-medium text-teal-700 dark:text-teal-400">পদবি ও বিশেষজ্ঞ (Designation)</label>
+            <Input
+              className="h-9 text-xs mt-0.5"
+              placeholder="e.g. সহকারী অধ্যাপক ও কনসালট্যান্ট"
+              value={des}
+              onChange={(e) => setDes(e.target.value)}
+            />
+          </div>
           {dirty && (
-            <Button size="sm" onClick={() => onSaveIdentity(n, q)}>
+            <Button
+              size="sm"
+              className="h-9 px-3 text-xs bg-teal-600 hover:bg-teal-700 text-white shrink-0"
+              onClick={() => onSaveIdentity(n, combineDoctorQualification(deg, des))}
+            >
               Save
             </Button>
           )}
