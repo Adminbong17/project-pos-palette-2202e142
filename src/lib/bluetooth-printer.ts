@@ -23,15 +23,24 @@ export interface ConnectedPrinterInfo {
 }
 
 // Known GATT service UUIDs used by mobile thermal printers (PT-220, MTP-II, POS-58, MX04 Cat, etc.)
-const KNOWN_PRINTER_SERVICES = [
-  "000018f0-0000-1000-8000-00805f9b34fb", // Standard mobile printer service (PT-220, MTP-II)
-  "0000ffe0-0000-1000-8000-00805f9b34fb", // Common Chinese BLE POS
-  "0000ff00-0000-1000-8000-00805f9b34fb", // Cat Printer / MX04 / GT01 primary service
-  "0000ae30-0000-1000-8000-00805f9b34fb", // Cat Printer alternate service
-  "0000fee7-0000-1000-8000-00805f9b34fb",
+export const CAT_PRINTER_SERVICES = [
+  "0000ae30-0000-1000-8000-00805f9b34fb", // 0xae30 - Cat Printer primary print service (MX04, GT01, WalkPrint, iPrint)
+  "0000af30-0000-1000-8000-00805f9b34fb", // 0xaf30 - Cat Printer advertisement/status service
+  "0000ff00-0000-1000-8000-00805f9b34fb", // 0xff00 - Cat Printer alternate print service
+  "0000fee7-0000-1000-8000-00805f9b34fb", // 0xfee7 - Tencent/JieLi BLE service
+];
+
+export const ESCPOS_PRINTER_SERVICES = [
+  "000018f0-0000-1000-8000-00805f9b34fb", // 0x18f0 - Standard mobile thermal printer (PT-220, MTP-II)
+  "0000ffe0-0000-1000-8000-00805f9b34fb", // 0xffe0 - Standard Chinese BLE POS
   "49535343-fe7d-4ae5-8fa9-9fafd205e455", // ISSC Transparent UART
   "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART
+];
+
+export const ALL_PRINTER_SERVICES = [
+  ...CAT_PRINTER_SERVICES,
+  ...ESCPOS_PRINTER_SERVICES,
 ];
 
 export type ReceiptFontSize = "normal" | "large" | "xlarge";
@@ -723,21 +732,102 @@ class ThermalPrinterManager {
     }
 
     try {
+      // Disconnect any existing BLE connection to clear stale Windows GATT session
+      this.disconnectBle();
+
       const device = await (navigator as any).bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: KNOWN_PRINTER_SERVICES,
+        optionalServices: ALL_PRINTER_SERVICES,
       });
 
       if (!device) throw new Error("কোনো ডিভাইস সিলেক্ট করা হয়নি");
 
-      const server = await device.gatt?.connect();
-      if (!server) throw new Error("ব্লুটুথ কানেকশন পাওয়া যায়নি");
+      // Auto-detect printer model from device name or current active driver
+      const devName = (device.name || "").toLowerCase();
+      const isCat =
+        /mx04|mx05|mx06|gt01|gb01|gb02|gb03|cat|walkprint|iprint|funprint|tiny/i.test(devName) ||
+        this.activeDriver === "cat_printer";
+      const isPt220 = /pt-220|mtp|pos-58|rpp|xprinter/i.test(devName);
+
+      // Windows BLE robust connect with retry
+      let server: any = null;
+      let lastConnectErr: any = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          if (device.gatt?.connected) {
+            server = device.gatt;
+            break;
+          }
+          try {
+            if (device.gatt) device.gatt.disconnect();
+          } catch (_) {}
+
+          await new Promise((r) => setTimeout(r, 200));
+          server = await device.gatt?.connect();
+          if (server && server.connected) {
+            // Windows BLE settling delay: allow GATT database cache to populate
+            await new Promise((r) => setTimeout(r, 450));
+            break;
+          }
+        } catch (err: any) {
+          lastConnectErr = err;
+          console.warn(`BLE GATT connect attempt ${attempt} failed:`, err);
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+
+      if (!server || !server.connected) {
+        throw new Error(
+          lastConnectErr?.message ||
+            "প্রিন্টারের সাথে ব্লুটুথ কানেক্ট করা যায়নি। নিশ্চিত করুন প্রিন্টারটির পাওয়ার অন আছে এবং কাছাকাছি রয়েছে।"
+        );
+      }
+
+      // Prioritize service candidates based on detected device model
+      const priorityServices = isCat
+        ? [...CAT_PRINTER_SERVICES, ...ESCPOS_PRINTER_SERVICES]
+        : isPt220
+        ? [...ESCPOS_PRINTER_SERVICES, ...CAT_PRINTER_SERVICES]
+        : [...ALL_PRINTER_SERVICES];
 
       let writeChar: any = null;
 
-      for (const serviceUuid of KNOWN_PRINTER_SERVICES) {
+      // Discover write characteristic safely with automatic reconnect guard
+      for (const serviceUuid of priorityServices) {
+        if (!server.connected) {
+          try {
+            await new Promise((r) => setTimeout(r, 300));
+            server = await device.gatt.connect();
+            await new Promise((r) => setTimeout(r, 400));
+          } catch (_) {
+            continue;
+          }
+        }
+
         try {
           const service = await server.getPrimaryService(serviceUuid);
+          if (!service) continue;
+
+          // Fast direct lookup for known Cat Printer characteristics
+          if (serviceUuid.includes("ae30")) {
+            try {
+              const char = await service.getCharacteristic("0000ae01-0000-1000-8000-00805f9b34fb");
+              if (char) {
+                writeChar = char;
+                break;
+              }
+            } catch (_) {}
+          } else if (serviceUuid.includes("ff00")) {
+            try {
+              const char = await service.getCharacteristic("0000ff02-0000-1000-8000-00805f9b34fb");
+              if (char) {
+                writeChar = char;
+                break;
+              }
+            } catch (_) {}
+          }
+
           const chars = await service.getCharacteristics();
           for (const c of chars) {
             if (c.properties.write || c.properties.writeWithoutResponse) {
@@ -746,10 +836,12 @@ class ThermalPrinterManager {
             }
           }
         } catch (_) {}
+
         if (writeChar) break;
       }
 
-      if (!writeChar) {
+      // Fallback: If still not found and still connected, inspect all primary services
+      if (!writeChar && server.connected) {
         try {
           const services = await server.getPrimaryServices();
           for (const service of services) {
@@ -777,11 +869,7 @@ class ThermalPrinterManager {
       this.bleCharacteristic = writeChar;
       this.disconnectSerial();
 
-      // Auto-detect printer model
-      const devName = (device.name || "").toLowerCase();
-      const isCat = /mx04|mx05|mx06|gt01|gb01|gb02|gb03|cat|walkprint|iprint|funprint|tiny/i.test(devName);
-      const isPt220 = /pt-220|mtp|pos-58|rpp|xprinter/i.test(devName);
-
+      // Set active driver
       if (isCat) {
         this.activeDriver = "cat_printer";
       } else if (isPt220) {
@@ -896,23 +984,40 @@ class ThermalPrinterManager {
   /**
    * Send raw binary data chunks to the printer
    */
-  public async writeRaw(data: Uint8Array, chunkSize = 100, delayMs = 15): Promise<void> {
+  public async writeRaw(data: Uint8Array, chunkSize = 64, delayMs = 15): Promise<void> {
     if (this.serialWriter) {
       await this.serialWriter.write(data);
       return;
     }
 
     if (this.bleCharacteristic) {
+      // Reconnect guard if disconnected
+      if (this.bleDevice && !this.bleDevice.gatt?.connected) {
+        try {
+          await this.bleDevice.gatt?.connect();
+          await new Promise((r) => setTimeout(r, 250));
+        } catch (_) {}
+      }
+
       for (let i = 0; i < data.length; i += chunkSize) {
         const chunk = data.slice(i, i + chunkSize);
         try {
-          if (this.bleCharacteristic.writeValueWithResponse) {
+          // Prefer writeValueWithoutResponse for Cat Printer and BLE fast transfer
+          if (this.bleCharacteristic.writeValueWithoutResponse) {
+            await this.bleCharacteristic.writeValueWithoutResponse(chunk);
+          } else if (this.bleCharacteristic.writeValueWithResponse) {
             await this.bleCharacteristic.writeValueWithResponse(chunk);
           } else {
             await this.bleCharacteristic.writeValue(chunk);
           }
         } catch (_) {
-          await this.bleCharacteristic.writeValue(chunk);
+          try {
+            await this.bleCharacteristic.writeValue(chunk);
+          } catch (_) {
+            if (this.bleCharacteristic.writeValueWithoutResponse) {
+              await this.bleCharacteristic.writeValueWithoutResponse(chunk);
+            }
+          }
         }
         if (delayMs > 0) {
           await new Promise((r) => setTimeout(r, delayMs));

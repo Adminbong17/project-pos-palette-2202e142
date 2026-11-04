@@ -59,7 +59,11 @@ export function BluetoothPrinterModal({
       toast.success(`ব্লুটুথ প্রিন্টার কানেক্ট হয়েছে: ${res.name} (${res.driver === "cat_printer" ? "Cat Printer" : "PT-220"})`);
     } catch (err: any) {
       if (err.name !== "NotFoundError") {
-        toast.error(err.message || "কানেক্ট করতে সমস্যা হয়েছে");
+        let msg = err.message || "কানেক্ট করতে সমস্যা হয়েছে";
+        if (msg.includes("GATT Server is disconnected") || msg.includes("Cannot perform GATT")) {
+          msg = "প্রিন্টার ব্লুটুথ সংযোগ বিচ্ছিন্ন হয়েছে। নিশ্চিত করুন প্রিন্টার অন আছে এবং চার্জ আছে। পেজটি রিফ্রেশ দিয়ে আবার চেষ্টা করুন। (যদি Windows Settings-এ পেয়ার করা থাকে, তবে সেখান থেকে Remove Device করুন)";
+        }
+        toast.error(msg, { duration: 6000 });
       }
     } finally {
       setLoading(false);
@@ -210,11 +214,12 @@ export function BluetoothPrinterModal({
               <div className="font-semibold text-foreground flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
                 <span>🐱 MX04 Cat Printer কানেকশন নির্দেশিকা:</span>
               </div>
-              <p>
-                ১. Cat Printer এর পাওয়ার বাটন চেপে অন করুন (LED বাতি জ্বলবে)।<br />
-                ২. নিচে <b>Web Bluetooth (BLE)</b> বাটনে ক্লিক করুন।<br />
-                ৩. ব্রাউজার লিস্টে <b>MX04</b>, <b>GT01</b>, <b>GB01</b>, বা <b>WalkPrint</b> সিলেক্ট করে পেয়ার করুন।<br />
-                ৪. পেয়ার হলে রসিদ ও টেস্ট প্রিন্ট সম্পূর্ণ ক্যাট ফরম্যাটে প্রিন্ট হবে।
+              <p className="leading-relaxed">
+                ১. Cat Printer এর পাওয়ার বাটন চেপে অন করুন (সবুজ/নীল LED জ্বলবে)।<br />
+                ২. <b>গুরুত্বপূর্ণ:</b> এটি Windows Settings-এ পেয়ার করার প্রয়োজন নেই। পেয়ার করা থাকলে <b>Bluetooth &amp; devices</b> থেকে <b>Remove Device</b> করে নিন।<br />
+                ৩. নিচে <b>Web Bluetooth (BLE)</b> বাটনে ক্লিক করুন।<br />
+                ৪. ব্রাউজার লিস্টে <b>MX04</b>, <b>GT01</b>, <b>GB01</b>, বা <b>WalkPrint</b> সিলেক্ট করে <b>Pair</b> করুন।<br />
+                ৫. পেয়ার হলে রসিদ ও টেস্ট প্রিন্ট সরাসরি ক্যাট প্রোটোকলে প্রিন্ট হবে।
               </p>
             </div>
           ) : (
