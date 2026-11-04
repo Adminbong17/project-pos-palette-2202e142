@@ -12,6 +12,8 @@ import {
   setUserPassword,
   setUserDisabled,
   deleteUserAccount,
+  listAllSimpleBusinesses,
+  updateSuperAdminUser,
   type SuperAdminUser,
   type UserBizMembership,
 } from "@/lib/super-admin-users.functions";
@@ -51,6 +53,7 @@ import {
   ShieldCheck,
   Save,
   Check,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FoldTable } from "@/components/fold-table";
@@ -132,6 +135,63 @@ function Page() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editUser = useServerFn(updateSuperAdminUser);
+  const fetchBusinesses = useServerFn(listAllSimpleBusinesses);
+
+  const [editingUser, setEditingUser] = useState<SuperAdminUser | null>(null);
+  const [userFormData, setUserFormData] = useState({
+    email: "",
+    username: "",
+    name: "",
+    phone: "",
+    business_id: "",
+    role: "Admin",
+  });
+
+  const businessesQuery = useQuery({
+    queryKey: ["super-admin-simple-businesses"],
+    enabled: !!isSuper,
+    queryFn: () => fetchBusinesses({ data: undefined as any }),
+  });
+  const allBusinesses = businessesQuery.data ?? [];
+
+  function openEditUser(u: SuperAdminUser) {
+    setEditingUser(u);
+    const matchedBiz = allBusinesses.find((b) => u.businesses.includes(b.name));
+    setUserFormData({
+      email: u.email !== "—" ? u.email : "",
+      username: u.username ?? "",
+      name: (u.doctor_name || u.name) !== "—" ? (u.doctor_name || u.name) : "",
+      phone: u.phone ?? "",
+      business_id: u.primary_business_id || matchedBiz?.id || allBusinesses[0]?.id || "",
+      role: u.primary_role || u.roles[0] || "Admin",
+    });
+  }
+
+  const updateUserMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingUser) return;
+      return await editUser({
+        data: {
+          user_id: editingUser.id,
+          email: userFormData.email,
+          username: userFormData.username,
+          name: userFormData.name,
+          phone: userFormData.phone,
+          business_id: userFormData.business_id,
+          role: userFormData.role,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("ব্যবহারকারীর তথ্য সফলভাবে আপডেট হয়েছে!");
+      setEditingUser(null);
+      qc.invalidateQueries({ queryKey: ["super-admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "ব্যবহারকারী আপডেট ব্যর্থ হয়েছে"),
+  });
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = users.data ?? [];
@@ -193,22 +253,64 @@ function Page() {
                 return (
                   <tr key={u.id} className="border-t border-border align-top">
                     <td className="p-2">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5 group">
                         <span className="font-medium">{u.email}</span>
                         {u.disabled && (
                           <Badge variant="destructive" className="text-[10px]">
                             Disabled
                           </Badge>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => openEditUser(u)}
+                          className="opacity-40 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
+                          title="ইমেইল / ইউজারনেম এডিট করুন"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                        </button>
                       </div>
                       {u.username && <div className="text-xs text-muted-foreground">@{u.username}</div>}
                     </td>
                     <td className="p-2">
-                      <div>{u.doctor_name || u.name}</div>
+                      <div className="flex items-center gap-1.5 group">
+                        <span>{u.doctor_name || u.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => openEditUser(u)}
+                          className="opacity-40 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
+                          title="নাম ও ফোন নম্বর এডিট করুন"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                        </button>
+                      </div>
                       {u.phone && <div className="text-xs text-muted-foreground">{u.phone}</div>}
                     </td>
-                    <td className="p-2 text-xs align-top"><FoldableList items={u.businesses} collapsedCount={2} /></td>
-                    <td className="p-2 text-xs align-top"><FoldableList items={u.roles} collapsedCount={2} /></td>
+                    <td className="p-2 text-xs align-top">
+                      <div className="flex items-center gap-1.5 group">
+                        <FoldableList items={u.businesses.length ? u.businesses : ["—"]} collapsedCount={2} />
+                        <button
+                          type="button"
+                          onClick={() => openEditUser(u)}
+                          className="opacity-40 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
+                          title="প্রতিষ্ঠান পরিবর্তন / এডিট করুন"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="p-2 text-xs align-top">
+                      <div className="flex items-center gap-1.5 group">
+                        <FoldableList items={u.roles.length ? u.roles : ["—"]} collapsedCount={2} />
+                        <button
+                          type="button"
+                          onClick={() => openEditUser(u)}
+                          className="opacity-40 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
+                          title="ভূমিকা (Role) পরিবর্তন / এডিট করুন"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                        </button>
+                      </div>
+                    </td>
 
                     <td className="p-2 text-xs">
                       {memberships.length === 0 ? (
@@ -305,6 +407,16 @@ function Page() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => openEditUser(u)}
+                          className="h-8 px-2 text-xs font-bold border-primary/40 text-primary hover:bg-primary/10 cursor-pointer gap-1 shadow-2xs"
+                          title="এই ব্যবহারকারীর সকল তথ্য (ইমেইল, নাম, প্রতিষ্ঠান, রোল) এডিট করুন"
+                        >
+                          <Pencil className="size-3.5" />
+                          <span>Edit</span>
+                        </Button>
+                        <Button
+                          size="sm"
                           variant={u.disabled ? "outline" : "secondary"}
                           className={u.disabled ? "text-green-700" : "text-amber-700"}
                           disabled={isMe || disableUser.isPending}
@@ -393,6 +505,165 @@ function Page() {
           </AlertDialog>
         </div>
       )}
+
+      {/* Edit User Dialog (Email, Username, Name, Phone, Business, Role) */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Pencil className="size-5 text-primary" />
+              ব্যবহারকারীর তথ্য এডিট করুন (User Details)
+            </DialogTitle>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateUserMutation.mutate();
+            }}
+            className="space-y-4 py-2"
+          >
+            {/* Email */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                ইমেইল (Email) <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="email"
+                required
+                value={userFormData.email}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder="user@example.com"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Username */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                ইউজারনেম (Username)
+              </label>
+              <Input
+                type="text"
+                value={userFormData.username}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, username: e.target.value }))}
+                placeholder="username"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                নাম (Full Name / Doctor Name)
+              </label>
+              <Input
+                type="text"
+                value={userFormData.name}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="পূর্ণ নাম"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                ফোন নম্বর (Phone)
+              </label>
+              <Input
+                type="tel"
+                value={userFormData.phone}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="01XXXXXXXXX"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            {/* Business Assignment */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                প্রতিষ্ঠান (Business / Organization)
+              </label>
+              <select
+                value={userFormData.business_id}
+                onChange={(e) => setUserFormData((prev) => ({ ...prev, business_id: e.target.value }))}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">-- কোনো প্রতিষ্ঠান নেই (None) --</option>
+                {allBusinesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Role */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                রোল / পদবি (Role)
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={
+                    ["Admin", "Manager", "Salesman", "Cashier", "Doctor", "Staff"].includes(userFormData.role)
+                      ? userFormData.role
+                      : "Custom"
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== "Custom") {
+                      setUserFormData((prev) => ({ ...prev, role: val }));
+                    }
+                  }}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="Admin">Admin</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Salesman">Salesman</option>
+                  <option value="Cashier">Cashier</option>
+                  <option value="Doctor">Doctor</option>
+                  <option value="Staff">Staff</option>
+                  <option value="Custom">Custom Role (নিজে লিখুন)</option>
+                </select>
+                <Input
+                  type="text"
+                  value={userFormData.role}
+                  onChange={(e) => setUserFormData((prev) => ({ ...prev, role: e.target.value }))}
+                  placeholder="রোল লিখুন (e.g. Admin)"
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-3 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingUser(null)}
+                disabled={updateUserMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateUserMutation.isPending}
+                className="gap-1.5 font-semibold"
+              >
+                {updateUserMutation.isPending ? (
+                  "সংরক্ষণ হচ্ছে..."
+                ) : (
+                  <>
+                    <Save className="size-4" />
+                    সংরক্ষণ করুন (Save Changes)
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {manageModulesUser && (
         <UserModulesModal

@@ -24,6 +24,8 @@ export type SuperAdminUser = {
   roles: string[];
   disabled: boolean;
   business_memberships: UserBizMembership[];
+  primary_business_id?: string | null;
+  primary_role?: string | null;
 };
 
 export const listAllUsers = createServerFn({ method: "POST" })
@@ -64,7 +66,7 @@ export const listAllUsers = createServerFn({ method: "POST" })
 
     const [{ data: profiles }, { data: members }, { data: businesses }, { data: roles }, { data: userRoles }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, email, username, first_name, last_name, doctor_name"),
+        supabaseAdmin.from("profiles").select("id, email, username, first_name, last_name, doctor_name, phone, current_business_id"),
         supabaseAdmin.from("business_users").select("user_id, business_id, is_active"),
         supabaseAdmin.from("businesses").select("id, name"),
         supabaseAdmin.from("roles").select("id, name"),
@@ -116,21 +118,28 @@ export const listAllUsers = createServerFn({ method: "POST" })
             ? [u.user_metadata?.first_name, u.user_metadata?.last_name].filter(Boolean).join(" ")
             : "") ||
           "—";
+        const mems = membershipsByUser.get(u.id) ?? [];
+        const primaryBizId = p.current_business_id || mems[0]?.business_id || null;
+        const userRolesList = rolesByUser.get(u.id) ? Array.from(rolesByUser.get(u.id)!) : [];
+        const primaryRole = userRolesList[0] || mems[0]?.role || null;
+
         return {
           id: u.id,
           email: u.email ?? p.email ?? "—",
           username: p.username ?? null,
           name,
           doctor_name: p.doctor_name ?? null,
-          phone: u.phone ?? null,
+          phone: p.phone ?? u.phone ?? null,
           created_at: u.created_at ?? null,
           last_sign_in_at: u.last_sign_in_at ?? null,
           // Only visible when an admin set it through this panel.
           managed_password: (u.user_metadata?.managed_password as string | undefined) ?? null,
           businesses: [...(bizByUser.get(u.id) ?? [])],
-          roles: [...(rolesByUser.get(u.id) ?? [])],
+          roles: userRolesList,
           disabled: !!(u.banned_until && new Date(u.banned_until as string).getTime() > Date.now()),
-          business_memberships: membershipsByUser.get(u.id) ?? [],
+          business_memberships: mems,
+          primary_business_id: primaryBizId,
+          primary_role: primaryRole,
         };
       })
       .sort((a, b) => a.email.localeCompare(b.email));
@@ -240,5 +249,206 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
     if (error && !/not found/i.test(error.message)) throw new Error(error.message);
     const { error: profileErr } = await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
     if (profileErr) throw new Error(profileErr.message);
+    return { ok: true };
+  });
+
+/**
+ * Super Admin: Get simple list of all businesses for dropdown selection.
+ */
+export const listAllSimpleBusinesses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("businesses")
+      .select("id, name")
+      .order("name");
+    return (data ?? []) as { id: string; name: string }[];
+  });
+
+/**
+ * Super Admin: Edit user account details (Email, Username, Name, Phone, Business, Role).
+ */
+export const updateSuperAdminUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      user_id: string;
+      email?: string;
+      username?: string;
+      name?: string;
+      phone?: string;
+      business_id?: string;
+      role?: string;
+    }) => {
+      if (!data?.user_id) throw new Error("user_id required");
+      return data;
+    }
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Email update
+    if (data.email && data.email.trim()) {
+      const cleanEmail = data.email.trim().toLowerCase();
+      try {
+        const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+          email: cleanEmail,
+          email_confirm: true,
+        });
+        if (authErr) throw authErr;
+      } catch (err: any) {
+        throw new Error(`ইমেইল আপডেট করা যায়নি: ${err?.message || err}`);
+      }
+
+      await supabaseAdmin
+        .from("profiles")
+        .update({ email: cleanEmail })
+        .eq("id", data.user_id);
+    }
+
+    // 2. Username update
+    if (data.username !== undefined) {
+      const cleanUsername = data.username.trim() || null;
+      await supabaseAdmin
+        .from("profiles")
+        .update({ username: cleanUsername })
+        .eq("id", data.user_id);
+
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+          user_metadata: { username: cleanUsername },
+        });
+      } catch {}
+    }
+
+    // 3. Name & Phone update
+    const profUpdates: any = {};
+    if (data.name !== undefined) {
+      const cleanName = data.name.trim();
+      const parts = cleanName.split(/\s+/);
+      const firstName = parts[0] || "";
+      const lastName = parts.slice(1).join(" ") || "";
+      profUpdates.first_name = firstName;
+      profUpdates.last_name = lastName;
+      profUpdates.doctor_name = cleanName;
+
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            name: cleanName,
+            doctor_name: cleanName,
+          },
+        });
+      } catch {}
+    }
+
+    if (data.phone !== undefined) {
+      profUpdates.phone = data.phone.trim() || null;
+      try {
+        if (data.phone.trim()) {
+          await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+            phone: data.phone.trim(),
+          });
+        }
+      } catch {}
+    }
+
+    if (Object.keys(profUpdates).length > 0) {
+      await supabaseAdmin
+        .from("profiles")
+        .update(profUpdates)
+        .eq("id", data.user_id);
+    }
+
+    // 4. Business update
+    let targetBizId = data.business_id;
+
+    if (targetBizId) {
+      await supabaseAdmin
+        .from("business_users")
+        .update({ is_active: false })
+        .eq("user_id", data.user_id)
+        .neq("business_id", targetBizId);
+
+      await supabaseAdmin
+        .from("business_users")
+        .upsert(
+          { business_id: targetBizId, user_id: data.user_id, is_active: true },
+          { onConflict: "business_id,user_id" },
+        );
+
+      await supabaseAdmin
+        .from("profiles")
+        .update({ current_business_id: targetBizId })
+        .eq("id", data.user_id);
+    } else {
+      const { data: curBiz } = await supabaseAdmin
+        .from("business_users")
+        .select("business_id")
+        .eq("user_id", data.user_id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (curBiz?.business_id) {
+        targetBizId = curBiz.business_id;
+      }
+    }
+
+    // 5. Role update
+    if (targetBizId && data.role && data.role.trim()) {
+      const cleanRole = data.role.trim();
+
+      let { data: roleRow } = await supabaseAdmin
+        .from("roles")
+        .select("id")
+        .eq("business_id", targetBizId)
+        .ilike("name", `${cleanRole}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (!roleRow) {
+        const { data: newRole } = await supabaseAdmin
+          .from("roles")
+          .insert({
+            business_id: targetBizId,
+            name: cleanRole,
+            is_default: false,
+          })
+          .select("id")
+          .single();
+        roleRow = newRole;
+      }
+
+      if (roleRow?.id) {
+        const { data: existingUr } = await supabaseAdmin
+          .from("user_roles")
+          .select("id")
+          .eq("business_id", targetBizId)
+          .eq("user_id", data.user_id)
+          .maybeSingle();
+
+        if (existingUr) {
+          await supabaseAdmin
+            .from("user_roles")
+            .update({ role_id: roleRow.id })
+            .eq("id", existingUr.id);
+        } else {
+          await supabaseAdmin
+            .from("user_roles")
+            .insert({
+              business_id: targetBizId,
+              user_id: data.user_id,
+              role_id: roleRow.id,
+              allowed_sections: null,
+            });
+        }
+      }
+    }
+
     return { ok: true };
   });
