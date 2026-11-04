@@ -1081,63 +1081,114 @@ function PrescriptionsPage() {
 
     if (size === "A4") {
       const styles = `
-        @page { size: A4; margin: 0; }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        html, body { margin:0; padding:0; background:#fff; color:#0f172a; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Bengali', Arial, sans-serif; font-size:12px; }
-        .page { width:210mm; min-height:297mm; padding:${ownPad ? "50.8mm" : "10mm"} 10mm 8mm; box-sizing:border-box; background:#fff; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+        @page { size: A4 portrait; margin: 0; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 210mm !important;
+          height: 296mm !important;
+          max-height: 296mm !important;
+          background: #fff;
+          color: #0f172a;
+          font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Bengali', Arial, sans-serif;
+          font-size: 11.5px;
+          overflow: hidden !important;
+        }
+        .page {
+          width: 210mm !important;
+          height: 296mm !important;
+          max-height: 296mm !important;
+          padding: ${ownPad ? "50.8mm" : "7mm"} 10mm 6mm;
+          box-sizing: border-box;
+          background: #fff;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow: hidden !important;
+          page-break-after: avoid !important;
+          page-break-before: avoid !important;
+          page-break-inside: avoid !important;
+          break-after: avoid !important;
+          break-before: avoid !important;
+          break-inside: avoid !important;
+        }
+        @media print {
+          @page { size: A4 portrait; margin: 0; }
+          html, body {
+            width: 210mm !important;
+            height: 296mm !important;
+            max-height: 296mm !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .page {
+            width: 210mm !important;
+            height: 296mm !important;
+            max-height: 296mm !important;
+            overflow: hidden !important;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
+            break-after: avoid !important;
+            break-before: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
         .watermark-layer { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:320px; height:320px; pointer-events:none; z-index:0; }
         .watermark-svg { width:100%; height:100%; }
-        .header-top-accent { height:4px; background:linear-gradient(90deg, #0d9488 0%, #0284c7 50%, #3b82f6 100%); border-radius:2px; margin-bottom:8px; }
-        .header { text-align:center; border-bottom:2px solid #0d9488; padding-bottom:8px; margin-bottom:8px; position:relative; z-index:1; }
-        .clinic-title { font-size:15px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:3px; }
-        .doc-name { font-size:24px; font-weight:800; color:#0f172a; margin:2px 0; letter-spacing:0.2px; line-height:1.2; }
-        .doc-degree { font-size:13px; font-weight:600; color:#0284c7; margin-bottom:2px; line-height:1.3; }
-        .doc-desig { font-size:12px; font-weight:500; color:#0f766e; margin-bottom:2px; line-height:1.3; }
-        .doc-meta { font-size:11px; color:#64748b; margin-top:4px; display:flex; justify-content:center; gap:12px; }
-        .pbox { background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0d9488; border-radius:6px; padding:7px 10px; margin:6px 0 10px; position:relative; z-index:1; }
+        .header-top-accent { height:3.5px; background:linear-gradient(90deg, #0d9488 0%, #0284c7 50%, #3b82f6 100%); border-radius:2px; margin-bottom:6px; }
+        .header { text-align:center; border-bottom:2px solid #0d9488; padding-bottom:6px; margin-bottom:6px; position:relative; z-index:1; flex-shrink:0; }
+        .clinic-title { font-size:14px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px; }
+        .doc-name { font-size:21px; font-weight:800; color:#0f172a; margin:1px 0; letter-spacing:0.2px; line-height:1.2; }
+        .doc-degree { font-size:12px; font-weight:600; color:#0284c7; margin-bottom:1.5px; line-height:1.3; }
+        .doc-desig { font-size:11.5px; font-weight:500; color:#0f766e; margin-bottom:1.5px; line-height:1.3; }
+        .doc-meta { font-size:10.5px; color:#64748b; margin-top:3px; display:flex; justify-content:center; gap:12px; }
+        .pbox { background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #0d9488; border-radius:6px; padding:5px 10px; margin:4px 0 6px; position:relative; z-index:1; flex-shrink:0; }
         .pbox-row { display:flex; justify-content:space-between; align-items:center; }
-        .pbox-sub { font-size:11px; color:#475569; margin-top:3px; }
-        .plabel { color:#64748b; font-size:10.5px; font-weight:600; margin-right:4px; }
-        .pname { font-size:13.5px; color:#0f172a; font-weight:700; }
-        .pid-badge { font-size:10px; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; margin-left:6px; font-weight:600; }
-        .rx-no { font-family:monospace; font-size:12px; color:#0f766e; font-weight:700; }
-        .split { display:flex; flex:1 1 auto; border-top:1.5px solid #cbd5e1; min-height:${ownPad ? "140mm" : "175mm"}; position:relative; z-index:1; }
-        .left { width:38%; padding:8px 10px 8px 0; border-right:1.5px solid #cbd5e1; box-sizing:border-box; }
-        .right { width:62%; padding:8px 0 8px 12px; box-sizing:border-box; display:flex; flex-direction:column; }
-        .sec-title { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin:10px 0 4px; padding-bottom:2px; border-bottom:1.5px solid #cbd5e1; }
+        .pbox-sub { font-size:10.5px; color:#475569; margin-top:2px; }
+        .plabel { color:#64748b; font-size:10px; font-weight:600; margin-right:4px; }
+        .pname { font-size:13px; color:#0f172a; font-weight:700; }
+        .pid-badge { font-size:9.5px; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; margin-left:6px; font-weight:600; }
+        .rx-no { font-family:monospace; font-size:11.5px; color:#0f766e; font-weight:700; }
+        .split { display:flex; flex:1 1 0; min-height:0; border-top:1.5px solid #cbd5e1; position:relative; z-index:1; overflow:hidden; }
+        .left { width:36%; padding:6px 10px 6px 0; border-right:1.5px solid #cbd5e1; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column; }
+        .right { width:64%; padding:6px 0 6px 12px; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; }
+        .sec-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin:6px 0 3px; padding-bottom:2px; border-bottom:1.5px solid #cbd5e1; flex-shrink:0; }
         .sec-cc { color:#0284c7; border-color:#bae6fd; }
         .sec-vitals { color:#0d9488; border-color:#99f6e4; }
         .sec-inv { color:#7c3aed; border-color:#ddd6fe; }
         .sec-adv { color:#0f766e; border-color:#99f6e4; margin-top:0; }
-        .num-item { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11.5px; color:#334155; }
+        .num-item { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11px; color:#334155; line-height:1.35; }
         .bullet-dot { color:#0d9488; font-weight:bold; }
-        .vital-row { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11.5px; color:#334155; }
-        .rx-area { flex:1 0 auto; }
-        .rx-mark { font-size:32px; font-weight:900; font-family:'Times New Roman', Georgia, serif; color:#0d9488; line-height:1; margin-bottom:8px; }
-        .med { margin:0 0 8px; padding-bottom:6px; border-bottom:1px dashed #e2e8f0; }
-        .med-head { display:flex; align-items:baseline; gap:6px; }
-        .med-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#e0f2fe; color:#0369a1; font-size:10px; font-weight:700; flex-shrink:0; }
-        .med-name { font-weight:700; font-size:13px; color:#0f172a; }
-        .med-qty { font-size:10.5px; color:#64748b; background:#f1f5f9; padding:1px 5px; border-radius:3px; }
-        .med-sched { padding-left:24px; color:#0284c7; font-size:11.5px; font-weight:600; margin-top:1px; }
-        .med-inst { padding-left:24px; color:#475569; font-style:italic; font-size:11px; margin-top:1px; }
-        .adv-area { border-top:1.5px dashed #cbd5e1; padding-top:8px; margin-top:auto; }
-        .rx-notes { margin-top:4px; font-size:11px; color:#475569; }
-        .next-visit-pill { background:#fefce8; border-left:3.5px solid #f59e0b; color:#92400e; padding:4px 8px; border-radius:4px; font-size:11px; margin-top:8px; font-weight:500; }
-        .wish-ribbon { margin:10px auto 6px; padding:4px 14px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:20px; color:#0f766e; font-size:11px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
-        .wish-icon { font-size:13px; }
+        .vital-row { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11px; color:#334155; line-height:1.35; }
+        .rx-area { flex:1 1 auto; overflow:hidden; }
+        .rx-mark { font-size:26px; font-weight:900; font-family:'Times New Roman', Georgia, serif; color:#0d9488; line-height:1; margin-bottom:6px; }
+        .med { margin:0 0 6px; padding-bottom:4px; border-bottom:1px dashed #e2e8f0; }
+        .med-head { display:flex; align-items:baseline; gap:5px; }
+        .med-num { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%; background:#e0f2fe; color:#0369a1; font-size:9.5px; font-weight:700; flex-shrink:0; }
+        .med-name { font-weight:700; font-size:12.5px; color:#0f172a; }
+        .med-qty { font-size:10px; color:#64748b; background:#f1f5f9; padding:1px 4px; border-radius:3px; }
+        .med-sched { padding-left:22px; color:#0284c7; font-size:11px; font-weight:600; margin-top:1px; }
+        .med-inst { padding-left:22px; color:#475569; font-style:italic; font-size:10.5px; margin-top:1px; }
+        .adv-area { border-top:1.5px dashed #cbd5e1; padding-top:6px; margin-top:auto; flex-shrink:0; }
+        .rx-notes { margin-top:3px; font-size:10.5px; color:#475569; }
+        .next-visit-pill { background:#fefce8; border-left:3px solid #f59e0b; color:#92400e; padding:3px 8px; border-radius:4px; font-size:10.5px; margin-top:5px; font-weight:500; }
+        .wish-ribbon { margin:6px auto 3px; padding:3px 12px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:16px; color:#0f766e; font-size:10.5px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
+        .wish-icon { font-size:12px; }
         .wish-sep { opacity:0.4; }
-        .sign-block { margin-top:10px; text-align:right; }
-        .sign-line { width:180px; border-bottom:1.5px dashed #0d9488; margin-left:auto; margin-bottom:4px; }
-        .sign-title { font-size:10px; color:#64748b; margin-bottom:2px; }
-        .sign-doc-name { font-weight:700; font-size:12px; color:#0f172a; }
-        .sign-doc-qual { font-size:10.5px; color:#0284c7; }
-        .sign-doc-desig { font-size:10px; color:#0f766e; }
-        .footer-container { margin-top:auto; padding-top:6px; position:relative; z-index:1; }
-        .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#64748b; padding:6px 0 4px; border-top:1px solid #e2e8f0; }
+        .sign-block { margin-top:6px; text-align:right; }
+        .sign-line { width:170px; border-bottom:1.5px dashed #0d9488; margin-left:auto; margin-bottom:3px; }
+        .sign-title { font-size:9.5px; color:#64748b; margin-bottom:1px; }
+        .sign-doc-name { font-weight:700; font-size:11.5px; color:#0f172a; }
+        .sign-doc-qual { font-size:10px; color:#0284c7; }
+        .sign-doc-desig { font-size:9.5px; color:#0f766e; }
+        .footer-container { margin-top:auto; padding-top:4px; position:relative; z-index:1; flex-shrink:0; }
+        .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:9.5px; color:#64748b; padding:4px 0 2px; border-top:1px solid #e2e8f0; }
         .footer-left { display:flex; gap:8px; align-items:center; }
-        .footer-right { color:#94a3b8; font-size:9.5px; }
-        .footer-accent-line { height:3px; background:linear-gradient(90deg, #0d9488, #0284c7, #3b82f6); border-radius:1.5px; margin-top:2px; }`;
+        .footer-right { color:#94a3b8; font-size:9px; }
+        .footer-accent-line { height:2.5px; background:linear-gradient(90deg, #0d9488, #0284c7, #3b82f6); border-radius:1.5px; margin-top:2px; }`;
 
       const body = `
       <div class="page">
@@ -1294,14 +1345,20 @@ function PrescriptionsPage() {
       const pw = 210, ph = 297;
       const imgH = (canvas.height * pw) / canvas.width;
       const img = canvas.toDataURL("image/jpeg", 0.95);
-      let remaining = imgH, pos = 0;
-      pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
-      remaining -= ph;
-      while (remaining > 0) {
-        pos -= ph;
-        pdf.addPage();
-        pdf.addImage(img, "JPEG", 0, pos, pw, imgH);
+
+      if (imgH <= 299) {
+        // Fits comfortably on 1 single A4 page without creating an empty 2nd page
+        pdf.addImage(img, "JPEG", 0, 0, pw, Math.min(imgH, ph));
+      } else {
+        let remaining = imgH, pos = 0;
+        pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
         remaining -= ph;
+        while (remaining > 5) {
+          pos -= ph;
+          pdf.addPage();
+          pdf.addImage(img, "JPEG", 0, pos, pw, imgH);
+          remaining -= ph;
+        }
       }
       pdf.save(`Rx-${(rx.rx_no ?? rx.id).replace(/[^\w-]/g, "")}.pdf`);
       toast.success("PDF saved", { id: t });
