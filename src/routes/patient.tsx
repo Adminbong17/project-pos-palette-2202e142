@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -30,6 +30,7 @@ import {
   Users,
   Home,
   Settings,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -504,8 +505,47 @@ function Login({
 
   return (
     <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between">
+      {/* ================= TOP ECOSYSTEM BAR ================= */}
+      <div className="border-b border-border/40 bg-card/90 text-xs backdrop-blur-md sticky top-0 z-30">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 sm:px-6">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="hidden sm:inline text-muted-foreground font-medium">শেখ ফার্মা ইকোসিস্টেম:</span>
+            <div className="inline-flex rounded-full bg-muted/60 p-0.5 border border-border text-[11px] font-semibold">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-card transition"
+              >
+                <ShoppingCart className="h-3 w-3 text-emerald-500" />
+                <span>পিওএস (Sell)</span>
+              </Link>
+              <Link
+                to="/rx"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-card transition"
+              >
+                <Stethoscope className="h-3 w-3 text-teal-500" />
+                <span>ডাক্তার (Rx)</span>
+              </Link>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-primary-foreground font-bold shadow-sm">
+                <Users className="h-3 w-3" />
+                <span>রোগী সেবা (Pt)</span>
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <a
+              href={`tel:${SHEIKH_PHARMA_DETAILS.phonesRaw[0]}`}
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition"
+            >
+              <Phone className="h-3 w-3 text-primary" />
+              <span className="hidden xs:inline">হেল্পলাইন:</span>
+              <span className="font-bold text-foreground">{SHEIKH_PHARMA_DETAILS.phonesRaw[0]}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* ================= TOP NAVIGATION BAR ================= */}
-      <header className="w-full border-b border-border/40 bg-card/60 backdrop-blur-md sticky top-0 z-20">
+      <header className="w-full border-b border-border/40 bg-card/75 backdrop-blur-md sticky top-[41px] z-20">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
