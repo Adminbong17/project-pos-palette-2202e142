@@ -114,25 +114,16 @@ function BkashSettingsPage() {
         }}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Environment</Label>
+          <div className="sm:col-span-2">
+            <Label>Environment (পরিবেশ)</Label>
             <select
               value={form.environment}
               onChange={(e) => setForm({ ...form, environment: e.target.value as "live" | "sandbox" })}
               className={inputCls}
             >
-              <option value="live">Live (tokenized.pay.bka.sh)</option>
-              <option value="sandbox">Sandbox (test)</option>
+              <option value="live">Live Production (tokenized.pay.bka.sh)</option>
+              <option value="sandbox">Sandbox Test (tokenized.sandbox.bka.sh)</option>
             </select>
-          </div>
-          <div>
-            <Label>Rate per credit (tk)</Label>
-            <input
-              inputMode="decimal"
-              value={form.rate_per_credit}
-              onChange={(e) => setForm({ ...form, rate_per_credit: Number(e.target.value) })}
-              className={inputCls}
-            />
           </div>
           <div>
             <Label>App key</Label>
@@ -189,8 +180,7 @@ function BkashSettingsPage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Leave any credential blank to keep the saved value. Used for Rx credit top-ups, monthly Rx
-          bills and monthly business bills.
+          পাসওয়ার্ড বা কোনো ক্রেডেনশিয়াল পরিবর্তন করতে না চাইলে ফাঁকা রাখুন। এই ক্রেডেনশিয়াল দিয়ে গ্রাহকদের মাসিক সাবস্ক্রিপশন বিলের বিকাশ পেমেন্ট ও অটো-আনলক পরিচালিত হবে।
         </p>
 
         <div className="flex flex-wrap gap-2">

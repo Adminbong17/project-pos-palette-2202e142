@@ -31,6 +31,7 @@ import {
   FolderArchive,
   ClipboardList,
   ListChecks,
+  CalendarClock,
 } from "lucide-react";
 
 import { useCurrentRole } from "@/hooks/use-current-role";
@@ -156,34 +157,24 @@ const CLINICAL_MODULES = [
 
 const BILLING_MODULES = [
   {
+    to: "/admin/rx-billing",
+    label: "Subscription & Billing Master",
+    titleBn: "ক্লায়েন্ট সাবস্ক্রিপশন ও বিলিং মাস্টার",
+    desc: "সকল প্রতিষ্ঠানের মাসিক বিলের পরিমাণ নির্ধারণ, বকেয়া ডিউ ডেট, ১-ক্লিক ফ্রি, ম্যানুয়াল লক/আনলক।",
+    icon: CalendarClock,
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-500/20",
+    badge: "SaaS Billing",
+  },
+  {
     to: "/admin/bkash",
     label: "bKash Payment Gateway",
-    titleBn: "বিকাশ পেমেন্ট গেটওয়ে",
-    desc: "বিকাশ টোকেনাইজড পেমেন্ট ক্রেডেনশিয়াল (App Key, Secret, Merchant) ও ক্রেডিট রেট সেটআপ।",
+    titleBn: "বিকাশ পেমেন্ট গেটওয়ে ক্রেডেনশিয়াল",
+    desc: "সুপার অ্যাডমিন বিকাশ টোকেনাইজড পেমেন্ট ক্রেডেনশিয়াল (App Key, Secret, Username, Password) সেটআপ।",
     icon: Wallet,
     color: "text-pink-600 dark:text-pink-400",
     bg: "bg-pink-500/10 border-pink-500/20",
-    badge: "Gateway",
-  },
-  {
-    to: "/admin/credit-purchases",
-    label: "Credit Purchases Ledger",
-    titleBn: "ক্রেডিট বিক্রয় ও আয় অডিট",
-    desc: "বিকাশ ও ম্যানুয়াল মাধ্যমে কে কত ক্রেডিট রিচার্জ করেছে তার সম্পূর্ণ অডিট হিসেব।",
-    icon: CreditCard,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-    badge: "Revenue",
-  },
-  {
-    to: "/admin/rx-credit-links",
-    label: "Credit Purchase Links",
-    titleBn: "পেমেন্ট ও টপ-আপ লিঙ্ক",
-    desc: "ক্লিনিক ও ডাক্তারদের রিচার্জ করার জন্য ওয়ান-ক্লিক পেমেন্ট লিঙ্ক তৈরি ও ম্যানুয়াল অ্যাপ্রুভাল।",
-    icon: Sparkles,
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-500/10 border-violet-500/20",
-    badge: "Top-up",
+    badge: "Credentials",
   },
   {
     to: "/admin/sms",
@@ -650,16 +641,16 @@ function AdminHubPage() {
           </Card>
         </Link>
 
-        {/* 5. ক্রেডিট রেভিনিউ */}
-        <Link to="/admin/credit-purchases" className="group">
+        {/* 5. সাবস্ক্রিপশন বিলিং */}
+        <Link to="/admin/rx-billing" className="group">
           <Card className="h-full border-border/80 bg-card/85 shadow-sm backdrop-blur-md transition-all duration-200 hover:shadow-md hover:border-primary/40 group-hover:-translate-y-0.5">
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <Wallet className="h-4 w-4" />
+                  <CalendarClock className="h-4 w-4" />
                 </span>
                 <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
-                  Revenue
+                  Subscriptions
                 </span>
               </div>
               <div>
@@ -667,10 +658,10 @@ function AdminHubPage() {
                   {m ? `৳${m.totalRevenueBDT.toLocaleString()}` : "..."}
                 </div>
                 <div className="text-xs font-semibold text-foreground/80 mt-0.5">
-                  ক্রেডিট আয়
+                  সাবস্ক্রিপশন বিলিং
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-1 truncate">
-                  বিক্রিত: {m ? m.totalCreditsSold.toLocaleString() : "..."} ক্রেডিট
+                  ক্লায়েন্ট মাসিক ফি ও অটো-লক
                 </div>
               </div>
             </CardContent>
@@ -718,7 +709,7 @@ function AdminHubPage() {
               </span>
               <div>
                 <h4 className="font-bold text-sm text-foreground">bKash Payment Gateway</h4>
-                <p className="text-[11px] text-muted-foreground">টোকেনাইজড পেমেন্ট ও ক্রেডিট রিচার্জ</p>
+                <p className="text-[11px] text-muted-foreground">টোকেনাইজড পেমেন্ট ক্রেডেনশিয়াল</p>
               </div>
             </div>
             <Badge
@@ -739,8 +730,8 @@ function AdminHubPage() {
               <span className="font-mono font-bold uppercase">{m?.bkashConfig.environment || "Live"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">ক্রেডিট রেট:</span>
-              <span className="font-bold text-foreground">৳{m?.bkashConfig.ratePerCredit} / প্রেসক্রিপশন</span>
+              <span className="text-muted-foreground">ব্যবহার:</span>
+              <span className="font-bold text-foreground">মাসিক সাবস্ক্রিপশন বিলিং</span>
             </div>
           </div>
 

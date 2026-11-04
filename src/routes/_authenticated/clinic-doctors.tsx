@@ -30,8 +30,6 @@ import {
 } from "@/lib/rx-staff.functions";
 import { staffUsernameToEmail } from "@/lib/rx-staff";
 import { useChambers } from "@/components/appointment-queue";
-import { ClinicCreditsCard } from "@/components/clinic-credits-card";
-import { RxCreditBuyCard } from "@/components/rx-credit-buy-card";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -299,13 +297,6 @@ function ClinicDoctorsPage() {
           </form>
         </CardContent>
       </Card>
-
-      <ClinicCreditsCard
-        businessId={businessId}
-        doctors={(doctors.data ?? []).map((d) => ({ user_id: d.user_id, name: d.name }))}
-      />
-
-      <RxCreditBuyCard businessId={businessId} />
 
       <ClinicStaffCard
         businessId={businessId}

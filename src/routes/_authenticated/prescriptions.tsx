@@ -10,8 +10,6 @@ import { ChildDoseModal } from "@/components/ChildDoseModal";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMasterOptions, mergeByName } from "@/hooks/use-rx-master-options";
 import { useCurrentBusiness } from "@/hooks/use-current-business";
-import { useRxBillingState } from "@/hooks/use-rx-billing";
-import { RxBillingBanner } from "@/components/rx-billing-banner";
 import { fetchAll } from "@/lib/fetch-all";
 import { useRxPresets } from "@/hooks/use-rx-presets";
 import { useRxOptionSettings } from "@/hooks/use-rx-option-settings";
@@ -342,7 +340,6 @@ function vitalsLines(s: string | null | undefined): string[] {
 
 function PrescriptionsPage() {
   const { data: business } = useCurrentBusiness();
-  const rxBilling = useRxBillingState();
   const businessId = business?.id;
   const qc = useQueryClient();
 
@@ -1228,11 +1225,9 @@ function PrescriptionsPage() {
             </div>
           </FloatingSearch>
           <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
-          <Button onClick={openNew} disabled={rxBilling.blocked}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
+          <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
         </div>
       </div>
-
-      <RxBillingBanner />
 
       <div className="rounded-lg border">
         <Table>

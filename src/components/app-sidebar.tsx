@@ -49,10 +49,10 @@ export const SUPER_ADMIN_SECTIONS = [
     ],
   },
   {
-    label: "Billing & Gateways",
+    label: "SaaS Billing & Credentials",
     items: [
-      { to: "/admin/rx-billing", label: "Subscription & Billing", icon: CalendarClock, enabled: true },
-      { to: "/admin/bkash", label: "bKash Gateway", icon: Wallet, enabled: true },
+      { to: "/admin/rx-billing", label: "Client Subscriptions", icon: CalendarClock, enabled: true },
+      { to: "/admin/bkash", label: "bKash Credentials", icon: Wallet, enabled: true },
     ],
   },
   {
@@ -125,7 +125,6 @@ const sections = [
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-appointments" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "rx-staff" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "rx-lists" },
-      { to: "/rx-billing", label: "My Subscription", icon: Wallet, enabled: true, key: "rx-billing" },
     ],
   },
   {
