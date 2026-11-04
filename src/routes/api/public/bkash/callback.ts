@@ -8,7 +8,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 function back(origin: string, params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString();
-  return new Response(null, { status: 302, headers: { Location: `${origin}/rx-billing?${qs}` } });
+  return new Response(null, { status: 302, headers: { Location: `${origin}/dashboard?${qs}` } });
 }
 
 async function handle(request: Request) {

@@ -51,10 +51,8 @@ export const SUPER_ADMIN_SECTIONS = [
   {
     label: "Billing & Gateways",
     items: [
+      { to: "/admin/rx-billing", label: "Subscription & Billing", icon: CalendarClock, enabled: true },
       { to: "/admin/bkash", label: "bKash Gateway", icon: Wallet, enabled: true },
-      { to: "/admin/credit-purchases", label: "Credit Purchases", icon: Receipt, enabled: true },
-      { to: "/admin/rx-credit-links", label: "Credit Links", icon: Wallet, enabled: true },
-      { to: "/admin/rx-billing", label: "Billing Plans", icon: CalendarClock, enabled: true },
     ],
   },
   {
@@ -127,9 +125,7 @@ const sections = [
       { to: "/rx-appointments", label: "Patient Queue", icon: CalendarClock, enabled: true, key: "rx-appointments" },
       { to: "/rx-staff", label: "My Staff", icon: Users, enabled: true, key: "rx-staff" },
       { to: "/rx-lists", label: "My Rx Lists", icon: BookOpen, enabled: true, key: "rx-lists" },
-      { to: "/rx-billing", label: "Rx Billing", icon: Wallet, enabled: true, key: "rx-billing" },
-      { to: "/rx-credit-history", label: "Credit & Payment History", icon: History, enabled: true, key: "rx-credit-history" },
-
+      { to: "/rx-billing", label: "My Subscription", icon: Wallet, enabled: true, key: "rx-billing" },
     ],
   },
   {
@@ -140,9 +136,8 @@ const sections = [
       { to: "/admin/users", superOnly: true, label: "All Users & Logins", icon: UserCog, enabled: true, key: "__admin" },
       { to: "/admin/doctors", superOnly: true, label: "Doctors & Approvals", icon: Stethoscope, enabled: true, key: "__admin" },
       { to: "/admin/prescriptions", superOnly: true, label: "Admin Prescription", icon: ClipboardList, enabled: true, key: "__admin" },
+      { to: "/admin/rx-billing", superOnly: true, label: "Subscription & Billing", icon: CalendarClock, enabled: true, key: "__admin" },
       { to: "/admin/bkash", superOnly: true, label: "bKash Gateway", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/credit-purchases", superOnly: true, label: "Credit Purchases", icon: Wallet, enabled: true, key: "__admin" },
-      { to: "/admin/rx-credit-links", superOnly: true, label: "Credit Links", icon: Wallet, enabled: true, key: "__admin" },
       { to: "/admin/sms", superOnly: true, label: "SMS Gateway", icon: MessageSquare, enabled: true, key: "__admin" },
       { to: "/admin/backups", superOnly: true, label: "Backups & Restore", icon: FolderArchive, enabled: true, key: "__admin" },
       { to: "/rx-options", label: "Manage Rx Options", icon: ListChecks, enabled: true, key: "__admin" },

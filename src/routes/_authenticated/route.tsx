@@ -13,6 +13,11 @@ import { LogoutConfirm } from "@/components/logout-confirm";
 import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { usePlatformSubscription } from "@/hooks/use-platform-subscription";
+import { SubscriptionDueBanner } from "@/components/SubscriptionDueBanner";
+import { SubscriptionLockModal } from "@/components/SubscriptionLockModal";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -34,7 +39,26 @@ function AuthedLayout() {
   const { isLoading: roleLoading } = useCurrentRole();
   const { sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
   const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
+  const { sub, isLocked, isDueWarning, refetch: refetchSub } = usePlatformSubscription();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const bkashStatus = params.get("bkash");
+      if (bkashStatus === "success") {
+        toast.success("আপনার বিকাশ পেমেন্ট সফল হয়েছে! সাবস্ক্রিপশন সচল করা হয়েছে।");
+        refetchSub();
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } else if (bkashStatus === "failed") {
+        const reason = params.get("reason") || "পেমেন্ট সম্পন্ন হয়নি";
+        toast.error(`বিকাশ পেমেন্ট ব্যর্থ হয়েছে: ${reason}`);
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, [refetchSub]);
   
   const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
@@ -171,7 +195,9 @@ function AuthedLayout() {
             </button>
             </LogoutConfirm>
           </header>
+          {isDueWarning && sub && <SubscriptionDueBanner sub={sub} />}
           <main className="flex-1"><Outlet /></main>
+          {isLocked && sub && <SubscriptionLockModal sub={sub} />}
         </div>
       </div>
     </SidebarProvider>
