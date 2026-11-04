@@ -576,3 +576,162 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
       helpline,
     };
   });
+
+/**
+ * Super Admin: Update all fields of a client (Business Name, Business Type,
+ * Owner Name, Owner Email, Monthly Fee, Due Day of month, Specific Due Date, Helpline, Mode).
+ */
+export const updateClientFullProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      business_id: string;
+      business_name?: string;
+      biz_kind?: "pos" | "doctor" | "clinic";
+      owner_name?: string;
+      owner_email?: string;
+      monthly_amount?: number;
+      due_day?: number;
+      current_due_date?: string;
+      helpline?: string;
+      mode?: "subscription" | "free";
+    }) => {
+      if (!input?.business_id) throw new Error("business_id required");
+      return input;
+    }
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { periodStart } = getDhakaMonthDates();
+
+    // 1. Update business name and kind
+    const bizUpdates: any = {};
+    if (data.business_name !== undefined && data.business_name.trim()) {
+      bizUpdates.name = data.business_name.trim();
+    }
+    if (data.biz_kind !== undefined) {
+      if (data.biz_kind === "clinic") {
+        bizUpdates.clinic_mode = true;
+        bizUpdates.biz_kind = "clinic";
+      } else if (data.biz_kind === "doctor") {
+        bizUpdates.clinic_mode = false;
+        bizUpdates.biz_kind = "doctor";
+      } else {
+        bizUpdates.clinic_mode = false;
+        bizUpdates.biz_kind = "pharmacy";
+      }
+    }
+    if (Object.keys(bizUpdates).length > 0) {
+      const { error: bErr } = await supabaseAdmin
+        .from("businesses")
+        .update(bizUpdates)
+        .eq("id", data.business_id);
+      if (bErr) throw new Error(bErr.message);
+    }
+
+    // 2. Update owner name & email
+    if (data.owner_name !== undefined || data.owner_email !== undefined) {
+      const { data: biz } = await supabaseAdmin
+        .from("businesses")
+        .select("owner_id")
+        .eq("id", data.business_id)
+        .single();
+
+      if (biz?.owner_id) {
+        const profUpdates: any = {};
+        if (data.owner_name !== undefined && data.owner_name.trim()) {
+          profUpdates.doctor_name = data.owner_name.trim();
+          profUpdates.first_name = data.owner_name.trim();
+        }
+        if (data.owner_email !== undefined && data.owner_email.trim()) {
+          profUpdates.email = data.owner_email.trim().toLowerCase();
+        }
+        if (Object.keys(profUpdates).length > 0) {
+          const { error: pErr } = await supabaseAdmin
+            .from("profiles")
+            .update(profUpdates)
+            .eq("id", biz.owner_id);
+          if (pErr) console.warn("Error updating profile:", pErr.message);
+
+          if (data.owner_email && data.owner_email.trim()) {
+            try {
+              await supabaseAdmin.auth.admin.updateUserById(biz.owner_id, {
+                email: data.owner_email.trim().toLowerCase(),
+              });
+            } catch (err: any) {
+              console.warn("Could not update auth email:", err?.message || err);
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Update account: monthly amount, helpline, notes (due_day), mode
+    const accUpdates: any = {};
+    if (data.monthly_amount !== undefined) {
+      accUpdates.monthly_amount = Math.max(0, Math.trunc(Number(data.monthly_amount) || 0));
+    }
+    if (data.helpline !== undefined) {
+      accUpdates.helpline = data.helpline.trim();
+    }
+    if (data.mode !== undefined) {
+      accUpdates.mode = data.mode;
+    }
+
+    // Notes JSON update for due_day
+    if (data.due_day !== undefined) {
+      const dueDay = Math.min(31, Math.max(1, Number(data.due_day) || 7));
+      const { data: acc } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .select("notes")
+        .eq("business_id", data.business_id)
+        .is("user_id", null)
+        .maybeSingle();
+
+      const existing = parseBillingConfig(acc?.notes);
+      accUpdates.notes = JSON.stringify({ ...existing, due_day: dueDay });
+    }
+
+    if (Object.keys(accUpdates).length > 0) {
+      await supabaseAdmin
+        .from("rx_billing_accounts")
+        .update(accUpdates as never)
+        .eq("business_id", data.business_id)
+        .is("user_id", null);
+    }
+
+    // 4. Update current unpaid bill (amount, due_date)
+    const billUpdates: any = {};
+    if (data.monthly_amount !== undefined) {
+      billUpdates.amount = Math.max(0, Math.trunc(Number(data.monthly_amount) || 0));
+    }
+    if (data.current_due_date && /^\d{4}-\d{2}-\d{2}$/.test(data.current_due_date)) {
+      billUpdates.due_date = data.current_due_date;
+    } else if (data.due_day !== undefined) {
+      const dueDay = Math.min(31, Math.max(1, Number(data.due_day) || 7));
+      const { y, m } = getDhakaMonthDates(dueDay);
+      billUpdates.due_date = `${y}-${m}-${String(dueDay).padStart(2, "0")}`;
+    }
+
+    if (Object.keys(billUpdates).length > 0) {
+      await supabaseAdmin
+        .from("rx_bills")
+        .update(billUpdates as never)
+        .eq("business_id", data.business_id)
+        .is("user_id", null)
+        .eq("status", "unpaid");
+    }
+
+    // If made free, mark any unpaid bill as paid
+    if (data.mode === "free") {
+      await supabaseAdmin
+        .from("rx_bills")
+        .update({ status: "paid", paid_at: new Date().toISOString() } as never)
+        .eq("business_id", data.business_id)
+        .is("user_id", null)
+        .eq("period_start", periodStart);
+    }
+
+    return { ok: true };
+  });

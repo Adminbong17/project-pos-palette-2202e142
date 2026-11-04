@@ -19,6 +19,7 @@ import {
   RefreshCw,
   ExternalLink,
   CalendarDays,
+  Pencil,
 } from "lucide-react";
 
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -30,12 +31,14 @@ import {
   markSubscriptionBillPaid,
   extendSubscriptionGrace,
   lockSubscriptionNow,
+  updateClientFullProfile,
   type BusinessSubscriptionRow,
 } from "@/lib/subscriptions.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
   head: () => ({
@@ -64,10 +67,62 @@ function AdminSubscriptionsMasterPage() {
   const markPaid = useServerFn(markSubscriptionBillPaid);
   const extendGrace = useServerFn(extendSubscriptionGrace);
   const lockNow = useServerFn(lockSubscriptionNow);
+  const saveFullProfile = useServerFn(updateClientFullProfile);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "due" | "locked" | "free">("all");
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
+
+  const [editingClient, setEditingClient] = useState<BusinessSubscriptionRow | null>(null);
+  const [formData, setFormData] = useState({
+    business_name: "",
+    biz_kind: "pos" as "pos" | "doctor" | "clinic",
+    owner_name: "",
+    owner_email: "",
+    monthly_amount: 800,
+    due_day: 7,
+    current_due_date: "",
+    helpline: "01712472839",
+    mode: "subscription" as "subscription" | "free",
+  });
+
+  const profileMutation = useMutation({
+    mutationFn: async (payload: {
+      business_id: string;
+      business_name?: string;
+      biz_kind?: "pos" | "doctor" | "clinic";
+      owner_name?: string;
+      owner_email?: string;
+      monthly_amount?: number;
+      due_day?: number;
+      current_due_date?: string;
+      helpline?: string;
+      mode?: "subscription" | "free";
+    }) => {
+      return await saveFullProfile({ data: payload });
+    },
+    onSuccess: () => {
+      toast.success("ক্লায়েন্ট ও বিলিং তথ্য সফলভাবে আপডেট করা হয়েছে");
+      setEditingClient(null);
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "তথ্য আপডেট করা সম্ভব হয়নি"),
+  });
+
+  function openEdit(s: BusinessSubscriptionRow) {
+    setEditingClient(s);
+    setFormData({
+      business_name: s.business_name || "",
+      biz_kind: (s.clinic_mode ? "clinic" : s.biz_kind === "doctor" ? "doctor" : "pos") as any,
+      owner_name: s.owner_name || "",
+      owner_email: s.owner_email || "",
+      monthly_amount: s.monthly_amount ?? 800,
+      due_day: s.due_day ?? 7,
+      current_due_date: s.current_bill?.due_date || "",
+      helpline: s.helpline || "01712472839",
+      mode: s.mode || "subscription",
+    });
+  }
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-all-subscriptions"],
@@ -400,9 +455,19 @@ function AdminSubscriptionsMasterPage() {
                     <tr key={s.business_id} className="hover:bg-muted/30 transition-colors">
                       {/* Business info */}
                       <td className="p-3.5">
-                        <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 text-primary shrink-0" />
-                          <span>{s.business_name}</span>
+                        <div className="flex items-center justify-between gap-1 group">
+                          <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
+                            <Building2 className="h-4 w-4 text-primary shrink-0" />
+                            <span>{s.business_name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(s)}
+                            className="opacity-70 hover:opacity-100 hover:text-primary transition-opacity p-1 rounded-md hover:bg-muted cursor-pointer"
+                            title="ব্যবসার নাম ও ধরণ এডিট করুন"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium">
@@ -414,8 +479,20 @@ function AdminSubscriptionsMasterPage() {
 
                       {/* Owner info */}
                       <td className="p-3.5">
-                        <div className="font-medium text-foreground">{s.owner_name || "—"}</div>
-                        <div className="text-[11px] text-muted-foreground font-mono">{s.owner_email || "No email"}</div>
+                        <div className="flex items-center justify-between gap-1 group">
+                          <div>
+                            <div className="font-medium text-foreground">{s.owner_name || "—"}</div>
+                            <div className="text-[11px] text-muted-foreground font-mono">{s.owner_email || "No email"}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(s)}
+                            className="opacity-70 hover:opacity-100 hover:text-primary transition-opacity p-1 rounded-md hover:bg-muted cursor-pointer"
+                            title="ওনারের নাম ও ইমেইল এডিট করুন"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </div>
                       </td>
 
                       {/* Monthly Fee Control */}
@@ -496,8 +573,18 @@ function AdminSubscriptionsMasterPage() {
                           </select>
                         </div>
                         {s.current_bill && s.mode !== "free" && s.current_bill.due_date && (
-                          <div className="text-[10px] text-muted-foreground mt-1 font-mono">
-                            চলতি শেষ তারিখ: {s.current_bill.due_date}
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              চলতি শেষ তারিখ: {s.current_bill.due_date}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(s)}
+                              className="opacity-60 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded cursor-pointer"
+                              title="চলতি বিলের নির্দিষ্ট শেষ তারিখ পরিবর্তন করুন"
+                            >
+                              <Pencil className="h-2.5 w-2.5" />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -542,6 +629,19 @@ function AdminSubscriptionsMasterPage() {
 
                       {/* Super Admin Quick Actions */}
                       <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
+                        {/* Edit Full Profile */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(s)}
+                          className="h-7 px-2 text-[11px] rounded-lg font-bold border-primary/40 text-primary hover:bg-primary/10 cursor-pointer shadow-2xs"
+                          title="এই ক্লায়েন্টের সকল তথ্য এডিট করুন"
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          <span>এডিট</span>
+                        </Button>
+
                         {/* Toggle Free Mode */}
                         <Button
                           type="button"
@@ -620,6 +720,174 @@ function AdminSubscriptionsMasterPage() {
           </table>
         </div>
       </Card>
+
+      {/* Edit Client & Billing Modal Dialog */}
+      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <Pencil className="h-4 w-4 text-primary" />
+              <span>ক্লায়েন্ট ও বিলিং তথ্য সম্পাদনা</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!editingClient) return;
+              profileMutation.mutate({
+                business_id: editingClient.business_id,
+                ...formData,
+              });
+            }}
+            className="space-y-4 pt-2 text-xs"
+          >
+            {/* 1. Business Name */}
+            <div className="space-y-1">
+              <label className="font-bold text-foreground flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+                ব্যবসার নাম:
+              </label>
+              <Input
+                value={formData.business_name}
+                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                required
+                className="h-9 text-xs"
+                placeholder="যেমন: Sheikh Pharma"
+              />
+            </div>
+
+            {/* 2. Business Type & Mode */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">ব্যবসার ধরণ:</label>
+                <select
+                  value={formData.biz_kind}
+                  onChange={(e) => setFormData({ ...formData, biz_kind: e.target.value as any })}
+                  className="w-full h-9 px-2.5 rounded-lg border border-border bg-input text-xs font-medium outline-none focus:border-primary"
+                >
+                  <option value="pos">🏪 শপ / ফার্মেসি POS</option>
+                  <option value="doctor">🩺 ডাক্তার প্রেসক্রিপশন</option>
+                  <option value="clinic">🏥 ক্লিনিক ও ডায়াগনস্টিক</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">অ্যাকাউন্ট মোড:</label>
+                <select
+                  value={formData.mode}
+                  onChange={(e) => setFormData({ ...formData, mode: e.target.value as any })}
+                  className="w-full h-9 px-2.5 rounded-lg border border-border bg-input text-xs font-medium outline-none focus:border-primary"
+                >
+                  <option value="subscription">💳 পেইড সাবস্ক্রিপশন</option>
+                  <option value="free">🎁 ফ্রি / লাইফটাইম</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 3. Owner Name & Email */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">ওনারের নাম:</label>
+                <Input
+                  value={formData.owner_name}
+                  onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  className="h-9 text-xs"
+                  placeholder="ওনার বা ডাক্তারের নাম"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">ওনারের ইমেইল (লগইন):</label>
+                <Input
+                  type="email"
+                  value={formData.owner_email}
+                  onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
+                  className="h-9 text-xs font-mono"
+                  placeholder="owner@gmail.com"
+                />
+              </div>
+            </div>
+
+            {/* 4. Monthly Fee & Due Day */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">মাসিক ফি (৳):</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="50"
+                  disabled={formData.mode === "free"}
+                  value={formData.mode === "free" ? 0 : formData.monthly_amount}
+                  onChange={(e) => setFormData({ ...formData, monthly_amount: Number(e.target.value) || 0 })}
+                  className="h-9 text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">প্রতি মাসের বিলিং দিন:</label>
+                <select
+                  value={formData.due_day}
+                  disabled={formData.mode === "free"}
+                  onChange={(e) => setFormData({ ...formData, due_day: Number(e.target.value) || 7 })}
+                  className="w-full h-9 px-2.5 rounded-lg border border-border bg-input text-xs font-bold font-mono outline-none focus:border-primary"
+                >
+                  {ALL_DUE_DAYS.map((day) => (
+                    <option key={day} value={day}>
+                      প্রতি মাসের {day} তারিখ
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 5. Specific Current Month Due Date & Helpline */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">চলতি বিলের শেষ তারিখ:</label>
+                <Input
+                  type="date"
+                  disabled={formData.mode === "free"}
+                  value={formData.current_due_date}
+                  onChange={(e) => setFormData({ ...formData, current_due_date: e.target.value })}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-foreground">হেল্পলাইন নম্বর:</label>
+                <Input
+                  value={formData.helpline}
+                  onChange={(e) => setFormData({ ...formData, helpline: e.target.value })}
+                  className="h-9 text-xs font-mono"
+                  placeholder="01712472839"
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingClient(null)}
+                className="h-9 text-xs font-semibold cursor-pointer"
+              >
+                বাতিল করুন
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={profileMutation.isPending}
+                className="h-9 text-xs font-bold bg-primary text-primary-foreground cursor-pointer shadow-xs"
+              >
+                {profileMutation.isPending ? "সেভ হচ্ছে…" : "💾 পরিবর্তন সংরক্ষণ করুন"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
