@@ -1,6 +1,7 @@
 /**
  * Cat Printer (MX04, GT01, GB01, WalkPrint, iPrint, FunPrint) BLE Protocol Driver
  * Supports 384-dot (48 bytes/row) 200 DPI thermal printing via proprietary 0x5178 packets.
+ * Optimized for high-density, jet-black, authentic POS receipt output.
  */
 
 const CHECKSUM_TABLE = new Uint8Array([
@@ -62,57 +63,50 @@ export const CAT_COMMANDS = {
   SET_QUALITY_200_DPI: buildCatPacket(0xa4, new Uint8Array([0x32])),
   LATTICE_START: buildCatPacket(0xa6, new Uint8Array([0xaa, 0x55, 0x17, 0x38, 0x44, 0x5f, 0x5f, 0x5f, 0x44, 0x38, 0x2c])),
   LATTICE_END: buildCatPacket(0xa6, new Uint8Array([0xaa, 0x55, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17])),
-  SET_PAPER: buildCatPacket(0xa1, new Uint8Array([0x30, 0x00])),
   APPLY_ENERGY: buildCatPacket(0xbe, new Uint8Array([0x01])),
 };
 
-export function catSetEnergy(energy = 0xffff): Uint8Array {
-  return buildCatPacket(0xaf, new Uint8Array([(energy >> 8) & 0xff, energy & 0xff]));
+/**
+ * Sets print energy / darkness
+ * Cat printer BLE requires a 4-byte little-endian payload
+ */
+export function catSetEnergy(energy = 28000): Uint8Array {
+  return buildCatPacket(
+    0xaf,
+    new Uint8Array([
+      energy & 0xff,
+      (energy >> 8) & 0xff,
+      (energy >> 16) & 0xff,
+      (energy >> 24) & 0xff,
+    ])
+  );
 }
 
-export function catFeedPaper(steps = 40): Uint8Array {
-  return buildCatPacket(0xbd, new Uint8Array([steps & 0xff]));
+/**
+ * Sets motor speed (lower = slower feed = deeper thermal heat burn = rich jet-black output)
+ */
+export function catSetSpeed(speed = 16): Uint8Array {
+  return buildCatPacket(0xbd, new Uint8Array([speed & 0xff]));
 }
 
-function runLengthEncode(row: Uint8Array): number[] {
-  const res: number[] = [];
-  let count = 0;
-  let lastVal = -1;
-
-  const appendRepetition = (n: number, val: number) => {
-    while (n > 0x7f) {
-      res.push(0x7f | (val << 7));
-      n -= 0x7f;
-    }
-    if (n > 0) {
-      res.push((val << 7) | n);
-    }
-  };
-
-  for (let i = 0; i < row.length; i++) {
-    const val = row[i];
-    if (val === lastVal) {
-      count++;
-    } else {
-      if (lastVal !== -1) appendRepetition(count, lastVal);
-      count = 1;
-    }
-    lastVal = val;
-  }
-  if (count > 0 && lastVal !== -1) {
-    appendRepetition(count, lastVal);
-  }
-  return res;
+/**
+ * Feeds paper forward by specified lines (Command 0xA1)
+ */
+export function catFeedPaper(lines = 70): Uint8Array {
+  return buildCatPacket(0xa1, new Uint8Array([lines & 0xff, (lines >> 8) & 0xff]));
 }
 
-function byteEncode(row: Uint8Array): Uint8Array {
-  const bytes = new Uint8Array(48); // 384 / 8 = 48 bytes
+/**
+ * Converts a 384-element row array (1 for black, 0 for white) into exactly 48 bytes (LSB first)
+ */
+export function byteEncode(row: Uint8Array): Uint8Array {
+  const bytes = new Uint8Array(48); // 384 dots / 8 = 48 bytes
   for (let col = 0; col < 48; col++) {
     let b = 0;
     const offset = col * 8;
     for (let bit = 0; bit < 8; bit++) {
       if (row[offset + bit] === 1) {
-        b |= 1 << bit; // Cat printers use bit 0 as first pixel in chunk
+        b |= 1 << bit; // Standard LSB first bit ordering for Cat Printer
       }
     }
     bytes[col] = b;
@@ -121,14 +115,12 @@ function byteEncode(row: Uint8Array): Uint8Array {
 }
 
 /**
- * Builds a single image row packet for Cat Printer.
- * Tries RLE compression (CMD 0xBF); if not smaller than 48 bytes, falls back to raw bytes (CMD 0xA2).
+ * Builds a single 48-byte raw image row packet for Cat Printer.
+ * ALWAYS uses pure 0xA2 raw bitmap.
+ * CRITICAL: Never use 0xBF (RLE) on MX04 because cheap JieLi microcontrollers do not decompress RLE,
+ * which squishes rows horizontally into microscopic illegible dots.
  */
 export function buildCatRowPacket(row: Uint8Array): Uint8Array {
-  const rle = runLengthEncode(row);
-  if (rle.length <= 48) {
-    return buildCatPacket(0xbf, new Uint8Array(rle));
-  }
   const rawBytes = byteEncode(row);
   return buildCatPacket(0xa2, rawBytes);
 }
@@ -138,7 +130,7 @@ export function buildCatRowPacket(row: Uint8Array): Uint8Array {
  */
 export function canvasToCatPrinterPackets(
   canvas: HTMLCanvasElement,
-  energy = 0xffff
+  energy = 28000
 ): Uint8Array[] {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas 2D context");
@@ -150,14 +142,15 @@ export function canvasToCatPrinterPackets(
 
   const packets: Uint8Array[] = [];
 
-  // 1. Initial Wakeup & Configuration
+  // 1. Initial Wakeup & Deep Thermal Contrast Configuration
   packets.push(CAT_COMMANDS.GET_DEV_STATE);
   packets.push(CAT_COMMANDS.SET_QUALITY_200_DPI);
-  packets.push(catSetEnergy(energy));
+  packets.push(catSetSpeed(16)); // Slow steady motor speed for dark, crisp burn
+  packets.push(catSetEnergy(energy)); // High energy (28000) for jet-black text
   packets.push(CAT_COMMANDS.APPLY_ENERGY);
   packets.push(CAT_COMMANDS.LATTICE_START);
 
-  // 2. Row by row pixel encoding
+  // 2. Row by row pixel encoding (pure 0xA2 raw bitmap across all 384 dots)
   const rowBuffer = new Uint8Array(width);
   for (let y = 0; y < height; y++) {
     const rowOffset = y * width * 4;
@@ -168,71 +161,150 @@ export function canvasToCatPrinterPackets(
       const b = pixels[idx + 2];
       const a = pixels[idx + 3];
 
-      // Luminance thresholding (burn thermal dot if dark enough)
-      const lum = a < 128 ? 255 : 0.299 * r + 0.587 * g + 0.114 * b;
-      rowBuffer[x] = lum < 195 ? 1 : 0;
+      // High-contrast thresholding: Solid black if lum < 205 (prevents thin antialiasing dropouts)
+      const lum = a < 128 ? 255 : (r * 299 + g * 587 + b * 114) / 1000;
+      rowBuffer[x] = lum < 205 ? 1 : 0;
     }
     packets.push(buildCatRowPacket(rowBuffer));
   }
 
-  // 3. Feed paper, finalize lattice & query state
-  packets.push(catFeedPaper(50));
-  packets.push(CAT_COMMANDS.SET_PAPER);
-  packets.push(CAT_COMMANDS.SET_PAPER);
+  // 3. Finalize lattice, paper feed & device state
   packets.push(CAT_COMMANDS.LATTICE_END);
+  packets.push(catFeedPaper(70)); // Clean paper feed so receipt clears tear cutter
   packets.push(CAT_COMMANDS.GET_DEV_STATE);
 
   return packets;
 }
 
 /**
- * Generates a crisp test slip canvas for Cat Printer
+ * Generates an authentic, bold, full-width POS slip canvas for Cat Printer
  */
 export function renderCatTestSlipCanvas(businessName = "শেখ ফার্মা (Sheikh Pharma)"): HTMLCanvasElement {
+  const width = 384;
+  const height = 480;
   const canvas = document.createElement("canvas");
-  canvas.width = 384;
-  canvas.height = 320;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+  ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = "#000000";
-  ctx.textAlign = "center";
-
-  // Title
-  ctx.font = "bold 26px sans-serif";
-  ctx.fillText("SHEIKH PHARMA", 192, 40);
-
-  ctx.font = "bold 16px sans-serif";
-  ctx.fillText("MX04 Cat Ear Pocket Printer", 192, 68);
-  ctx.fillText("384-Dot BLE Thermal Mode", 192, 90);
-
-  // Divider
   ctx.strokeStyle = "#000000";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(12, 105);
-  ctx.lineTo(372, 105);
-  ctx.stroke();
 
-  // Specs & Info
-  ctx.textAlign = "left";
-  ctx.font = "bold 15px monospace";
-  ctx.fillText("Printer: MX04 / Cat BLE", 20, 130);
-  ctx.fillText("Resolution: 200 DPI (384px)", 20, 152);
-  ctx.fillText("Protocol: 0x5178 Binary Engine", 20, 174);
-  ctx.fillText(`Time: ${new Date().toLocaleTimeString()}`, 20, 196);
+  let y = 28;
 
-  // Status Box
-  ctx.strokeRect(16, 215, 352, 50);
+  // 1. Business Header (Big, bold, authentic POS title)
   ctx.textAlign = "center";
-  ctx.font = "bold 18px sans-serif";
-  ctx.fillText("🐱 CAT PRINTER READY! 🐱", 192, 246);
+  ctx.font = "900 34px 'Courier New', Consolas, sans-serif";
+  ctx.fillText("SHEIKH PHARMA", width / 2, y);
+  y += 28;
 
-  // Subtitle
-  ctx.font = "bold 13px sans-serif";
-  ctx.fillText("Wireless Receipt Printing OK", 192, 290);
+  ctx.font = "bold 20px 'Courier New', Consolas, monospace";
+  ctx.fillText("Hospital Road, Cumilla", width / 2, y);
+  y += 24;
+  ctx.fillText("Mob: 01700-000000", width / 2, y);
+  y += 18;
+
+  // Double Line Divider
+  const drawDoubleLine = (currY: number) => {
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(8, currY);
+    ctx.lineTo(width - 8, currY);
+    ctx.moveTo(8, currY + 4);
+    ctx.lineTo(width - 8, currY + 4);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  const drawDashed = (currY: number) => {
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(8, currY);
+    ctx.lineTo(width - 8, currY);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  drawDoubleLine(y);
+  y += 24;
+
+  // Banner
+  ctx.font = "900 22px 'Courier New', Consolas, monospace";
+  ctx.fillText("*** TEST RECEIPT / পরীক্ষা রসিদ ***", width / 2, y);
+  y += 20;
+  drawDashed(y);
+  y += 22;
+
+  // Meta rows
+  ctx.font = "bold 21px 'Courier New', Consolas, monospace";
+  const row = (left: string, right: string) => {
+    ctx.textAlign = "left";
+    ctx.fillText(left, 10, y);
+    ctx.textAlign = "right";
+    ctx.fillText(right, width - 10, y);
+    y += 25;
+  };
+
+  row("Printer :", "MX04 Cat Ear (58mm)");
+  row("Driver  :", "384-Dot Direct BLE");
+  row("Density :", "High Energy (28000)");
+  row("Time    :", new Date().toLocaleTimeString());
+
+  drawDashed(y);
+  y += 22;
+
+  // Table Header
+  ctx.font = "900 21px 'Courier New', Consolas, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("Item / বিবরণ", 10, y);
+  ctx.textAlign = "right";
+  ctx.fillText("Total (৳)", width - 10, y);
+  y += 22;
+  drawDashed(y);
+  y += 22;
+
+  // Sample items
+  ctx.font = "bold 21px 'Courier New', Consolas, monospace";
+  const itemRow = (name: string, calc: string, total: string) => {
+    ctx.textAlign = "left";
+    ctx.fillText(name, 10, y);
+    y += 22;
+    ctx.fillText(`  ${calc}`, 10, y);
+    ctx.textAlign = "right";
+    ctx.fillText(total, width - 10, y);
+    y += 25;
+  };
+
+  itemRow("1. Napa Extra 500mg", "2 × 2.50", "5.00");
+  itemRow("2. Seclo 20mg Cap", "5 × 7.00", "35.00");
+
+  drawDashed(y);
+  y += 18;
+
+  // Grand Total Box
+  drawDoubleLine(y);
+  y += 26;
+  ctx.font = "900 28px 'Courier New', Consolas, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("NET TOTAL:", 10, y);
+  ctx.textAlign = "right";
+  ctx.fillText("৳40.00", width - 10, y);
+  y += 12;
+  drawDoubleLine(y);
+  y += 26;
+
+  // Footer
+  ctx.textAlign = "center";
+  ctx.font = "900 20px 'Courier New', Consolas, monospace";
+  ctx.fillText("WIRELESS POS PRINTING OK!", width / 2, y);
+  y += 22;
+  ctx.font = "bold 18px 'Courier New', Consolas, monospace";
+  ctx.fillText("Driverless Web Bluetooth Ready", width / 2, y);
 
   return canvas;
 }
