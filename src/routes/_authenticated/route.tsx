@@ -98,6 +98,12 @@ function AuthedLayout() {
     return <Navigate to={homePath as any} replace />;
   }
 
+  // HARD LOCK: If subscription bill is overdue, show ONLY the square box lock screen.
+  // Nothing behind it (sidebar, header, POS, data) is rendered!
+  if (!superLoading && !isSuperAdmin && isLocked && sub) {
+    return <SubscriptionLockModal sub={sub} onSignOut={signOut} onRefresh={refetchSub} />;
+  }
+
   // Strictly enforce marked module grants — only `null` means unlimited.
   if (!isSuperAdmin && !roleLoading && !sectionsLoading) {
     if (Array.isArray(allowed) && allowed.length === 0) {
@@ -197,7 +203,6 @@ function AuthedLayout() {
           </header>
           {isDueWarning && sub && <SubscriptionDueBanner sub={sub} />}
           <main className="flex-1"><Outlet /></main>
-          {isLocked && sub && <SubscriptionLockModal sub={sub} />}
         </div>
       </div>
     </SidebarProvider>
