@@ -46,7 +46,7 @@ export function parseBillingConfig(notes: string | null | undefined): { dueDay: 
   if (notes) {
     try {
       const parsed = JSON.parse(notes);
-      if (typeof parsed.due_day === "number" && parsed.due_day >= 1 && parsed.due_day <= 28) {
+      if (typeof parsed.due_day === "number" && parsed.due_day >= 1 && parsed.due_day <= 31) {
         dueDay = parsed.due_day;
       }
       if (typeof parsed.note === "string") {
@@ -54,7 +54,7 @@ export function parseBillingConfig(notes: string | null | undefined): { dueDay: 
       }
     } catch {
       const n = parseInt(notes, 10);
-      if (!isNaN(n) && n >= 1 && n <= 28) dueDay = n;
+      if (!isNaN(n) && n >= 1 && n <= 31) dueDay = n;
       else note = notes;
     }
   }
@@ -70,7 +70,7 @@ function getDhakaMonthDates(customDueDay: number = 7) {
   const y = dhakaNow.getFullYear();
   const m = String(dhakaNow.getMonth() + 1).padStart(2, "0");
   const periodStart = `${y}-${m}-01`;
-  const safeDay = Math.min(28, Math.max(1, customDueDay));
+  const safeDay = Math.min(31, Math.max(1, customDueDay));
   const dueDate = `${y}-${m}-${String(safeDay).padStart(2, "0")}`;
   const todayStr = `${y}-${m}-${String(dhakaNow.getDate()).padStart(2, "0")}`;
 
@@ -182,7 +182,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
       } else {
         // Unpaid
         const effectiveDue = currentBill?.due_date || clientDueDate;
-        if (todayStr > effectiveDue) {
+        if (todayStr >= effectiveDue) {
           status = "locked";
         } else {
           status = "due";
@@ -433,6 +433,34 @@ export const extendSubscriptionGrace = createServerFn({ method: "POST" })
   });
 
 /**
+ * Super Admin: Instantly lock a client's system (sets due date to yesterday).
+ */
+export const lockSubscriptionNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { bill_id: string }) => {
+    if (!input?.bill_id) throw new Error("bill_id required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const dhakaNow = new Date(utc + 3600000 * 6);
+    dhakaNow.setDate(dhakaNow.getDate() - 1);
+    const yestStr = `${dhakaNow.getFullYear()}-${String(dhakaNow.getMonth() + 1).padStart(2, "0")}-${String(dhakaNow.getDate()).padStart(2, "0")}`;
+
+    const { error } = await supabaseAdmin
+      .from("rx_bills")
+      .update({ due_date: yestStr, status: "unpaid" } as never)
+      .eq("id", data.bill_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true, due_date: yestStr };
+  });
+
+/**
  * Regular User / Authed Layout: Get the signed-in business's subscription status.
  */
 export const getMyBusinessSubscription = createServerFn({ method: "GET" })
@@ -530,8 +558,8 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
 
     const isPaid = currentBill?.status === "paid";
     const effectiveDue = currentBill?.due_date || clientDueDate;
-    const isOverdue = !isPaid && todayStr > effectiveDue;
-    const isDueWarning = !isPaid && todayStr <= effectiveDue;
+    const isOverdue = !isPaid && todayStr >= effectiveDue;
+    const isDueWarning = !isPaid && todayStr < effectiveDue;
 
     return {
       business_id: businessId,

@@ -29,6 +29,7 @@ import {
   setSubscriptionMode,
   markSubscriptionBillPaid,
   extendSubscriptionGrace,
+  lockSubscriptionNow,
   type BusinessSubscriptionRow,
 } from "@/lib/subscriptions.functions";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ function AdminSubscriptionsMasterPage() {
   const saveMode = useServerFn(setSubscriptionMode);
   const markPaid = useServerFn(markSubscriptionBillPaid);
   const extendGrace = useServerFn(extendSubscriptionGrace);
+  const lockNow = useServerFn(lockSubscriptionNow);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "due" | "locked" | "free">("all");
@@ -136,6 +138,18 @@ function AdminSubscriptionsMasterPage() {
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
     },
     onError: (e: any) => toast.error(e?.message || "সময় বাড়ানো যায়নি"),
+  });
+
+  // Instant Lock mutation
+  const lockMutation = useMutation({
+    mutationFn: async (billId: string) => {
+      return await lockNow({ data: { bill_id: billId } });
+    },
+    onSuccess: () => {
+      toast.success("সিস্টেম অবিলম্বে স্থগিত / লক করা হয়েছে!");
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "লক করা সম্ভব হয়নি"),
   });
 
   const allSubs = data?.subscriptions ?? [];
@@ -579,6 +593,22 @@ function AdminSubscriptionsMasterPage() {
                           >
                             <Calendar className="h-3 w-3 mr-1 text-amber-600" />
                             <span>+৩ দিন</span>
+                          </Button>
+                        )}
+
+                        {/* Instant Lock button: if unpaid and not locked yet */}
+                        {s.current_bill && s.current_bill.status !== "paid" && s.mode !== "free" && s.status !== "locked" && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            disabled={lockMutation.isPending}
+                            onClick={() => lockMutation.mutate(s.current_bill!.id)}
+                            className="h-7 px-2 text-[11px] rounded-lg font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer shadow-2xs"
+                            title="সিস্টেম এখনই লক করুন"
+                          >
+                            <Lock className="h-3 w-3 mr-1" />
+                            <span>লক করুন</span>
                           </Button>
                         )}
                       </td>
