@@ -26,7 +26,6 @@ import {
   listAllSubscriptions,
   updateSubscriptionPrice,
   updateSubscriptionDueDay,
-  updateBillExactDueDate,
   setSubscriptionMode,
   markSubscriptionBillPaid,
   extendSubscriptionGrace,
@@ -51,7 +50,7 @@ export const Route = createFileRoute("/_authenticated/admin/rx-billing")({
   component: AdminSubscriptionsMasterPage,
 });
 
-const POPULAR_DUE_DAYS = [1, 5, 7, 10, 12, 15, 20, 25, 28];
+const ALL_DUE_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 function AdminSubscriptionsMasterPage() {
   const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
@@ -60,7 +59,6 @@ function AdminSubscriptionsMasterPage() {
   const loadSubscriptions = useServerFn(listAllSubscriptions);
   const savePrice = useServerFn(updateSubscriptionPrice);
   const saveDueDay = useServerFn(updateSubscriptionDueDay);
-  const saveExactDate = useServerFn(updateBillExactDueDate);
   const saveMode = useServerFn(setSubscriptionMode);
   const markPaid = useServerFn(markSubscriptionBillPaid);
   const extendGrace = useServerFn(extendSubscriptionGrace);
@@ -68,7 +66,6 @@ function AdminSubscriptionsMasterPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "due" | "locked" | "free">("all");
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
-  const [editingDates, setEditingDates] = useState<Record<string, string>>({});
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-all-subscriptions"],
@@ -99,18 +96,6 @@ function AdminSubscriptionsMasterPage() {
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
     },
     onError: (e: any) => toast.error(e?.message || "দিন পরিবর্তন ব্যর্থ হয়েছে"),
-  });
-
-  // Exact custom due date mutation
-  const exactDateMutation = useMutation({
-    mutationFn: async ({ billId, dueDate }: { billId: string; dueDate: string }) => {
-      return await saveExactDate({ data: { bill_id: billId, due_date: dueDate } });
-    },
-    onSuccess: (res) => {
-      toast.success(`চলতি মাসের শেষ তারিখ পরিবর্তন হয়েছে (${res.due_date})`);
-      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
-    },
-    onError: (e: any) => toast.error(e?.message || "তারিখ পরিবর্তন ব্যর্থ হয়েছে"),
   });
 
   // Free / Subscription toggle mutation
@@ -368,7 +353,7 @@ function AdminSubscriptionsMasterPage() {
                 <th className="p-3.5">ব্যবসার নাম ও ধরণ</th>
                 <th className="p-3.5">ওনারের তথ্য</th>
                 <th className="p-3.5">মাসিক ফি (৳)</th>
-                <th className="p-3.5">নির্ধারিত তারিখ (Due Day/Date)</th>
+                <th className="p-3.5">বিল পরিশোধের তারিখ</th>
                 <th className="p-3.5">স্ট্যাটাস</th>
                 <th className="p-3.5 text-right">সুপার অ্যাডমিন অ্যাকশন</th>
               </tr>
@@ -396,9 +381,6 @@ function AdminSubscriptionsMasterPage() {
                   const isPriceDirty =
                     editingPrices[s.business_id] !== undefined &&
                     editingPrices[s.business_id] !== s.monthly_amount;
-
-                  const currentBillDue = s.current_bill?.due_date || "";
-                  const exactDateVal = editingDates[s.business_id] ?? currentBillDue;
 
                   return (
                     <tr key={s.business_id} className="hover:bg-muted/30 transition-colors">
@@ -473,67 +455,37 @@ function AdminSubscriptionsMasterPage() {
                         )}
                       </td>
 
-                      {/* Due Day / Custom Date Control */}
+                      {/* Due Date Control — Single clean selector */}
                       <td className="p-3.5">
-                        <div className="space-y-1.5">
-                          {/* Recurring Due Day Selector */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-muted-foreground">প্রতি মাসের:</span>
-                            <select
-                              value={s.due_day || 7}
-                              disabled={s.mode === "free" || dueDayMutation.isPending}
-                              onChange={(e) =>
-                                dueDayMutation.mutate({
-                                  businessId: s.business_id,
-                                  dueDay: Number(e.target.value) || 7,
-                                })
-                              }
-                              className="h-7 px-2 rounded-lg border border-border bg-input text-xs font-bold font-mono outline-none cursor-pointer focus:border-primary"
-                              title="প্রতি মাসের নির্ধারিত দিন নির্বাচন করুন"
-                            >
-                              {POPULAR_DUE_DAYS.map((day) => (
-                                <option key={day} value={day}>
-                                  {day} তারিখ
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Specific Bill Date Picker */}
-                          {s.current_bill && s.mode !== "free" && (
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <input
-                                type="date"
-                                value={exactDateVal}
-                                onChange={(e) =>
-                                  setEditingDates({
-                                    ...editingDates,
-                                    [s.business_id]: e.target.value,
-                                  })
-                                }
-                                className="h-7 px-1.5 rounded-lg border border-border bg-input text-[11px] font-mono outline-none focus:border-primary"
-                                title="এই মাসের জন্য নির্দিষ্ট তারিখ দিন"
-                              />
-                              {exactDateVal !== currentBillDue && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  disabled={exactDateMutation.isPending}
-                                  onClick={() =>
-                                    exactDateMutation.mutate({
-                                      billId: s.current_bill!.id,
-                                      dueDate: exactDateVal,
-                                    })
-                                  }
-                                  className="h-7 px-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground cursor-pointer shadow-xs"
-                                  title="নির্দিষ্ট তারিখ সেভ করুন"
-                                >
-                                  <Save className="h-3 w-3 mr-0.5" /> Set
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={s.due_day || 7}
+                            disabled={s.mode === "free" || dueDayMutation.isPending}
+                            onChange={(e) =>
+                              dueDayMutation.mutate({
+                                businessId: s.business_id,
+                                dueDay: Number(e.target.value) || 7,
+                              })
+                            }
+                            className={`h-8 px-2.5 rounded-lg border text-xs font-bold font-mono outline-none cursor-pointer transition-colors ${
+                              s.mode === "free"
+                                ? "bg-muted text-muted-foreground border-border/50 cursor-not-allowed"
+                                : "bg-input border-border hover:border-primary/60 focus:border-primary"
+                            }`}
+                            title="প্রতি মাসের নির্ধারিত দিন নির্বাচন করুন (১ থেকে ৩১ তারিখ)"
+                          >
+                            {ALL_DUE_DAYS.map((day) => (
+                              <option key={day} value={day}>
+                                প্রতি মাসের {day} তারিখ
+                              </option>
+                            ))}
+                          </select>
                         </div>
+                        {s.current_bill && s.mode !== "free" && s.current_bill.due_date && (
+                          <div className="text-[10px] text-muted-foreground mt-1 font-mono">
+                            চলতি শেষ তারিখ: {s.current_bill.due_date}
+                          </div>
+                        )}
                       </td>
 
                       {/* Status */}
