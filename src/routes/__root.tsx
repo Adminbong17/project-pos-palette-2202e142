@@ -35,24 +35,42 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
   console.error(err);
   const router = useRouter();
   const stale = isChunkLoadError(error);
+
   useEffect(() => {
-    if (recoverFromChunkError(error)) return;
+    if (stale) {
+      const t = setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("_v", String(Date.now()));
+        window.location.replace(url.toString());
+      }, 400);
+      return () => clearTimeout(t);
+    }
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+  }, [error, stale]);
+
+  const handleReload = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("_v", String(Date.now()));
+    window.location.replace(url.toString());
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {stale ? "A new version was just released. Reloading…" : err.message}
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="text-xl font-bold text-foreground">
+          {stale ? "নতুন সংস্করণ আপডেট হচ্ছে…" : "Something went wrong"}
+        </h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {stale
+            ? "সিস্টেমের নতুন আপডেট তৈরি হয়েছে। পেজটি স্বয়ংক্রিয়ভাবে রিলোড হচ্ছে…"
+            : err.message}
         </p>
         <button
-          onClick={() => {
-            if (stale) { window.location.reload(); return; }
-            router.invalidate(); reset();
-          }}
-          className="mt-6 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-        >Try again</button>
+          onClick={stale ? handleReload : () => { router.invalidate(); reset(); }}
+          className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+        >
+          {stale ? "এখনই রিলোড করুন" : "Try again"}
+        </button>
       </div>
     </div>
   );

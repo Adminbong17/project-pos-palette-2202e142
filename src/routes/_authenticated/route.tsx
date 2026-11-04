@@ -8,7 +8,7 @@ import { useAllowedSections, isPathAllowed, sectionHomePath } from "@/hooks/use-
 import { isRxMode, isRxPathAllowed, isPatientHost } from "@/lib/rx-mode";
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
-import { LogOut, ArrowLeft, ShoppingCart, ShieldCheck } from "lucide-react";
+import { LogOut, ArrowLeft, ShoppingCart, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 import { LogoutConfirm } from "@/components/logout-confirm";
 import { BluetoothStatusButton } from "@/components/BluetoothStatusButton";
 import { useNavigate } from "@tanstack/react-router";
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.user };
   },
   component: AuthedLayout,
+  errorComponent: AuthedErrorComponent,
 });
 
 function AuthedLayout() {
@@ -58,7 +59,8 @@ function AuthedLayout() {
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
-  }, [refetchSub]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const pathname = useLocation({ select: (l) => l.pathname });
   const qc = useQueryClient();
@@ -81,60 +83,87 @@ function AuthedLayout() {
   }
 
   function goBack() {
-    // Prefer going up one path segment so Back always lands somewhere sensible,
-    // regardless of browser history state (which may point to /auth or be empty).
     const clean = pathname.replace(/\/+$/, "");
     const parent = clean.substring(0, clean.lastIndexOf("/")) || homePath;
     const target = parent === "/" ? homePath : parent;
     navigate({ to: target as any });
   }
 
-  if (!roleLoading && !sectionsLoading && allowed === null && rxMode && !isRxPathAllowed(pathname)) {
-    return <Navigate to={homePath as any} replace />;
+  // 1. Wait for auth & permissions to load before making ANY redirect decisions!
+  // This completely prevents premature redirects with half-baked permission states.
+  if (superLoading || roleLoading || sectionsLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-xs text-muted-foreground font-medium">লোড হচ্ছে…</span>
+        </div>
+      </div>
+    );
   }
 
-  // Platform-wide admin pages belong to the super admin only.
-  if (!superLoading && !isSuperAdmin && pathname.startsWith("/admin")) {
-    return <Navigate to={homePath as any} replace />;
-  }
-
-  // HARD LOCK: If subscription bill is overdue, show ONLY the square box lock screen.
-  // Nothing behind it (sidebar, header, POS, data) is rendered!
-  if (!superLoading && !isSuperAdmin && isLocked && sub) {
+  // 2. HARD LOCK: If subscription bill is overdue, show ONLY the square box lock screen.
+  // Super Admins are exempt.
+  if (!isSuperAdmin && isLocked && sub) {
     return <SubscriptionLockModal sub={sub} onSignOut={signOut} onRefresh={refetchSub} />;
   }
 
-  // Strictly enforce marked module grants — only `null` means unlimited.
-  if (!isSuperAdmin && !roleLoading && !sectionsLoading) {
-    if (Array.isArray(allowed) && allowed.length === 0) {
+  // 3. Super Admins have full access to everything. Non-superadmins must pass permission checks.
+  if (!isSuperAdmin) {
+    // 3a. Platform-wide admin pages belong to the super admin only.
+    if (pathname.startsWith("/admin")) {
+      const safeHome = homePath && !homePath.startsWith("/admin") && isPathAllowed(homePath, allowed) ? homePath : null;
+      if (safeHome && safeHome !== pathname) {
+        return <Navigate to={safeHome as any} replace />;
+      }
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-background">
-          <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground">No Access Granted</h2>
-              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                Your account does not have permission to access any modules. Please contact the platform
-                Super Admin to assign modules to your account.
-              </p>
-            </div>
-            <div className="flex justify-center pt-2">
-              <button
-                onClick={signOut}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
+        <AccessRestrictedView
+          pathname={pathname}
+          homePath={safeHome}
+          canGoHome={!!safeHome}
+          onGoHome={() => safeHome && navigate({ to: safeHome as any })}
+          onSignOut={signOut}
+        />
       );
     }
+
+    // 3b. Strictly enforce marked module grants — empty array means 0 modules granted.
+    if (Array.isArray(allowed) && allowed.length === 0) {
+      return <NoAccessView onSignOut={signOut} />;
+    }
+
+    // 3c. Module access control — never redirect to self or to an unallowed path!
     if (!isPathAllowed(pathname, allowed)) {
-      return <Navigate to={homePath as any} replace />;
+      const safeHome = homePath && isPathAllowed(homePath, allowed) ? homePath : null;
+      if (safeHome && safeHome !== pathname) {
+        return <Navigate to={safeHome as any} replace />;
+      }
+      return (
+        <AccessRestrictedView
+          pathname={pathname}
+          homePath={safeHome}
+          canGoHome={!!safeHome}
+          onGoHome={() => safeHome && navigate({ to: safeHome as any })}
+          onSignOut={signOut}
+        />
+      );
+    }
+
+    // 3d. Rx mode path restrictions (when allowed is null / legacy unconfigured)
+    if (allowed === null && rxMode && !isRxPathAllowed(pathname)) {
+      const safeHome = homePath && isRxPathAllowed(homePath) ? homePath : "/rx-dashboard";
+      if (safeHome !== pathname && isRxPathAllowed(safeHome)) {
+        return <Navigate to={safeHome as any} replace />;
+      }
+      return (
+        <AccessRestrictedView
+          pathname={pathname}
+          homePath={safeHome}
+          canGoHome={true}
+          onGoHome={() => navigate({ to: safeHome as any })}
+          onSignOut={signOut}
+        />
+      );
     }
   }
 
@@ -206,5 +235,113 @@ function AuthedLayout() {
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+function NoAccessView({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-background">
+      <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+          <ShieldCheck className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">No Access Granted</h2>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Your account does not have permission to access any modules. Please contact the platform
+            Super Admin to assign modules to your account.
+          </p>
+        </div>
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={onSignOut}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccessRestrictedView({
+  pathname,
+  homePath,
+  canGoHome,
+  onGoHome,
+  onSignOut,
+}: {
+  pathname: string;
+  homePath?: string | null;
+  canGoHome: boolean;
+  onGoHome: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-background">
+      <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">পেজ অ্যাক্সেস সীমিত</h2>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            আপনার অ্যাকাউন্টে এই পেজটিতে (<code className="font-mono text-primary font-semibold">{pathname}</code>) প্রবেশ করার অনুমতি নেই।
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          {canGoHome && (
+            <button
+              onClick={onGoHome}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+            >
+              মূল পাতায় যান
+            </button>
+          )}
+          <button
+            onClick={onSignOut}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-sm cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            লগআউট
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthedErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+      <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+          <AlertTriangle className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">পেজ লোড হতে সমস্যা হয়েছে</h2>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            সিস্টেমে সাময়িক সমস্যা দেখা দিয়েছে। অনুগ্রহ করে রিফ্রেশ করুন।
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+          >
+            রিফ্রেশ করুন
+          </button>
+          <button
+            onClick={() => navigate({ to: "/dashboard" as any })}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-sm cursor-pointer"
+          >
+            ড্যাশবোর্ডে ফিরুন
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

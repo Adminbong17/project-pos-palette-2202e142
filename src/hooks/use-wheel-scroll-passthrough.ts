@@ -18,30 +18,21 @@ export function useWheelScrollPassthrough<T extends HTMLElement>() {
       const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
       if (!dy) return;
 
-      let node = e.target as HTMLElement | null;
-      let depth = 0;
-      while (node && node !== el && depth < 25) {
-        depth++;
-        // Cheap overflow check first — only pay for getComputedStyle on
-        // elements that actually have overflowing content.
-        if (node.scrollHeight > node.clientHeight + 1) {
-          const overflowY = getComputedStyle(node).overflowY;
-          if (/(auto|scroll|overlay)/.test(overflowY)) {
-            const atTop = node.scrollTop <= 0;
-            const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
-            if ((dy < 0 && !atTop) || (dy > 0 && !atBottom)) return; // inner scroller handles it
-          }
+      const target = e.target as HTMLElement | null;
+      if (target && target !== el) {
+        if (target.tagName === "TEXTAREA" || target.tagName === "SELECT") {
+          const atTop = target.scrollTop <= 0;
+          const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+          if ((dy < 0 && !atTop) || (dy > 0 && !atBottom)) return;
         }
-        node = node.parentElement;
       }
 
       if (el.scrollHeight <= el.clientHeight + 1) return;
       el.scrollTop += dy;
-      e.preventDefault();
     };
 
-    el.addEventListener("wheel", onWheel, { passive: false, capture: true });
-    return () => el.removeEventListener("wheel", onWheel, { capture: true } as any);
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   return ref;
