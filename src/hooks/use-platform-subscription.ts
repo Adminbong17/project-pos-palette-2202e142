@@ -11,9 +11,9 @@ export function usePlatformSubscription() {
 
   const q = useQuery({
     queryKey: ["my-platform-subscription"],
-    // Super admins are never locked or billed; wait for super admin check to settle
-    enabled: !superLoading && !isSuperAdmin,
-    staleTime: 60_000,
+    // Keep subscription status loaded for the active business
+    enabled: !superLoading,
+    staleTime: 10_000,
     queryFn: async () => await getSub({ data: undefined as never }),
   });
 

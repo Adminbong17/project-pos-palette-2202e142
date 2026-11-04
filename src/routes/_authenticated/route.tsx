@@ -116,6 +116,9 @@ function AuthedLayout() {
     navigate({ to: target as any });
   }
 
+  // Check URL query for preview_lock mode (e.g. /dashboard?preview_lock=1)
+  const isPreviewLock = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview_lock") === "1";
+
   // 1. Wait for auth & permissions to load before making ANY redirect decisions!
   // This completely prevents premature redirects with half-baked permission states.
   if (superLoading || roleLoading || sectionsLoading || (!isSuperAdmin && subLoading)) {
@@ -129,10 +132,39 @@ function AuthedLayout() {
     );
   }
 
-  // 2. HARD LOCK: If subscription bill is overdue, show ONLY the square box lock screen.
-  // Super Admins are exempt.
-  if (!isSuperAdmin && isLocked && sub) {
-    return <SubscriptionLockModal sub={sub} onSignOut={signOut} onRefresh={refetchSub} />;
+  // 2. HARD LOCK or ADMIN PREVIEW: If subscription bill is overdue OR super admin requested preview:
+  // Show ONLY the centered square box lock screen. Zero UI leak, no sidebar, no content.
+  if ((!isSuperAdmin && isLocked) || (isSuperAdmin && isPreviewLock)) {
+    const displaySub = sub || {
+      business_id: business?.id || "preview-biz",
+      business_name: business?.name || "Sheikh Pharma",
+      mode: "subscription" as const,
+      monthly_amount: 800,
+      due_day: 7,
+      is_free: false,
+      is_paid: false,
+      is_locked: true,
+      is_due_warning: false,
+      due_date: "০৭ তারিখ",
+      bill_id: null,
+      helpline: "01712472839",
+    };
+
+    return (
+      <SubscriptionLockModal
+        sub={displaySub}
+        onSignOut={signOut}
+        onRefresh={refetchSub}
+        isPreview={isPreviewLock}
+        onClosePreview={() => {
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("preview_lock");
+            window.location.replace(url.pathname + (url.search ? url.search : ""));
+          }
+        }}
+      />
+    );
   }
 
   // 3. Super Admins have full access to everything. Non-superadmins must pass permission checks.

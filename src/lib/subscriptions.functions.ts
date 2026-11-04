@@ -40,9 +40,10 @@ export type CurrentSubscriptionStatus = {
   helpline: string;
 };
 
-export function parseBillingConfig(notes: string | null | undefined): { dueDay: number; note: string } {
+export function parseBillingConfig(notes: string | null | undefined): { dueDay: number; note: string; manualLock: boolean } {
   let dueDay = 7;
   let note = "";
+  let manualLock = false;
   if (notes) {
     try {
       const parsed = JSON.parse(notes);
@@ -52,13 +53,16 @@ export function parseBillingConfig(notes: string | null | undefined): { dueDay: 
       if (typeof parsed.note === "string") {
         note = parsed.note;
       }
+      if (parsed.manual_lock === true) {
+        manualLock = true;
+      }
     } catch {
       const n = parseInt(notes, 10);
       if (!isNaN(n) && n >= 1 && n <= 31) dueDay = n;
       else note = notes;
     }
   }
-  return { dueDay, note };
+  return { dueDay, note, manualLock };
 }
 
 function getDhakaMonthDates(customDueDay: number = 7) {
@@ -148,7 +152,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
         acc = createdAcc as any;
       }
 
-      const { dueDay } = parseBillingConfig(acc?.notes);
+      const { dueDay, manualLock } = parseBillingConfig(acc?.notes);
       const clientDueDate = `${y}-${m}-${String(dueDay).padStart(2, "0")}`;
 
       const mode = (acc?.mode === "free" ? "free" : "subscription") as "subscription" | "free";
@@ -182,7 +186,7 @@ export const listAllSubscriptions = createServerFn({ method: "GET" })
       } else {
         // Unpaid
         const effectiveDue = currentBill?.due_date || clientDueDate;
-        if (todayStr >= effectiveDue) {
+        if (manualLock || todayStr >= effectiveDue) {
           status = "locked";
         } else {
           status = "due";
@@ -349,9 +353,19 @@ export const setSubscriptionMode = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { periodStart } = getDhakaMonthDates();
 
+    const { data: acc } = await supabaseAdmin
+      .from("rx_billing_accounts")
+      .select("id, notes")
+      .eq("business_id", data.business_id)
+      .is("user_id", null)
+      .maybeSingle();
+
+    const currentNotes = parseBillingConfig(acc?.notes);
+    const updatedNotes = JSON.stringify({ ...currentNotes, manual_lock: false });
+
     const { error } = await supabaseAdmin
       .from("rx_billing_accounts")
-      .update({ mode: data.mode } as never)
+      .update({ mode: data.mode, notes: updatedNotes } as never)
       .eq("business_id", data.business_id)
       .is("user_id", null);
     if (error) throw new Error(error.message);
@@ -382,6 +396,12 @@ export const markSubscriptionBillPaid = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const { data: bill } = await supabaseAdmin
+      .from("rx_bills")
+      .select("id, business_id")
+      .eq("id", data.bill_id)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from("rx_bills")
       .update({
@@ -390,6 +410,23 @@ export const markSubscriptionBillPaid = createServerFn({ method: "POST" })
       } as never)
       .eq("id", data.bill_id);
     if (error) throw new Error(error.message);
+
+    if (bill?.business_id) {
+      const { data: acc } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .select("id, notes")
+        .eq("business_id", bill.business_id)
+        .is("user_id", null)
+        .maybeSingle();
+      if (acc) {
+        const currentNotes = parseBillingConfig(acc?.notes);
+        const updatedNotes = JSON.stringify({ ...currentNotes, manual_lock: false });
+        await supabaseAdmin
+          .from("rx_billing_accounts")
+          .update({ notes: updatedNotes } as never)
+          .eq("id", acc.id);
+      }
+    }
 
     return { ok: true };
   });
@@ -409,7 +446,7 @@ export const extendSubscriptionGrace = createServerFn({ method: "POST" })
 
     const { data: bill, error: billErr } = await supabaseAdmin
       .from("rx_bills")
-      .select("id, due_date")
+      .select("id, due_date, business_id")
       .eq("id", data.bill_id)
       .maybeSingle();
     if (billErr) throw new Error(billErr.message);
@@ -429,16 +466,33 @@ export const extendSubscriptionGrace = createServerFn({ method: "POST" })
       .eq("id", data.bill_id);
     if (error) throw new Error(error.message);
 
+    if (bill.business_id) {
+      const { data: acc } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .select("id, notes")
+        .eq("business_id", bill.business_id)
+        .is("user_id", null)
+        .maybeSingle();
+      if (acc) {
+        const currentNotes = parseBillingConfig(acc?.notes);
+        const updatedNotes = JSON.stringify({ ...currentNotes, manual_lock: false });
+        await supabaseAdmin
+          .from("rx_billing_accounts")
+          .update({ notes: updatedNotes } as never)
+          .eq("id", acc.id);
+      }
+    }
+
     return { ok: true, new_due_date: newDueStr };
   });
 
 /**
- * Super Admin: Instantly lock a client's system (sets due date to yesterday).
+ * Super Admin: Instantly lock a client's system (sets manual_lock: true and due date to yesterday).
  */
 export const lockSubscriptionNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { bill_id: string }) => {
-    if (!input?.bill_id) throw new Error("bill_id required");
+  .inputValidator((input: { business_id?: string; bill_id?: string }) => {
+    if (!input?.business_id && !input?.bill_id) throw new Error("business_id or bill_id required");
     return input;
   })
   .handler(async ({ data, context }) => {
@@ -451,13 +505,133 @@ export const lockSubscriptionNow = createServerFn({ method: "POST" })
     dhakaNow.setDate(dhakaNow.getDate() - 1);
     const yestStr = `${dhakaNow.getFullYear()}-${String(dhakaNow.getMonth() + 1).padStart(2, "0")}-${String(dhakaNow.getDate()).padStart(2, "0")}`;
 
-    const { error } = await supabaseAdmin
-      .from("rx_bills")
-      .update({ due_date: yestStr, status: "unpaid" } as never)
-      .eq("id", data.bill_id);
-    if (error) throw new Error(error.message);
+    let bizId = data.business_id;
+
+    if (data.bill_id) {
+      const { data: bill } = await supabaseAdmin
+        .from("rx_bills")
+        .select("business_id")
+        .eq("id", data.bill_id)
+        .maybeSingle();
+      if (bill?.business_id) bizId = bill.business_id;
+
+      await supabaseAdmin
+        .from("rx_bills")
+        .update({ due_date: yestStr, status: "unpaid" } as never)
+        .eq("id", data.bill_id);
+    }
+
+    if (bizId) {
+      const { data: acc } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .select("id, notes, monthly_amount")
+        .eq("business_id", bizId)
+        .is("user_id", null)
+        .maybeSingle();
+
+      const currentNotes = parseBillingConfig(acc?.notes);
+      const updatedNotes = JSON.stringify({ ...currentNotes, manual_lock: true });
+
+      if (acc) {
+        await supabaseAdmin
+          .from("rx_billing_accounts")
+          .update({ notes: updatedNotes } as never)
+          .eq("id", acc.id);
+      }
+
+      const { periodStart } = getDhakaMonthDates();
+      const { data: existingBill } = await supabaseAdmin
+        .from("rx_bills")
+        .select("id")
+        .eq("business_id", bizId)
+        .is("user_id", null)
+        .eq("status", "unpaid")
+        .limit(1)
+        .maybeSingle();
+
+      if (existingBill) {
+        await supabaseAdmin
+          .from("rx_bills")
+          .update({ due_date: yestStr, status: "unpaid" } as never)
+          .eq("id", existingBill.id);
+      } else {
+        await supabaseAdmin
+          .from("rx_bills")
+          .insert({
+            business_id: bizId,
+            user_id: null,
+            period_start: periodStart,
+            due_date: yestStr,
+            amount: Number(acc?.monthly_amount ?? 800),
+            status: "unpaid",
+          } as never);
+      }
+    }
 
     return { ok: true, due_date: yestStr };
+  });
+
+/**
+ * Super Admin: Instantly unlock a client's system (removes manual_lock and gives +3 days grace).
+ */
+export const unlockSubscriptionNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { business_id?: string; bill_id?: string }) => {
+    if (!input?.business_id && !input?.bill_id) throw new Error("business_id or bill_id required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const dhakaNow = new Date(utc + 3600000 * 6);
+    dhakaNow.setDate(dhakaNow.getDate() + 3);
+    const newDueStr = `${dhakaNow.getFullYear()}-${String(dhakaNow.getMonth() + 1).padStart(2, "0")}-${String(dhakaNow.getDate()).padStart(2, "0")}`;
+
+    let bizId = data.business_id;
+
+    if (data.bill_id) {
+      const { data: bill } = await supabaseAdmin
+        .from("rx_bills")
+        .select("business_id")
+        .eq("id", data.bill_id)
+        .maybeSingle();
+      if (bill?.business_id) bizId = bill.business_id;
+
+      await supabaseAdmin
+        .from("rx_bills")
+        .update({ due_date: newDueStr, status: "unpaid" } as never)
+        .eq("id", data.bill_id);
+    }
+
+    if (bizId) {
+      const { data: acc } = await supabaseAdmin
+        .from("rx_billing_accounts")
+        .select("id, notes")
+        .eq("business_id", bizId)
+        .is("user_id", null)
+        .maybeSingle();
+
+      if (acc) {
+        const currentNotes = parseBillingConfig(acc?.notes);
+        const updatedNotes = JSON.stringify({ ...currentNotes, manual_lock: false });
+        await supabaseAdmin
+          .from("rx_billing_accounts")
+          .update({ notes: updatedNotes } as never)
+          .eq("id", acc.id);
+      }
+
+      await supabaseAdmin
+        .from("rx_bills")
+        .update({ due_date: newDueStr } as never)
+        .eq("business_id", bizId)
+        .is("user_id", null)
+        .eq("status", "unpaid");
+    }
+
+    return { ok: true, new_due_date: newDueStr };
   });
 
 /**
@@ -508,7 +682,7 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
 
-    const { dueDay } = parseBillingConfig((acc as any)?.notes);
+    const { dueDay, manualLock } = parseBillingConfig((acc as any)?.notes);
     const { y, m, periodStart, todayStr } = getDhakaMonthDates(dueDay);
     const clientDueDate = `${y}-${m}-${String(dueDay).padStart(2, "0")}`;
 
@@ -558,8 +732,8 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
 
     const isPaid = currentBill?.status === "paid";
     const effectiveDue = currentBill?.due_date || clientDueDate;
-    const isOverdue = !isPaid && todayStr >= effectiveDue;
-    const isDueWarning = !isPaid && todayStr < effectiveDue;
+    const isOverdue = !isPaid && (manualLock || todayStr >= effectiveDue);
+    const isDueWarning = !isPaid && !manualLock && todayStr < effectiveDue;
 
     return {
       business_id: businessId,

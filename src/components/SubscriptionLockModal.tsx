@@ -20,10 +20,14 @@ export function SubscriptionLockModal({
   sub,
   onSignOut,
   onRefresh,
+  isPreview = false,
+  onClosePreview,
 }: {
   sub: CurrentSubscriptionStatus;
   onSignOut?: () => void;
   onRefresh?: () => void;
+  isPreview?: boolean;
+  onClosePreview?: () => void;
 }) {
   const startBkash = useServerFn(startBkashPayment);
   const [loading, setLoading] = useState(false);
@@ -33,6 +37,10 @@ export function SubscriptionLockModal({
   const helpline = sub.helpline || "01712472839";
 
   async function handlePayNow() {
+    if (isPreview) {
+      toast.info(`প্রিভিউ মুড: বিকাশ গেটওয়ে সম্পূর্ণ সচল আছে (৳${amount})। লাইভ বিলের ক্ষেত্রে এটি সরাসরি বিকাশ পেজে নিয়ে যাবে।`);
+      return;
+    }
     if (!sub.business_id || !sub.bill_id) {
       toast.error("বিলের তথ্য পাওয়া যায়নি। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।");
       return;
@@ -78,6 +86,30 @@ export function SubscriptionLockModal({
       <div className="relative w-full max-w-md rounded-3xl border-2 border-destructive/40 bg-card p-6 sm:p-8 text-center shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-200">
         {/* Glow behind the box */}
         <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-b from-destructive/20 to-transparent blur-xl -z-10 pointer-events-none" />
+
+        {/* Admin Preview Header */}
+        {isPreview && (
+          <div className="rounded-2xl border border-amber-500/50 bg-amber-500/15 p-3 text-left space-y-1.5 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-500">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+                অ্যাডমিন প্রিভিউ মুড (প্রদর্শনী)
+              </span>
+              {onClosePreview && (
+                <button
+                  type="button"
+                  onClick={onClosePreview}
+                  className="text-[11px] font-bold text-amber-400 hover:text-white underline cursor-pointer"
+                >
+                  প্রিভিউ বন্ধ করুন ✕
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-amber-200/90 leading-relaxed">
+              বকেয়া বিল পরিশোধ না করলে বা সফটওয়্যার লক করা থাকলে ক্লায়েন্টদের স্ক্রিন ঠিক এভাবেই সম্পূর্ণ অফ হয়ে শুধুমাত্র এই মেসেজ কার্ডটি দেখাবে।
+            </p>
+          </div>
+        )}
 
         {/* Urgent Icon */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/15 text-destructive ring-8 ring-destructive/10 animate-pulse">
@@ -190,6 +222,20 @@ export function SubscriptionLockModal({
               </Button>
             )}
           </div>
+
+          {isPreview && onClosePreview && (
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClosePreview}
+                className="w-full h-8 rounded-lg text-xs font-bold bg-muted hover:bg-muted/80 text-foreground cursor-pointer"
+              >
+                প্রিভিউ বন্ধ করুন (Exit Preview)
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

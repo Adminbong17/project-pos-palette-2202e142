@@ -20,6 +20,9 @@ import {
   ExternalLink,
   CalendarDays,
   Pencil,
+  Eye,
+  Unlock,
+  ShieldAlert,
 } from "lucide-react";
 
 import { useIsSuperAdmin } from "@/hooks/use-super-admin";
@@ -31,9 +34,12 @@ import {
   markSubscriptionBillPaid,
   extendSubscriptionGrace,
   lockSubscriptionNow,
+  unlockSubscriptionNow,
   updateClientFullProfile,
   type BusinessSubscriptionRow,
+  type CurrentSubscriptionStatus,
 } from "@/lib/subscriptions.functions";
+import { SubscriptionLockModal } from "@/components/SubscriptionLockModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,11 +73,13 @@ function AdminSubscriptionsMasterPage() {
   const markPaid = useServerFn(markSubscriptionBillPaid);
   const extendGrace = useServerFn(extendSubscriptionGrace);
   const lockNow = useServerFn(lockSubscriptionNow);
+  const unlockNow = useServerFn(unlockSubscriptionNow);
   const saveFullProfile = useServerFn(updateClientFullProfile);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "due" | "locked" | "free">("all");
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
+  const [previewSub, setPreviewSub] = useState<CurrentSubscriptionStatus | null>(null);
 
   const [editingClient, setEditingClient] = useState<BusinessSubscriptionRow | null>(null);
   const [formData, setFormData] = useState({
@@ -179,6 +187,7 @@ function AdminSubscriptionsMasterPage() {
     onSuccess: () => {
       toast.success("পেমেন্ট সফলভাবে এন্ট্রি হয়েছে! সিস্টেম আনলক করা হয়েছে।");
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+      qc.invalidateQueries({ queryKey: ["my-platform-subscription"] });
     },
     onError: (e: any) => toast.error(e?.message || "পেমেন্ট এন্ট্রি ব্যর্থ হয়েছে"),
   });
@@ -191,20 +200,35 @@ function AdminSubscriptionsMasterPage() {
     onSuccess: (res) => {
       toast.success(`৩ দিন সময় বৃদ্ধি করা হয়েছে (নতুন শেষ তারিখ: ${res.new_due_date})`);
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+      qc.invalidateQueries({ queryKey: ["my-platform-subscription"] });
     },
     onError: (e: any) => toast.error(e?.message || "সময় বাড়ানো যায়নি"),
   });
 
   // Instant Lock mutation
   const lockMutation = useMutation({
-    mutationFn: async (billId: string) => {
-      return await lockNow({ data: { bill_id: billId } });
+    mutationFn: async ({ businessId, billId }: { businessId: string; billId?: string }) => {
+      return await lockNow({ data: { business_id: businessId, bill_id: billId } });
     },
     onSuccess: () => {
-      toast.success("সিস্টেম অবিলম্বে স্থগিত / লক করা হয়েছে!");
+      toast.success("সিস্টেম অবিলম্বে স্থগিত / লক করা হয়েছে! ক্লায়েন্ট এখন শুধুমাত্র বকেয়া বিলের মেসেজ কার্ড দেখতে পাবে।");
       qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+      qc.invalidateQueries({ queryKey: ["my-platform-subscription"] });
     },
     onError: (e: any) => toast.error(e?.message || "লক করা সম্ভব হয়নি"),
+  });
+
+  // Instant Unlock mutation
+  const unlockMutation = useMutation({
+    mutationFn: async ({ businessId, billId }: { businessId: string; billId?: string }) => {
+      return await unlockNow({ data: { business_id: businessId, bill_id: billId } });
+    },
+    onSuccess: (res) => {
+      toast.success(`সিস্টেম আনলক করা হয়েছে! (নতুন সময়সীমা: ${res.new_due_date})`);
+      qc.invalidateQueries({ queryKey: ["admin-all-subscriptions"] });
+      qc.invalidateQueries({ queryKey: ["my-platform-subscription"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "আনলক করা সম্ভব হয়নি"),
   });
 
   const allSubs = data?.subscriptions ?? [];
@@ -278,6 +302,35 @@ function AdminSubscriptionsMasterPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Lock Card Preview Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const target = allSubs.find((s) => s.status === "locked") || allSubs[0];
+              setPreviewSub({
+                business_id: target?.business_id || "preview-id",
+                business_name: target?.business_name || "Sheikh Pharma",
+                mode: target?.mode || "subscription",
+                monthly_amount: target?.monthly_amount || 800,
+                due_day: target?.due_day || 7,
+                is_free: target?.mode === "free",
+                is_paid: false,
+                is_locked: true,
+                is_due_warning: false,
+                due_date: target?.current_bill?.due_date || `${target?.due_day || 7} তারিখ`,
+                bill_id: target?.current_bill?.id || null,
+                helpline: target?.helpline || "01712472839",
+              });
+            }}
+            className="h-9 rounded-xl text-xs font-bold border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 cursor-pointer shadow-2xs gap-1.5"
+            title="ক্লায়েন্ট বকেয়া বিল না দিলে যে লাল মেসেজ কার্ডটি দেখবে তার প্রিভিউ দেখুন"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            <span>লক মেসেজ কার্ড প্রিভিউ</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -629,6 +682,34 @@ function AdminSubscriptionsMasterPage() {
 
                       {/* Super Admin Quick Actions */}
                       <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
+                        {/* Preview Lock Card for this specific business */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setPreviewSub({
+                              business_id: s.business_id,
+                              business_name: s.business_name,
+                              mode: s.mode,
+                              monthly_amount: s.monthly_amount,
+                              due_day: s.due_day,
+                              is_free: s.mode === "free",
+                              is_paid: s.status === "paid",
+                              is_locked: true,
+                              is_due_warning: false,
+                              due_date: s.current_bill?.due_date || `${s.due_day} তারিখ`,
+                              bill_id: s.current_bill?.id || null,
+                              helpline: s.helpline || "01712472839",
+                            })
+                          }
+                          className="h-7 px-2 text-[11px] rounded-lg font-bold border-destructive/30 text-destructive hover:bg-destructive/10 cursor-pointer shadow-2xs"
+                          title="এই ক্লায়েন্টের জন্য বকেয়া বিলের মেসেজ কার্ড প্রিভিউ দেখুন"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          <span>কার্ড প্রিভিউ</span>
+                        </Button>
+
                         {/* Edit Full Profile */}
                         <Button
                           type="button"
@@ -696,16 +777,42 @@ function AdminSubscriptionsMasterPage() {
                           </Button>
                         )}
 
+                        {/* Unlock button if locked */}
+                        {s.status === "locked" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={unlockMutation.isPending}
+                            onClick={() =>
+                              unlockMutation.mutate({
+                                businessId: s.business_id,
+                                billId: s.current_bill?.id,
+                              })
+                            }
+                            className="h-7 px-2 text-[11px] rounded-lg font-bold border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 cursor-pointer shadow-2xs"
+                            title="সিস্টেম আনলক করুন (+৩ দিন গ্রেস বাড়িয়ে দেওয়া হবে)"
+                          >
+                            <Unlock className="h-3 w-3 mr-1 text-amber-600" />
+                            <span>আনলক করুন</span>
+                          </Button>
+                        )}
+
                         {/* Instant Lock button: if unpaid and not locked yet */}
-                        {s.current_bill && s.current_bill.status !== "paid" && s.mode !== "free" && s.status !== "locked" && (
+                        {s.status !== "locked" && s.mode !== "free" && (
                           <Button
                             type="button"
                             variant="destructive"
                             size="sm"
                             disabled={lockMutation.isPending}
-                            onClick={() => lockMutation.mutate(s.current_bill!.id)}
+                            onClick={() =>
+                              lockMutation.mutate({
+                                businessId: s.business_id,
+                                billId: s.current_bill?.id,
+                              })
+                            }
                             className="h-7 px-2 text-[11px] rounded-lg font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer shadow-2xs"
-                            title="সিস্টেম এখনই লক করুন"
+                            title="সিস্টেম এখনই লক করুন (ক্লায়েন্ট শুধুমাত্র বকেয়া বিল কার্ড দেখতে পাবে)"
                           >
                             <Lock className="h-3 w-3 mr-1" />
                             <span>লক করুন</span>
@@ -888,6 +995,15 @@ function AdminSubscriptionsMasterPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Live Lock Modal Preview */}
+      {previewSub && (
+        <SubscriptionLockModal
+          sub={previewSub}
+          isPreview={true}
+          onClosePreview={() => setPreviewSub(null)}
+        />
+      )}
     </div>
   );
 }
