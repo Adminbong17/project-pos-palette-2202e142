@@ -40,7 +40,13 @@ function AuthedLayout() {
   const { isLoading: roleLoading } = useCurrentRole();
   const { sections: allowed, isLoading: sectionsLoading } = useAllowedSections();
   const { isSuperAdmin, isLoading: superLoading } = useIsSuperAdmin();
-  const { sub, isLocked, isDueWarning, refetch: refetchSub } = usePlatformSubscription();
+  const {
+    sub,
+    isLocked,
+    isDueWarning,
+    isLoading: subLoading,
+    refetch: refetchSub,
+  } = usePlatformSubscription();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -112,7 +118,7 @@ function AuthedLayout() {
 
   // 1. Wait for auth & permissions to load before making ANY redirect decisions!
   // This completely prevents premature redirects with half-baked permission states.
-  if (superLoading || roleLoading || sectionsLoading) {
+  if (superLoading || roleLoading || sectionsLoading || (!isSuperAdmin && subLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">

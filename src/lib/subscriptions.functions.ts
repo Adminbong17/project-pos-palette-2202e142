@@ -453,13 +453,22 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
     const businessId = member.business_id;
     const businessName = (member as any)?.businesses?.name || "Sheikh Pharma";
 
-    // 2. Fetch business account & current bill
-    const [{ data: acc }, { data: bills }] = await Promise.all([
+    // 2. Fetch business account, oldest unpaid bill (if any), and latest bill
+    const [{ data: acc }, { data: unpaidBill }, { data: latestBill }] = await Promise.all([
       supabaseAdmin
         .from("rx_billing_accounts")
         .select("id, mode, monthly_amount, helpline, notes")
         .eq("business_id", businessId)
         .is("user_id", null)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("rx_bills")
+        .select("id, amount, due_date, status, paid_at, period_start")
+        .eq("business_id", businessId)
+        .is("user_id", null)
+        .eq("status", "unpaid")
+        .order("period_start", { ascending: true })
+        .limit(1)
         .maybeSingle(),
       supabaseAdmin
         .from("rx_bills")
@@ -479,10 +488,10 @@ export const getMyBusinessSubscription = createServerFn({ method: "GET" })
     const monthlyAmount = Number(acc?.monthly_amount ?? 800);
     const helpline = acc?.helpline || "01712472839";
 
-    // Check if current month bill exists
-    let currentBill = bills as any;
-    if (currentBill && currentBill.period_start !== periodStart) {
-      // Need a new bill for the new month
+    // If an unpaid bill exists anywhere, that bill takes absolute priority
+    let currentBill = (unpaidBill || latestBill) as any;
+    if (currentBill && currentBill.status === "paid" && currentBill.period_start !== periodStart) {
+      // Prior month was paid, but new month started - need new bill
       currentBill = null;
     }
 
