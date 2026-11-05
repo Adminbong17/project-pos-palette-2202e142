@@ -17,16 +17,34 @@ async function sign(payload: string) {
   return createHmac("sha256", `patient-portal:${secret}`).update(payload).digest("hex");
 }
 
-async function verifyToken(token: string): Promise<string> {
-  const [phone, exp, sig] = String(token ?? "").split(".");
-  if (!phone || !exp || !sig) throw new Error("Please log in again");
-  if (Number(exp) < Date.now()) throw new Error("Session expired — please log in again");
-  const expected = await sign(`${phone}.${exp}`);
+async function verifySessionToken(token: string): Promise<{ phone: string; pid?: string }> {
+  const parts = String(token ?? "").split(".");
   const { timingSafeEqual } = await import("crypto");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Please log in again");
-  return phone;
+  if (parts.length === 3) {
+    const [phone, exp, sig] = parts;
+    if (!phone || !exp || !sig) throw new Error("Please log in again");
+    if (Number(exp) < Date.now()) throw new Error("Session expired — please log in again");
+    const expected = await sign(`${phone}.${exp}`);
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Please log in again");
+    return { phone };
+  } else if (parts.length === 4) {
+    const [phone, pid, exp, sig] = parts;
+    if (!phone || !exp || !sig) throw new Error("Please log in again");
+    if (Number(exp) < Date.now()) throw new Error("Session expired — please log in again");
+    const expected = await sign(`${phone}.${pid}.${exp}`);
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Please log in again");
+    return { phone, pid: pid === "_" ? undefined : pid };
+  }
+  throw new Error("Please log in again");
+}
+
+async function verifyToken(token: string): Promise<string> {
+  const sess = await verifySessionToken(token);
+  return sess.phone;
 }
 
 export const requestPatientCode = createServerFn({ method: "POST" })
@@ -85,22 +103,26 @@ export const verifyPatientCode = createServerFn({ method: "POST" })
   });
 
 export const getPatientDashboard = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string }) => z.object({ token: z.string().max(200) }).parse(d))
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().max(500) }).parse(d))
   .handler(async ({ data }) => {
-    const phone = await verifyToken(data.token);
+    const session = await verifySessionToken(data.token);
+    const phone = session.phone;
+    const initialPid = session.pid;
     const like = `%${phone.slice(1)}`; // matches 01…, +8801…, 8801…
+    const pidSearch = initialPid ? initialPid.replace(/^PID[\-_]?/i, "") : "";
+    const pidClause = pidSearch ? `,patient_code.ilike.%${pidSearch}%` : "";
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
 
     const [rx, labs, appts, sales, plans] = await Promise.all([
       db.from("prescriptions")
         .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
-        .ilike("patient_phone", like).order("rx_date", { ascending: false }).limit(100),
+        .or(`patient_phone.ilike.${like}${pidClause}`).order("rx_date", { ascending: false }).limit(100),
       db.from("lab_reports")
         .select("id, test_name, department, patient_name, patient_code, age, gender, sample_no, reported_at_text, comment, rows, created_at, business_id")
-        .ilike("phone_no", like).order("created_at", { ascending: false }).limit(100),
+        .or(`phone_no.ilike.${like}${pidClause}`).order("created_at", { ascending: false }).limit(100),
       db.from("rx_appointments")
         .select("id, appt_date, appt_time, serial_no, status, patient_name, fee_amount, business_id, doctor_id, chamber_id, patient_type, patient_code")
-        .ilike("patient_phone", like).order("appt_date", { ascending: false }).limit(100),
+        .or(`patient_phone.ilike.${like}${pidClause}`).order("appt_date", { ascending: false }).limit(100),
       db.from("clinic_sales")
         .select("id, invoice_no, sale_date, total, paid, discount_amount, business_id")
         .ilike("patient_phone", like).order("sale_date", { ascending: false }).limit(100),
@@ -212,6 +234,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
 
     return {
       phone,
+      initialPid,
       name,
       patients: Array.from(patientMap.values()),
       prescriptions: withBiz(rx.data as any).map((r: any) => ({
@@ -226,14 +249,120 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     };
   });
 
-/** Phone-only login (no SMS code) — issues a session token for the number. */
+/**
+ * Patient Login with Phone Number + PID (or Phone alone, or PID alone)
+ * Issues a signed session token.
+ */
+export const loginPatient = createServerFn({ method: "POST" })
+  .inputValidator((d: { phone?: string; pid?: string }) =>
+    z.object({
+      phone: z.string().max(30).optional(),
+      pid: z.string().max(50).optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const rawPhone = String(data.phone ?? "").trim();
+    const rawPid = String(data.pid ?? "").trim();
+
+    let cleanPhone = localPhone(rawPhone);
+    const cleanPid = rawPid ? rawPid.replace(/[^\w\-]/g, "") : "";
+    const pidSearch = cleanPid ? cleanPid.replace(/^PID[\-_]?/i, "") : "";
+
+    if (!cleanPhone && !cleanPid) {
+      throw new Error("মোবাইল নম্বর অথবা পেশেন্ট আইডি (PID) দিন");
+    }
+
+    // If only PID is given without phone, lookup registered phone
+    if (!cleanPhone && cleanPid) {
+      const [rxHit, apptHit, labHit] = await Promise.all([
+        db.from("prescriptions")
+          .select("patient_phone, patient_code")
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .not("patient_phone", "is", null)
+          .limit(1),
+        db.from("rx_appointments")
+          .select("patient_phone, patient_code")
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .not("patient_phone", "is", null)
+          .limit(1),
+        db.from("lab_reports")
+          .select("phone_no, patient_code")
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .not("phone_no", "is", null)
+          .limit(1),
+      ]);
+
+      const foundPhone =
+        rxHit.data?.[0]?.patient_phone ||
+        apptHit.data?.[0]?.patient_phone ||
+        labHit.data?.[0]?.phone_no;
+
+      if (!foundPhone) {
+        throw new Error("এই পেশেন্ট আইডি (PID) দিয়ে কোনো রেকর্ড পাওয়া যায়নি। অনুগ্রহ করে মোবাইল নম্বর দিন।");
+      }
+      cleanPhone = localPhone(foundPhone);
+    }
+
+    if (!cleanPhone) {
+      throw new Error("সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)");
+    }
+
+    // If both Phone and PID are given, verify PID belongs to this phone if any records exist
+    if (cleanPid) {
+      const like = `%${cleanPhone.slice(1)}`;
+      const [rxCheck, apptCheck, labCheck] = await Promise.all([
+        db.from("prescriptions")
+          .select("id")
+          .ilike("patient_phone", like)
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .limit(1),
+        db.from("rx_appointments")
+          .select("id")
+          .ilike("patient_phone", like)
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .limit(1),
+        db.from("lab_reports")
+          .select("id")
+          .ilike("phone_no", like)
+          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
+          .limit(1),
+      ]);
+
+      const matched =
+        (rxCheck.data?.length ?? 0) > 0 ||
+        (apptCheck.data?.length ?? 0) > 0 ||
+        (labCheck.data?.length ?? 0) > 0;
+
+      if (!matched) {
+        const [anyRx, anyAppt, anyLab] = await Promise.all([
+          db.from("prescriptions").select("id").ilike("patient_phone", like).limit(1),
+          db.from("rx_appointments").select("id").ilike("patient_phone", like).limit(1),
+          db.from("lab_reports").select("id").ilike("phone_no", like).limit(1),
+        ]);
+        const hasAny = (anyRx.data?.length ?? 0) > 0 || (anyAppt.data?.length ?? 0) > 0 || (anyLab.data?.length ?? 0) > 0;
+        if (hasAny) {
+          throw new Error("প্রদত্ত মোবাইল নম্বরের সাথে এই পেশেন্ট আইডি (PID) এর মিল পাওয়া যায়নি। নম্বর ও PID আবার চেক করুন।");
+        }
+      }
+    }
+
+    const exp = Date.now() + 30 * 24 * 3600 * 1000;
+    const pidPart = cleanPid || "_";
+    const token = `${cleanPhone}.${pidPart}.${exp}.${await sign(`${cleanPhone}.${pidPart}.${exp}`)}`;
+
+    return {
+      token,
+      phone: cleanPhone,
+      pid: cleanPid || undefined,
+    };
+  });
+
+/** Backwards-compatible phone-only login function */
 export const loginPatientByPhone = createServerFn({ method: "POST" })
   .inputValidator((d: { phone: string }) => z.object({ phone: z.string().max(20) }).parse(d))
   .handler(async ({ data }) => {
-    const phone = localPhone(data.phone);
-    if (!phone) throw new Error("সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন");
-    const exp = Date.now() + 30 * 24 * 3600 * 1000;
-    return { token: `${phone}.${exp}.${await sign(`${phone}.${exp}`)}`, phone };
+    return loginPatient({ data: { phone: data.phone } });
   });
 
 /* -------------------------------------------------------------------------- */

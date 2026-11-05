@@ -980,6 +980,10 @@ function PrescriptionsPage() {
     const { degree: docDegree, designation: docDesignation } = splitDoctorQualification(rawQualification);
     const showClinic = shouldShowClinicHeader(clinicName, docDisplayName);
 
+    const patientPhone = (rx.patient_phone || "").trim();
+    const rawPid = ((rx as any).patient_code || rx.rx_no || rx.id.slice(0, 8) || "").trim();
+    const pidFormatted = /^pid/i.test(rawPid) ? rawPid : (rawPid ? `PID-${rawPid}` : "");
+
     const headerHtml = `
       <div class="header">
         <div class="header-top-accent"></div>
@@ -1072,11 +1076,20 @@ function PrescriptionsPage() {
           </div>
         </div>
 
-        <div class="wish-ribbon">
-          <span class="wish-icon">🌿</span>
-          <span class="wish-bn">দ্রুত সুস্থ হয়ে উঠুন</span>
-          <span class="wish-sep">•</span>
-          <span class="wish-en">Wishing You Good Health &amp; Speedy Recovery</span>
+        <div class="portal-instruction-banner">
+          <div class="pib-header">
+            <div class="pib-title">
+              <span class="pib-icon">🌐</span>
+              <span class="pib-heading">পেশেন্ট পোর্টাল সেবা (Online Patient Portal)</span>
+            </div>
+            <div class="pib-badges">
+              ${pidFormatted ? `<span class="pib-pid-badge">পেশেন্ট আইডি (PID): <strong>${esc(pidFormatted)}</strong></span>` : ""}
+              ${patientPhone ? `<span class="pib-phone-badge">মোবাইল: <strong>${esc(patientPhone)}</strong></span>` : ""}
+            </div>
+          </div>
+          <div class="pib-body">
+            ঘরে বসে ডিজিটাল প্রেসক্রিপশন ও ল্যাব টেস্টের রিপোর্ট পেতে ভিজিট করুন: <strong class="pib-url">pt.sheikhpharma.shop</strong> — আপনার <strong>মোবাইল নম্বর</strong> ও <strong>পেশেন্ট আইডি (${esc(pidFormatted || "PID")})</strong> দিয়ে লগইন করে প্রেসক্রিপশন ডাউনলোড, রিপোর্টের হিস্ট্রি দেখা এবং পরবর্তী সিরিয়াল বুকিং করুন।
+          </div>
         </div>
 
         <div class="footer-bottom-bar">
@@ -1203,9 +1216,14 @@ function PrescriptionsPage() {
         .sign-doc-qual { font-size:10px; color:#0284c7; line-height:1.2; margin-top:1px; }
         .sign-doc-desig { font-size:9.5px; color:#0f766e; line-height:1.2; margin-top:1px; }
         .footer-container { margin-top:auto; padding-top:4px; position:relative; z-index:1; flex-shrink:0; }
-        .wish-ribbon { margin:6px auto 3px; padding:3px 14px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:16px; color:#0f766e; font-size:10px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
-        .wish-icon { font-size:11px; }
-        .wish-sep { opacity:0.4; }
+        .portal-instruction-banner { margin:5px 0 3px; padding:5px 9px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-left:3.5px solid #0d9488; border-radius:6px; color:#0f172a; font-size:9.5px; line-height:1.35; }
+        .pib-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; padding-bottom:2px; border-bottom:1px dashed #ccfbf1; }
+        .pib-title { display:flex; align-items:center; gap:4px; color:#0f766e; font-weight:700; font-size:10px; }
+        .pib-badges { display:flex; align-items:center; gap:6px; }
+        .pib-pid-badge { background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:1px 6px; border-radius:4px; font-size:9px; font-family:monospace; }
+        .pib-phone-badge { background:#f1f5f9; border:1px solid #e2e8f0; color:#334155; padding:1px 6px; border-radius:4px; font-size:9px; font-family:monospace; }
+        .pib-body { color:#334155; font-size:9.5px; }
+        .pib-url { color:#0284c7; font-family:monospace; font-size:10px; text-decoration:underline; font-weight:700; }
         .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:9.5px; color:#64748b; padding:4px 0 2px; border-top:1px solid #e2e8f0; margin-top:2px; }
         .footer-left { display:flex; gap:8px; align-items:center; }
         .footer-right { color:#94a3b8; font-size:9px; }
@@ -1275,7 +1293,7 @@ function PrescriptionsPage() {
       .med-sched { padding-left:12px; color:#0284c7; font-weight:600; font-size:0.95em; }
       .med-inst { padding-left:12px; font-style:italic; color:#475569; font-size:0.9em; }
       .rx-mark { font-size:20px; font-weight:bold; color:#0d9488; margin:4px 0 2px; }
-      .wish-ribbon { margin:6px auto 2px; text-align:center; font-size:0.85em; color:#0f766e; font-weight:600; border-top:1px dashed #cbd5e1; padding-top:4px; }
+      .portal-thermal-box { margin:4px 0 2px; padding:3px 4px; border:1px dashed #0d9488; border-radius:4px; background:#f8fafc; font-size:0.85em; text-align:center; color:#0f172a; line-height:1.3; }
       .footer { margin-top:8px; border-top:1px dashed #94a3b8; padding-top:4px; text-align:center; font-size:0.85em; }
       .credit { margin-top:4px; padding-top:2px; border-top:1px solid #e2e8f0; text-align:center; font-size:0.75em; color:#64748b; }`;
 
@@ -1291,8 +1309,11 @@ function PrescriptionsPage() {
       ${rx.advice ? `<div class="pbox" style="margin-top:6px;"><span class="label" style="font-weight:bold;color:#0f766e;">পরামর্শ (Advice):</span>${numbered(rx.advice)}</div>` : ""}
       ${nextVisitTxt ? `<div style="margin-top:4px;padding:3px 6px;background:#fefce8;border-left:3px solid #f59e0b;font-size:0.85em;color:#92400e;">📅 <strong>পরবর্তী সাক্ষাত:</strong> ${esc(nextVisitTxt)}</div>` : ""}
       ${rx.notes ? `<div style="margin-top:4px;font-size:0.85em;color:#64748b;">${nl(rx.notes)}</div>` : ""}
-      <div class="wish-ribbon">
-        <span>🌿 দ্রুত সুস্থ হয়ে উঠুন • Get Well Soon</span>
+      <div class="portal-thermal-box">
+        <div style="font-weight:bold;color:#0f766e;">🌐 পেশেন্ট পোর্টাল: pt.sheikhpharma.shop</div>
+        <div style="font-size:0.9em;color:#475569;margin-top:1px;">
+          মোবাইল নম্বর ও PID ${pidFormatted ? `(<strong>${esc(pidFormatted)}</strong>)` : ""} দিয়ে সব রিপোর্ট ও প্রেসক্রিপশন দেখুন
+        </div>
       </div>
       <div class="footer">
         <div style="border-bottom:1px dashed #0d9488;width:140px;margin:8px auto 2px;"></div>

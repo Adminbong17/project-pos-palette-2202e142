@@ -51,6 +51,7 @@ import { Badge } from "@/components/ui/badge";
 import { fmtDate as formatDate } from "@/lib/format-date";
 import {
   getPatientDashboard,
+  loginPatient,
   loginPatientByPhone,
   getAvailableDoctors,
   type AvailableDoctor,
@@ -143,16 +144,20 @@ const t = {
     ],
     cardTitle: "রোগী লগইন",
     cardSubtitle:
-      "ডাক্তার বা ফার্মেসিতে দেওয়া আপনার ১১ ডিজিটের মোবাইল নম্বরটি লিখুন।",
+      "আপনার ১১ ডিজিটের মোবাইল নম্বর এবং প্রেসক্রিপশনের পেশেন্ট আইডি (PID) দিয়ে লগইন করুন।",
     phoneLabel: "নিবন্ধিত মোবাইল নম্বর",
     phonePlaceholder: "০১৭১২-৩৪৫৬৭৮",
     phoneHint: "১১ ডিজিটের বাংলাদেশি মোবাইল নম্বর দিন",
     phoneError: "সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)",
+    pidLabel: "পেশেন্ট আইডি / PID (ঐচ্ছিক)",
+    pidPlaceholder: "যেমন: PID-10023 বা 10023",
+    pidHint: "প্রেসক্রিপশনে উল্লেখিত পেশেন্ট আইডি নম্বর",
+    pidError: "সঠিক পেশেন্ট আইডি (PID) দিন",
     loginBtn: "পোর্টাল এ প্রবেশ করুন",
     verifying: "যাচাই করা হচ্ছে...",
     trustEncrypted: "১০০% নিরাপদ ও এনক্রিপ্টেড",
     trustPasswordless: "কোনো পাসওয়ার্ডের প্রয়োজন নেই",
-    trustInstant: "তাত্ক্ষণিক মোবাইল ভেরিফিকেশন",
+    trustInstant: "মোবাইল + PID ভেরিফিকেশন",
     helpNeed: "কোনো সমস্যা বা তথ্যের জন্য কল করুন:",
     callNow: "এখনই কল করুন",
     footerAddress: "দোকান নং ১৩, আরব প্যারাডাইস মার্কেট, নতুন বাজার, মুক্তাগাছা, ময়মনসিংহ।",
@@ -244,16 +249,20 @@ const t = {
     ],
     cardTitle: "Patient Sign In",
     cardSubtitle:
-      "Enter the 11-digit mobile number provided at the clinic or pharmacy.",
+      "Enter your registered 11-digit mobile number and Patient ID (PID) to sign in.",
     phoneLabel: "Registered Mobile Number",
     phonePlaceholder: "01XXXXXXXXX",
     phoneHint: "Enter 11-digit Bangladeshi mobile number",
     phoneError: "Please enter a valid 11-digit mobile number (e.g. 017XXXXXXXX)",
+    pidLabel: "Patient ID / PID (Optional)",
+    pidPlaceholder: "e.g. PID-10023 or 10023",
+    pidHint: "Patient ID printed on your prescription",
+    pidError: "Please enter a valid Patient ID (PID)",
     loginBtn: "Access Patient Portal",
     verifying: "Verifying...",
     trustEncrypted: "100% Encrypted & Private",
     trustPasswordless: "No Password Required",
-    trustInstant: "Instant Phone-Based Session",
+    trustInstant: "Phone + PID Session",
     helpNeed: "Need help? Call pharmacy helpline:",
     callNow: "Call Support",
     footerAddress:
@@ -465,9 +474,10 @@ function Login({
   onLangToggle: (l: Lang) => void;
   onLogin: (t: string) => void;
 }) {
-  const login = useServerFn(loginPatientByPhone);
+  const login = useServerFn(loginPatient);
   const fetchDoctors = useServerFn(getAvailableDoctors);
   const [phone, setPhone] = useState("");
+  const [pid, setPid] = useState("");
   const [busy, setBusy] = useState(false);
   const curr = t[lang];
 
@@ -483,14 +493,23 @@ function Login({
 
   const go = async () => {
     const clean = normalizeBDPhoneInput(phone);
-    if (!/^01\d{9}$/.test(clean)) {
+    const cleanPid = pid.trim();
+
+    if (!clean && !cleanPid) {
+      toast.error(lang === "bn" ? "মোবাইল নম্বর অথবা পেশেন্ট আইডি (PID) দিন" : "Please enter mobile number or Patient ID (PID)");
+      return;
+    }
+
+    if (clean && !/^01\d{9}$/.test(clean)) {
       toast.error(curr.phoneError);
       return;
     }
+
     setBusy(true);
     try {
-      const r = await login({ data: { phone: clean } });
+      const r = await login({ data: { phone: clean, pid: cleanPid } });
       onLogin(r.token);
+      toast.success(lang === "bn" ? "সফলভাবে লগইন হয়েছে" : "Signed in successfully");
     } catch (e: any) {
       toast.error(e.message || curr.phoneError);
     } finally {
@@ -772,6 +791,47 @@ function Login({
                   </p>
                 </div>
 
+                {/* Patient ID (PID) Input Form */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                    <span>{curr.pidLabel}</span>
+                    <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold bg-teal-500/10 px-1.5 py-0.5 rounded">
+                      প্রেসক্রিপশন আইডি
+                    </span>
+                  </label>
+
+                  <div className="relative flex items-center rounded-xl border border-input bg-input/40 shadow-inner transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/25 focus-within:bg-card">
+                    <div className="flex items-center gap-1 border-r border-border/80 px-3 py-3 text-xs font-bold text-muted-foreground select-none bg-muted/40 rounded-l-xl font-mono">
+                      <span>🆔 PID</span>
+                    </div>
+
+                    <Input
+                      type="text"
+                      placeholder={curr.pidPlaceholder}
+                      value={pid}
+                      onChange={(e) => setPid(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && go()}
+                      className="h-12 border-0 bg-transparent px-3 text-sm font-mono font-medium shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                    />
+
+                    {pid && (
+                      <button
+                        type="button"
+                        onClick={() => setPid("")}
+                        className="mr-3 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                        aria-label="Clear PID input"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 px-1">
+                    <FileText className="h-3 w-3 text-teal-600 dark:text-teal-400" />
+                    <span>{curr.pidHint}</span>
+                  </p>
+                </div>
+
                 <Button
                   className="w-full h-12 text-base font-bold shadow-lg shadow-primary/25 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
                   disabled={busy}
@@ -988,6 +1048,19 @@ function Dashboard({
   useEffect(() => {
     if (q.error && /log in/i.test(String((q.error as Error).message))) onLogout();
   }, [q.error, onLogout]);
+
+  useEffect(() => {
+    if (q.data?.initialPid && q.data.patients?.length) {
+      const cleanTarget = q.data.initialPid.replace(/^PID[\-_]?/i, "").toLowerCase();
+      const match = q.data.patients.find((p: any) => {
+        const uidClean = (p.uid || "").replace(/^PID[\-_]?/i, "").toLowerCase();
+        return uidClean === cleanTarget || (p.uid || "").toLowerCase().includes(cleanTarget);
+      });
+      if (match) {
+        setSelectedPatientUid(match.uid);
+      }
+    }
+  }, [q.data?.initialPid, q.data?.patients]);
 
   if (q.isLoading)
     return (
