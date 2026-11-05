@@ -1051,19 +1051,32 @@ function PrescriptionsPage() {
 
     const footerHtml = `
       <div class="footer-container">
+        <div class="validation-row">
+          <div class="val-left">
+            ${nextVisitTxt ? `
+              <div class="next-visit-card">
+                <span class="next-visit-icon">📅</span>
+                <span class="next-visit-label">পরবর্তী সাক্ষাত (Next visit):</span>
+                <strong class="next-visit-date">${esc(nextVisitTxt)}</strong>
+              </div>
+            ` : ""}
+            ${rx.notes ? `<div class="rx-notes-line"><span class="rx-notes-label">📌 বিশেষ পরামর্শ:</span> ${nl(rx.notes)}</div>` : ""}
+          </div>
+
+          <div class="sign-block">
+            <div class="sign-line"></div>
+            <div class="sign-title">চিকিৎসকের স্বাক্ষর ও সিল (Doctor's Signature)</div>
+            <div class="sign-doc-name">${docDisplayName ? nl(docDisplayName) : ""}</div>
+            ${docDegree ? `<div class="sign-doc-qual">${nl(docDegree)}</div>` : ""}
+            ${docDesignation ? `<div class="sign-doc-desig">${nl(docDesignation)}</div>` : ""}
+          </div>
+        </div>
+
         <div class="wish-ribbon">
           <span class="wish-icon">🌿</span>
           <span class="wish-bn">দ্রুত সুস্থ হয়ে উঠুন</span>
           <span class="wish-sep">•</span>
           <span class="wish-en">Wishing You Good Health &amp; Speedy Recovery</span>
-        </div>
-
-        <div class="sign-block">
-          <div class="sign-line"></div>
-          <div class="sign-title">চিকিৎসকের স্বাক্ষর ও সিল (Doctor's Signature)</div>
-          <div class="sign-doc-name">${docDisplayName ? nl(docDisplayName) : ""}</div>
-          ${docDegree ? `<div class="sign-doc-qual">${nl(docDegree)}</div>` : ""}
-          ${docDesignation ? `<div class="sign-doc-desig">${nl(docDesignation)}</div>` : ""}
         </div>
 
         <div class="footer-bottom-bar">
@@ -1164,7 +1177,8 @@ function PrescriptionsPage() {
         .bullet-dot { color:#0d9488; font-weight:bold; }
         .vital-row { display:flex; align-items:flex-start; gap:4px; margin-bottom:2px; font-size:11px; color:#334155; line-height:1.35; }
         .rx-area { flex:1 1 auto; overflow:hidden; }
-        .rx-mark { font-size:26px; font-weight:900; font-family:'Times New Roman', Georgia, serif; color:#0d9488; line-height:1; margin-bottom:6px; }
+        .rx-header { display:flex; align-items:center; margin:0 0 10px; padding-bottom:3px; border-bottom:1.5px solid #ccfbf1; }
+        .rx-mark { font-size:32px; font-weight:700; font-family:Georgia, 'Times New Roman', serif; color:#0d9488; line-height:1.1; display:inline-block; letter-spacing:-0.5px; }
         .med { margin:0 0 6px; padding-bottom:4px; border-bottom:1px dashed #e2e8f0; }
         .med-head { display:flex; align-items:baseline; gap:5px; }
         .med-num { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%; background:#e0f2fe; color:#0369a1; font-size:9.5px; font-weight:700; flex-shrink:0; }
@@ -1173,19 +1187,26 @@ function PrescriptionsPage() {
         .med-sched { padding-left:22px; color:#0284c7; font-size:11px; font-weight:600; margin-top:1px; }
         .med-inst { padding-left:22px; color:#475569; font-style:italic; font-size:10.5px; margin-top:1px; }
         .adv-area { border-top:1.5px dashed #cbd5e1; padding-top:6px; margin-top:auto; flex-shrink:0; }
-        .rx-notes { margin-top:3px; font-size:10.5px; color:#475569; }
-        .next-visit-pill { background:#fefce8; border-left:3px solid #f59e0b; color:#92400e; padding:3px 8px; border-radius:4px; font-size:10.5px; margin-top:5px; font-weight:500; }
-        .wish-ribbon { margin:6px auto 3px; padding:3px 12px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:16px; color:#0f766e; font-size:10.5px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
-        .wish-icon { font-size:12px; }
-        .wish-sep { opacity:0.4; }
-        .sign-block { margin-top:6px; text-align:right; }
-        .sign-line { width:170px; border-bottom:1.5px dashed #0d9488; margin-left:auto; margin-bottom:3px; }
-        .sign-title { font-size:9.5px; color:#64748b; margin-bottom:1px; }
-        .sign-doc-name { font-weight:700; font-size:11.5px; color:#0f172a; }
-        .sign-doc-qual { font-size:10px; color:#0284c7; }
-        .sign-doc-desig { font-size:9.5px; color:#0f766e; }
+        .adv-list { font-size:11px; color:#334155; line-height:1.35; }
+        .validation-row { display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px; padding-top:6px; border-top:1.5px solid #e2e8f0; position:relative; z-index:1; }
+        .val-left { max-width:56%; display:flex; flex-direction:column; gap:4px; margin-bottom:2px; }
+        .next-visit-card { display:inline-flex; align-items:center; gap:6px; background:#fefce8; border:1px solid #fde047; border-left:3.5px solid #f59e0b; color:#92400e; padding:3px 8px; border-radius:5px; font-size:10.5px; width:fit-content; }
+        .next-visit-icon { font-size:12px; }
+        .next-visit-label { color:#78350f; font-weight:500; }
+        .next-visit-date { color:#92400e; font-weight:700; }
+        .rx-notes-line { font-size:10px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:2.5px 7px; line-height:1.35; }
+        .rx-notes-label { color:#0f766e; font-weight:600; }
+        .sign-block { text-align:right; min-width:170px; }
+        .sign-line { width:160px; border-bottom:1.5px dashed #0d9488; margin-left:auto; margin-bottom:4px; }
+        .sign-title { font-size:9px; color:#64748b; margin-bottom:2px; }
+        .sign-doc-name { font-weight:700; font-size:11.5px; color:#0f172a; line-height:1.2; }
+        .sign-doc-qual { font-size:10px; color:#0284c7; line-height:1.2; margin-top:1px; }
+        .sign-doc-desig { font-size:9.5px; color:#0f766e; line-height:1.2; margin-top:1px; }
         .footer-container { margin-top:auto; padding-top:4px; position:relative; z-index:1; flex-shrink:0; }
-        .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:9.5px; color:#64748b; padding:4px 0 2px; border-top:1px solid #e2e8f0; }
+        .wish-ribbon { margin:6px auto 3px; padding:3px 14px; background:linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border:1px solid #99f6e4; border-radius:16px; color:#0f766e; font-size:10px; font-weight:600; text-align:center; width:fit-content; display:flex; align-items:center; gap:6px; }
+        .wish-icon { font-size:11px; }
+        .wish-sep { opacity:0.4; }
+        .footer-bottom-bar { display:flex; justify-content:space-between; align-items:center; font-size:9.5px; color:#64748b; padding:4px 0 2px; border-top:1px solid #e2e8f0; margin-top:2px; }
         .footer-left { display:flex; gap:8px; align-items:center; }
         .footer-right { color:#94a3b8; font-size:9px; }
         .footer-accent-line { height:2.5px; background:linear-gradient(90deg, #0d9488, #0284c7, #3b82f6); border-radius:1.5px; margin-top:2px; }`;
@@ -1206,15 +1227,17 @@ function PrescriptionsPage() {
           </div>
           <div class="right">
             <div class="rx-area">
-              <div class="rx-mark">℞</div>
+              <div class="rx-header">
+                <span class="rx-mark">℞</span>
+              </div>
               ${medsHtml}
             </div>
-            <div class="adv-area">
-              <div class="sec-title sec-adv">পরামর্শ (Advice)</div>
-              <div>${numbered(rx.advice) || `<span style="color:#94a3b8;font-style:italic;">—</span>`}</div>
-              ${rx.notes ? `<div class="rx-notes">${nl(rx.notes)}</div>` : ""}
-              ${nextVisitTxt ? `<div class="next-visit-pill">📅 <strong>পরবর্তী সাক্ষাত (Next visit):</strong> ${esc(nextVisitTxt)}</div>` : ""}
-            </div>
+            ${rx.advice ? `
+              <div class="adv-area">
+                <div class="sec-title sec-adv">পরামর্শ (Advice)</div>
+                <div class="adv-list">${numbered(rx.advice)}</div>
+              </div>
+            ` : ""}
           </div>
         </div>
         ${footerHtml}
