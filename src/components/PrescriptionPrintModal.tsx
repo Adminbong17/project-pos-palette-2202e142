@@ -5,7 +5,7 @@ import {
 } from "@/lib/bluetooth-printer";
 import { BluetoothPrinterModal } from "@/components/BluetoothPrinterModal";
 import { Button } from "@/components/ui/button";
-import { Bluetooth, Printer, X, RefreshCw, FileText } from "lucide-react";
+import { Bluetooth, Printer, X, RefreshCw, FileText, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { PrintSize } from "@/components/print-size-select";
 
@@ -15,7 +15,8 @@ export interface PrescriptionPrintModalProps {
   rx: any | null;
   buildRxHtml: (rx: any, size: PrintSize) => Promise<{ styles: string; body: string; title: string }>;
   printRx: (rx: any, size: PrintSize) => Promise<void>;
-  savePdf: (rx: any) => Promise<void>;
+  savePdf: (rx: any, size?: PrintSize) => Promise<void>;
+  saveJpg?: (rx: any, size?: PrintSize) => Promise<void>;
   initialSize?: PrintSize;
   businessName?: string;
 }
@@ -27,6 +28,7 @@ export function PrescriptionPrintModal({
   buildRxHtml,
   printRx,
   savePdf,
+  saveJpg,
   initialSize = "58mm",
   businessName = "Sheikh Pharma",
 }: PrescriptionPrintModalProps) {
@@ -209,23 +211,36 @@ export function PrescriptionPrintModal({
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   onClick={handleRegularPrint}
                   variant="outline"
                   disabled={loading}
-                  className="h-9 rounded-xl text-xs cursor-pointer gap-1.5"
+                  className="h-9 rounded-xl text-xs cursor-pointer gap-1.5 px-2"
+                  title="প্রিন্টার দিয়ে প্রিন্ট করুন"
                 >
-                  <Printer className="h-3.5 w-3.5" /> Regular Print
+                  <Printer className="h-3.5 w-3.5" /> Print
                 </Button>
                 <Button
-                  onClick={() => savePdf(rx)}
+                  onClick={() => savePdf(rx, size)}
                   variant="outline"
                   disabled={loading}
-                  className="h-9 rounded-xl text-xs cursor-pointer gap-1.5"
+                  className="h-9 rounded-xl text-xs cursor-pointer gap-1.5 px-2"
+                  title="PDF ফাইল ডাউনলোড করুন"
                 >
-                  <FileText className="h-3.5 w-3.5" /> Download PDF
+                  <FileText className="h-3.5 w-3.5" /> PDF
                 </Button>
+                {saveJpg && (
+                  <Button
+                    onClick={() => saveJpg(rx, size)}
+                    variant="outline"
+                    disabled={loading}
+                    className="h-9 rounded-xl text-xs cursor-pointer gap-1.5 px-2 text-emerald-600 hover:text-emerald-700"
+                    title="JPG ছবি হিসেবে ডাউনলোড করুন"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" /> JPG
+                  </Button>
+                )}
               </div>
 
               <Button

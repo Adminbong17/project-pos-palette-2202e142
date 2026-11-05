@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Search, FileText, X, Baby, Sparkles, Sliders, Stethoscope } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, FileText, X, Baby, Sparkles, Sliders, Stethoscope, Image as ImageIcon } from "lucide-react";
 import { ChildDoseModal } from "@/components/ChildDoseModal";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -1296,16 +1296,34 @@ function PrescriptionsPage() {
     w.document.open(); w.document.write(html); w.document.close();
   };
 
-  const savePdf = async (rx: Rx) => {
+  const getRxFileName = (rx: Rx, ext: "pdf" | "jpg") => {
+    const cleanName = (rx.patient_name || "Patient")
+      .trim()
+      .replace(/[\/\?<>\\:\*\|":#]/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 50);
+
+    const rawId = (rx.patient_code || rx.rx_no || rx.id.slice(0, 8))
+      .trim()
+      .replace(/[\/\?<>\\:\*\|":#]/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 30);
+
+    const idPart = /^pid/i.test(rawId) ? rawId : `PID-${rawId}`;
+
+    return `Rx_${cleanName}_${idPart}.${ext}`;
+  };
+
+  const savePdf = async (rx: Rx, size: PrintSize = "A4") => {
     const t = toast.loading("Generating PDF…");
     let frame: HTMLIFrameElement | null = null;
     try {
-      const { styles, body } = await buildRxHtml(rx, "A4");
+      const { styles, body } = await buildRxHtml(rx, size);
 
       // Render inside an isolated iframe so the app's Tailwind theme
       // (which uses oklch() colors html2canvas can't parse) never applies.
       frame = document.createElement("iframe");
-      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:820px;height:1300px;border:0;background:#fff;";
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:900px;height:1400px;border:0;background:#fff;";
       document.body.appendChild(frame);
       const doc = frame.contentDocument!;
       doc.open();
@@ -1330,7 +1348,7 @@ function PrescriptionsPage() {
         frame?.remove();
         frame = null;
         toast.info("Use “Save as PDF” in the print dialog", { id: t });
-        await printRx(rx, "A4");
+        await printRx(rx, size);
         return;
       }
       const canvas = await html2canvas(target, {
@@ -1340,30 +1358,121 @@ function PrescriptionsPage() {
         windowHeight: target.scrollHeight,
       });
 
-
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pw = 210, ph = 297;
+      const pw = size === "80mm" ? 80 : size === "58mm" ? 58 : 210;
       const imgH = (canvas.height * pw) / canvas.width;
+      const ph = size === "A4" ? 297 : Math.max(imgH, 40);
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: size === "A4" ? "a4" : [pw, ph],
+        orientation: "portrait",
+      });
       const img = canvas.toDataURL("image/jpeg", 0.95);
 
-      if (imgH <= 299) {
-        // Fits comfortably on 1 single A4 page without creating an empty 2nd page
-        pdf.addImage(img, "JPEG", 0, 0, pw, Math.min(imgH, ph));
-      } else {
-        let remaining = imgH, pos = 0;
-        pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
-        remaining -= ph;
-        while (remaining > 5) {
-          pos -= ph;
-          pdf.addPage();
-          pdf.addImage(img, "JPEG", 0, pos, pw, imgH);
+      if (size === "A4") {
+        if (imgH <= 299) {
+          // Fits comfortably on 1 single A4 page without creating an empty 2nd page
+          pdf.addImage(img, "JPEG", 0, 0, pw, Math.min(imgH, ph));
+        } else {
+          let remaining = imgH, pos = 0;
+          pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
           remaining -= ph;
+          while (remaining > 5) {
+            pos -= ph;
+            pdf.addPage();
+            pdf.addImage(img, "JPEG", 0, pos, pw, imgH);
+            remaining -= ph;
+          }
         }
+      } else {
+        pdf.addImage(img, "JPEG", 0, 0, pw, imgH);
       }
-      pdf.save(`Rx-${(rx.rx_no ?? rx.id).replace(/[^\w-]/g, "")}.pdf`);
+      const fileName = getRxFileName(rx, "pdf");
+      pdf.save(fileName);
       toast.success("PDF saved", { id: t });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to make PDF", { id: t });
+    } finally {
+      frame?.remove();
+    }
+  };
+
+  const saveJpg = async (rx: Rx, size: PrintSize = "A4") => {
+    const t = toast.loading("Generating JPG…");
+    let frame: HTMLIFrameElement | null = null;
+    try {
+      const { styles, body } = await buildRxHtml(rx, size);
+
+      frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:900px;height:1400px;border:0;background:#fff;";
+      document.body.appendChild(frame);
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>
+        *{color:#000;}
+        html,body{margin:0;padding:0;background:#fff;}
+        ${styles}
+      </style></head><body>${body}</body></html>`);
+      doc.close();
+      await new Promise((r) => setTimeout(r, 120));
+
+      const target = doc.querySelector(".page") as HTMLElement;
+
+      let html2canvas: any;
+      try {
+        const mod = await import("html2canvas");
+        html2canvas = (mod as any).default;
+      } catch {
+        frame?.remove();
+        frame = null;
+        toast.error("Failed to load image library", { id: t });
+        return;
+      }
+
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+      });
+
+      const fileName = getRxFileName(rx, "jpg");
+
+      if (canvas.toBlob) {
+        canvas.toBlob(
+          (blob: Blob | null) => {
+            if (!blob) {
+              const a = document.createElement("a");
+              a.href = canvas.toDataURL("image/jpeg", 0.95);
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+          },
+          "image/jpeg",
+          0.95
+        );
+      } else {
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/jpeg", 0.95);
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      toast.success("JPG saved", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to make JPG", { id: t });
     } finally {
       frame?.remove();
     }
@@ -1452,8 +1561,23 @@ function PrescriptionsPage() {
                       <Bluetooth className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">BT Slip</span>
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => savePdf(rx)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-xs cursor-pointer"
+                      onClick={() => savePdf(rx)}
+                      title="PDF ডাউনলোড করুন"
+                    >
                       <FileText className="h-3.5 w-3.5" /> PDF
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-xs cursor-pointer text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-500/30"
+                      onClick={() => saveJpg(rx)}
+                      title="JPG ছবি ডাউনলোড করুন"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" /> JPG
                     </Button>
                     <Button size="icon" variant="ghost" onClick={() => openEdit(rx)}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this prescription?")) del.mutate(rx.id); }}>
@@ -1907,6 +2031,7 @@ function PrescriptionsPage() {
         buildRxHtml={buildRxHtml}
         printRx={printRx}
         savePdf={savePdf}
+        saveJpg={saveJpg}
         initialSize={printModalSize}
         businessName={business?.name || "Sheikh Pharma"}
       />
