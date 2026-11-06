@@ -144,20 +144,20 @@ const t = {
     ],
     cardTitle: "রোগী লগইন",
     cardSubtitle:
-      "আপনার ১১ ডিজিটের মোবাইল নম্বর এবং প্রেসক্রিপশনের পেশেন্ট আইডি (PID) দিয়ে লগইন করুন।",
-    phoneLabel: "নিবন্ধিত মোবাইল নম্বর",
+      "আপনার মোবাইল নম্বর অথবা প্রেসক্রিপশনে উল্লেখিত পেশেন্ট আইডি (যেমন: MRS465680) দিয়ে লগইন করুন।",
+    phoneLabel: "নিবন্ধিত মোবাইল নম্বর (ঐচ্ছিক)",
     phonePlaceholder: "০১৭১২-৩৪৫৬৭৮",
     phoneHint: "১১ ডিজিটের বাংলাদেশি মোবাইল নম্বর দিন",
     phoneError: "সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)",
-    pidLabel: "পেশেন্ট আইডি / PID (ঐচ্ছিক)",
-    pidPlaceholder: "যেমন: PID-10023 বা 10023",
-    pidHint: "প্রেসক্রিপশনে উল্লেখিত পেশেন্ট আইডি নম্বর",
+    pidLabel: "পেশেন্ট আইডি / PID",
+    pidPlaceholder: "যেমন: MRS465680 বা PID-10023",
+    pidHint: "প্রেসক্রিপশনে উল্লেখিত পেশেন্ট আইডি বা Rx নম্বর",
     pidError: "সঠিক পেশেন্ট আইডি (PID) দিন",
     loginBtn: "পোর্টাল এ প্রবেশ করুন",
     verifying: "যাচাই করা হচ্ছে...",
     trustEncrypted: "১০০% নিরাপদ ও এনক্রিপ্টেড",
     trustPasswordless: "কোনো পাসওয়ার্ডের প্রয়োজন নেই",
-    trustInstant: "মোবাইল + PID ভেরিফিকেশন",
+    trustInstant: "মোবাইল অথবা PID লগইন",
     helpNeed: "কোনো সমস্যা বা তথ্যের জন্য কল করুন:",
     callNow: "এখনই কল করুন",
     footerAddress: "দোকান নং ১৩, আরব প্যারাডাইস মার্কেট, নতুন বাজার, মুক্তাগাছা, ময়মনসিংহ।",
@@ -249,20 +249,20 @@ const t = {
     ],
     cardTitle: "Patient Sign In",
     cardSubtitle:
-      "Enter your registered 11-digit mobile number and Patient ID (PID) to sign in.",
-    phoneLabel: "Registered Mobile Number",
+      "Sign in using your registered mobile number or Patient ID (e.g. MRS465680) from your prescription.",
+    phoneLabel: "Registered Mobile Number (Optional)",
     phonePlaceholder: "01XXXXXXXXX",
     phoneHint: "Enter 11-digit Bangladeshi mobile number",
     phoneError: "Please enter a valid 11-digit mobile number (e.g. 017XXXXXXXX)",
-    pidLabel: "Patient ID / PID (Optional)",
-    pidPlaceholder: "e.g. PID-10023 or 10023",
-    pidHint: "Patient ID printed on your prescription",
+    pidLabel: "Patient ID / PID",
+    pidPlaceholder: "e.g. MRS465680 or PID-10023",
+    pidHint: "Patient ID or Rx No printed on your prescription",
     pidError: "Please enter a valid Patient ID (PID)",
     loginBtn: "Access Patient Portal",
     verifying: "Verifying...",
     trustEncrypted: "100% Encrypted & Private",
     trustPasswordless: "No Password Required",
-    trustInstant: "Phone + PID Session",
+    trustInstant: "Mobile or PID Session",
     helpNeed: "Need help? Call pharmacy helpline:",
     callNow: "Call Support",
     footerAddress:
@@ -796,7 +796,7 @@ function Login({
                   <label className="text-xs font-semibold text-foreground flex items-center justify-between">
                     <span>{curr.pidLabel}</span>
                     <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold bg-teal-500/10 px-1.5 py-0.5 rounded">
-                      প্রেসক্রিপশন আইডি
+                      {lang === "bn" ? "প্রেসক্রিপশন আইডি" : "Prescription ID"}
                     </span>
                   </label>
 
@@ -1051,10 +1051,14 @@ function Dashboard({
 
   useEffect(() => {
     if (q.data?.initialPid && q.data.patients?.length) {
-      const cleanTarget = q.data.initialPid.replace(/^PID[\-_]?/i, "").toLowerCase();
+      const cleanTarget = q.data.initialPid.replace(/^(PID|PAT|MRS|MR|MD|MS)[\-_]?/i, "").toLowerCase();
       const match = q.data.patients.find((p: any) => {
-        const uidClean = (p.uid || "").replace(/^PID[\-_]?/i, "").toLowerCase();
-        return uidClean === cleanTarget || (p.uid || "").toLowerCase().includes(cleanTarget);
+        const uidClean = (p.uid || "").replace(/^(PID|PAT|MRS|MR|MD|MS)[\-_]?/i, "").toLowerCase();
+        return (
+          (p.uid || "").toLowerCase() === q.data.initialPid.toLowerCase() ||
+          (cleanTarget && uidClean === cleanTarget) ||
+          (cleanTarget && (p.uid || "").toLowerCase().includes(cleanTarget))
+        );
       });
       if (match) {
         setSelectedPatientUid(match.uid);
@@ -1159,7 +1163,7 @@ function Dashboard({
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground font-mono">
-                📞 {d.phone}
+                {d.phone ? `📞 ${d.phone}` : (d.initialPid ? `🆔 ID: ${d.initialPid}` : "")}
               </p>
             </div>
           </div>
@@ -1491,7 +1495,7 @@ function Dashboard({
                                 fee: a.fee_amount,
                                 patientType: a.patient_type === "new" ? "New patient" : a.patient_type === "old" ? "Old patient" : "Report",
                                 patientName: a.patient_name || d.name,
-                                phone: d.phone,
+                                phone: d.phone || (a as any).patient_phone || d.initialPid || "",
                                 location: a.chamber_name || a.clinic,
                                 date: a.appt_date,
                               });

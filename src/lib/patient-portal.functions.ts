@@ -11,6 +11,33 @@ function localPhone(raw: string) {
   return /^01\d{9}$/.test(p) ? p : "";
 }
 
+/**
+ * Extract clean candidate search terms from a patient ID (PID) or Rx No.
+ * e.g. "MRS465680" -> ["MRS465680", "465680"]
+ * "PID-10023" -> ["PID-10023", "10023"]
+ * "041126-001" -> ["041126-001", "041126001"]
+ */
+export function extractPidSearchTerms(rawPid: string): string[] {
+  const clean = String(rawPid ?? "").trim().replace(/[^\w\-]/g, "");
+  if (!clean) return [];
+  const terms = new Set<string>();
+  terms.add(clean);
+
+  // Strip prefixes like PID-, PAT-, MRS-, MR-, MD-, MS-, RX-
+  const stripped = clean.replace(/^(PID|PAT|MRS|MR|MD|MS|RX)[\-_]?/i, "");
+  if (stripped && stripped.length >= 3) {
+    terms.add(stripped);
+  }
+
+  // Pure digits if >= 4 digits
+  const digits = clean.replace(/\D/g, "");
+  if (digits && digits.length >= 4) {
+    terms.add(digits);
+  }
+
+  return Array.from(terms);
+}
+
 async function sign(payload: string) {
   const { createHmac } = await import("crypto");
   const secret = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "";
@@ -108,27 +135,103 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     const session = await verifySessionToken(data.token);
     const phone = session.phone;
     const initialPid = session.pid;
-    const like = `%${phone.slice(1)}`; // matches 01…, +8801…, 8801…
-    const pidSearch = initialPid ? initialPid.replace(/^PID[\-_]?/i, "") : "";
-    const pidClause = pidSearch ? `,patient_code.ilike.%${pidSearch}%` : "";
+    const isPidOnly = phone.startsWith("PID:") || (!phone && !!initialPid);
+    const targetPid = initialPid || (phone.startsWith("PID:") ? phone.slice(4) : "");
+    const pidTerms = extractPidSearchTerms(targetPid);
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
 
-    const [rx, labs, appts, sales, plans] = await Promise.all([
-      db.from("prescriptions")
+    let rxPromise;
+    let labsPromise;
+    let apptsPromise;
+    let salesPromise;
+    let plansPromise;
+
+    if (isPidOnly) {
+      if (pidTerms.length === 0) {
+        throw new Error("সঠিক পেশেন্ট আইডি পাওয়া যায়নি");
+      }
+      const rxOr = pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `rx_no.ilike.%${t}%`]).join(",");
+      const apptOr = pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",");
+      const labOr = pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `sample_no.ilike.%${t}%`]).join(",");
+      const planOr = pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",");
+
+      rxPromise = db.from("prescriptions")
         .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
-        .or(`patient_phone.ilike.${like}${pidClause}`).order("rx_date", { ascending: false }).limit(100),
-      db.from("lab_reports")
+        .or(rxOr)
+        .order("rx_date", { ascending: false })
+        .limit(100);
+
+      labsPromise = db.from("lab_reports")
         .select("id, test_name, department, patient_name, patient_code, age, gender, sample_no, reported_at_text, comment, rows, created_at, business_id")
-        .or(`phone_no.ilike.${like}${pidClause}`).order("created_at", { ascending: false }).limit(100),
-      db.from("rx_appointments")
+        .or(labOr)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      apptsPromise = db.from("rx_appointments")
         .select("id, appt_date, appt_time, serial_no, status, patient_name, fee_amount, business_id, doctor_id, chamber_id, patient_type, patient_code")
-        .or(`patient_phone.ilike.${like}${pidClause}`).order("appt_date", { ascending: false }).limit(100),
-      db.from("clinic_sales")
-        .select("id, invoice_no, sale_date, total, paid, discount_amount, business_id")
-        .ilike("patient_phone", like).order("sale_date", { ascending: false }).limit(100),
-      db.from("clinic_treatment_plans")
+        .or(apptOr)
+        .order("appt_date", { ascending: false })
+        .limit(100);
+
+      salesPromise = Promise.resolve({ data: [] });
+
+      plansPromise = db.from("clinic_treatment_plans")
         .select("id, start_date, status, total_amount, discount, installment_count, notes, business_id, clinic_plan_installments(seq, due_date, amount, paid_amount, status)")
-        .ilike("patient_phone", like).order("start_date", { ascending: false }).limit(50),
+        .or(planOr)
+        .order("start_date", { ascending: false })
+        .limit(50);
+    } else {
+      const like = `%${phone.slice(1)}`; // matches 01…, +8801…, 8801…
+      const pidRxClause = pidTerms.length
+        ? "," + pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `rx_no.ilike.%${t}%`]).join(",")
+        : "";
+      const pidLabClause = pidTerms.length
+        ? "," + pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `sample_no.ilike.%${t}%`]).join(",")
+        : "";
+      const pidApptClause = pidTerms.length
+        ? "," + pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",")
+        : "";
+      const pidPlanClause = pidTerms.length
+        ? "," + pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",")
+        : "";
+
+      rxPromise = db.from("prescriptions")
+        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
+        .or(`patient_phone.ilike.${like}${pidRxClause}`)
+        .order("rx_date", { ascending: false })
+        .limit(100);
+
+      labsPromise = db.from("lab_reports")
+        .select("id, test_name, department, patient_name, patient_code, age, gender, sample_no, reported_at_text, comment, rows, created_at, business_id")
+        .or(`phone_no.ilike.${like}${pidLabClause}`)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      apptsPromise = db.from("rx_appointments")
+        .select("id, appt_date, appt_time, serial_no, status, patient_name, fee_amount, business_id, doctor_id, chamber_id, patient_type, patient_code")
+        .or(`patient_phone.ilike.${like}${pidApptClause}`)
+        .order("appt_date", { ascending: false })
+        .limit(100);
+
+      salesPromise = db.from("clinic_sales")
+        .select("id, invoice_no, sale_date, total, paid, discount_amount, business_id")
+        .ilike("patient_phone", like)
+        .order("sale_date", { ascending: false })
+        .limit(100);
+
+      plansPromise = db.from("clinic_treatment_plans")
+        .select("id, start_date, status, total_amount, discount, installment_count, notes, business_id, clinic_plan_installments(seq, due_date, amount, paid_amount, status)")
+        .or(`patient_phone.ilike.${like}${pidPlanClause}`)
+        .order("start_date", { ascending: false })
+        .limit(50);
+    }
+
+    const [rx, labs, appts, sales, plans] = await Promise.all([
+      rxPromise,
+      labsPromise,
+      apptsPromise,
+      salesPromise,
+      plansPromise,
     ]);
 
     const rxIds = (rx.data ?? []).map((r) => r.id);
@@ -178,7 +281,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     const name =
       rx.data?.[0]?.patient_name || appts.data?.[0]?.patient_name || labs.data?.[0]?.patient_name || "";
 
-    // Extract unique individual patients under this family mobile number
+    // Extract unique individual patients under this record / family
     const patientMap = new Map<string, {
       uid: string;
       name: string;
@@ -210,13 +313,13 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     };
 
     for (const a of (appts.data ?? []) as any[]) {
-      registerPatient(a.patient_code, a.patient_name, a.patient_age, a.patient_gender);
+      registerPatient(a.patient_code, a.patient_name, (a as any).patient_age, (a as any).patient_gender);
     }
     for (const r of (rx.data ?? []) as any[]) {
       registerPatient(r.patient_code, r.patient_name, (r as any).patient_age, (r as any).patient_gender);
     }
     for (const l of (labs.data ?? []) as any[]) {
-      registerPatient(l.patient_code, l.patient_name, (l as any).patient_age, (l as any).patient_gender);
+      registerPatient(l.patient_code, l.patient_name, (l as any).age, (l as any).gender);
     }
 
     const enrichedAppointments = (appts.data ?? []).map((a: any) => {
@@ -233,8 +336,8 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     });
 
     return {
-      phone,
-      initialPid,
+      phone: isPidOnly ? "" : phone,
+      initialPid: targetPid || initialPid,
       name,
       patients: Array.from(patientMap.values()),
       prescriptions: withBiz(rx.data as any).map((r: any) => ({
@@ -267,94 +370,91 @@ export const loginPatient = createServerFn({ method: "POST" })
 
     let cleanPhone = localPhone(rawPhone);
     const cleanPid = rawPid ? rawPid.replace(/[^\w\-]/g, "") : "";
-    const pidSearch = cleanPid ? cleanPid.replace(/^PID[\-_]?/i, "") : "";
+    const pidTerms = extractPidSearchTerms(cleanPid);
 
     if (!cleanPhone && !cleanPid) {
       throw new Error("মোবাইল নম্বর অথবা পেশেন্ট আইডি (PID) দিন");
     }
 
-    // If only PID is given without phone, lookup registered phone
-    if (!cleanPhone && cleanPid) {
+    let matchedCodeFromPid = "";
+    let matchedPhoneFromPid = "";
+
+    // If PID is provided, check if matching records exist
+    if (pidTerms.length > 0) {
+      const rxOr = pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `rx_no.ilike.%${t}%`]).join(",");
+      const apptOr = pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",");
+      const labOr = pidTerms.flatMap((t) => [`patient_code.ilike.%${t}%`, `sample_no.ilike.%${t}%`]).join(",");
+
       const [rxHit, apptHit, labHit] = await Promise.all([
         db.from("prescriptions")
-          .select("patient_phone, patient_code")
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .not("patient_phone", "is", null)
-          .limit(1),
+          .select("patient_phone, patient_code, patient_name")
+          .or(rxOr)
+          .order("rx_date", { ascending: false })
+          .limit(5),
         db.from("rx_appointments")
-          .select("patient_phone, patient_code")
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .not("patient_phone", "is", null)
-          .limit(1),
+          .select("patient_phone, patient_code, patient_name")
+          .or(apptOr)
+          .order("appt_date", { ascending: false })
+          .limit(5),
         db.from("lab_reports")
-          .select("phone_no, patient_code")
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .not("phone_no", "is", null)
-          .limit(1),
+          .select("phone_no, patient_code, patient_name")
+          .or(labOr)
+          .order("created_at", { ascending: false })
+          .limit(5),
       ]);
 
-      const foundPhone =
-        rxHit.data?.[0]?.patient_phone ||
-        apptHit.data?.[0]?.patient_phone ||
-        labHit.data?.[0]?.phone_no;
+      const foundRx = rxHit.data?.[0];
+      const foundAppt = apptHit.data?.[0];
+      const foundLab = labHit.data?.[0];
+      const record = foundRx || foundAppt || foundLab;
 
-      if (!foundPhone) {
-        throw new Error("এই পেশেন্ট আইডি (PID) দিয়ে কোনো রেকর্ড পাওয়া যায়নি। অনুগ্রহ করে মোবাইল নম্বর দিন।");
+      if (!record && !cleanPhone) {
+        throw new Error("এই পেশেন্ট আইডি (PID) বা প্রেসক্রিপশন নম্বর দিয়ে কোনো রেকর্ড পাওয়া যায়নি। প্রেসক্রিপশনের আইডি দেখে পুনরায় চেষ্টা করুন।");
       }
-      cleanPhone = localPhone(foundPhone);
+
+      if (record) {
+        matchedCodeFromPid = record.patient_code || cleanPid;
+        const candidatePhone = foundRx?.patient_phone || foundAppt?.patient_phone || foundLab?.phone_no;
+        matchedPhoneFromPid = localPhone(candidatePhone || "");
+      }
+
+      // If user entered BOTH phone and PID, verify compatibility if phone was recorded on the patient's record
+      if (cleanPhone && matchedPhoneFromPid && matchedPhoneFromPid !== cleanPhone) {
+        const allPhones = [
+          ...(rxHit.data ?? []).map((r: any) => localPhone(r.patient_phone)),
+          ...(apptHit.data ?? []).map((a: any) => localPhone(a.patient_phone)),
+          ...(labHit.data ?? []).map((l: any) => localPhone(l.phone_no)),
+        ].filter(Boolean);
+
+        if (allPhones.length > 0 && !allPhones.includes(cleanPhone)) {
+          throw new Error("প্রদত্ত মোবাইল নম্বরের সাথে এই পেশেন্ট আইডি (PID) এর মিল পাওয়া যায়নি। নম্বর ও PID আবার চেক করুন।");
+        }
+      }
+    }
+
+    // If user provided PID only (no phone entered)
+    if (!cleanPhone && cleanPid) {
+      if (matchedPhoneFromPid) {
+        cleanPhone = matchedPhoneFromPid;
+      } else {
+        // Record has no registered mobile number (e.g. walk-in clinic prescription)
+        // Issue session identifier using PID prefix
+        cleanPhone = `PID:${matchedCodeFromPid || cleanPid}`;
+      }
     }
 
     if (!cleanPhone) {
       throw new Error("সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)");
     }
 
-    // If both Phone and PID are given, verify PID belongs to this phone if any records exist
-    if (cleanPid) {
-      const like = `%${cleanPhone.slice(1)}`;
-      const [rxCheck, apptCheck, labCheck] = await Promise.all([
-        db.from("prescriptions")
-          .select("id")
-          .ilike("patient_phone", like)
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .limit(1),
-        db.from("rx_appointments")
-          .select("id")
-          .ilike("patient_phone", like)
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .limit(1),
-        db.from("lab_reports")
-          .select("id")
-          .ilike("phone_no", like)
-          .or(`patient_code.ilike.%${cleanPid}%,patient_code.ilike.%${pidSearch}%`)
-          .limit(1),
-      ]);
-
-      const matched =
-        (rxCheck.data?.length ?? 0) > 0 ||
-        (apptCheck.data?.length ?? 0) > 0 ||
-        (labCheck.data?.length ?? 0) > 0;
-
-      if (!matched) {
-        const [anyRx, anyAppt, anyLab] = await Promise.all([
-          db.from("prescriptions").select("id").ilike("patient_phone", like).limit(1),
-          db.from("rx_appointments").select("id").ilike("patient_phone", like).limit(1),
-          db.from("lab_reports").select("id").ilike("phone_no", like).limit(1),
-        ]);
-        const hasAny = (anyRx.data?.length ?? 0) > 0 || (anyAppt.data?.length ?? 0) > 0 || (anyLab.data?.length ?? 0) > 0;
-        if (hasAny) {
-          throw new Error("প্রদত্ত মোবাইল নম্বরের সাথে এই পেশেন্ট আইডি (PID) এর মিল পাওয়া যায়নি। নম্বর ও PID আবার চেক করুন।");
-        }
-      }
-    }
-
     const exp = Date.now() + 30 * 24 * 3600 * 1000;
-    const pidPart = cleanPid || "_";
+    const pidPart = cleanPid || matchedCodeFromPid || "_";
     const token = `${cleanPhone}.${pidPart}.${exp}.${await sign(`${cleanPhone}.${pidPart}.${exp}`)}`;
 
     return {
       token,
-      phone: cleanPhone,
-      pid: cleanPid || undefined,
+      phone: cleanPhone.startsWith("PID:") ? "" : cleanPhone,
+      pid: cleanPid || matchedCodeFromPid || undefined,
     };
   });
 
@@ -623,6 +723,9 @@ export const bookPatientAppointment = createServerFn({ method: "POST" })
     let phone = "";
     if (data.token) {
       phone = await verifyToken(data.token);
+      if (phone.startsWith("PID:")) {
+        phone = localPhone(data.phone ?? "");
+      }
     } else if (data.phone) {
       phone = localPhone(data.phone);
     }

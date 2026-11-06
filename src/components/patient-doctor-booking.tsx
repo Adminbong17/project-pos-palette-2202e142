@@ -256,6 +256,13 @@ export function DoctorBookingModal({
     currentDoctor?.chambers?.find((c) => c.id === selectedChamberId) ||
     currentDoctor?.chambers?.[0];
 
+  useEffect(() => {
+    if (isOpen) {
+      if (patientName) setName(patientName);
+      if (patientPhone) setPhone(patientPhone);
+    }
+  }, [isOpen, patientName, patientPhone]);
+
   // Fetch registered patients whenever 11 digits phone is entered
   useEffect(() => {
     const clean = cleanPhone(phone);
