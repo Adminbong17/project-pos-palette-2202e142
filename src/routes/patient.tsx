@@ -525,38 +525,38 @@ function Login({
   return (
     <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between">
       {/* ================= TOP ECOSYSTEM BAR ================= */}
-      <div className="border-b border-border/40 bg-card/90 text-xs backdrop-blur-md sticky top-0 z-30">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 sm:px-6">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="hidden sm:inline text-muted-foreground font-medium">শেখ ফার্মা ইকোসিস্টেম:</span>
-            <div className="inline-flex rounded-full bg-muted/60 p-0.5 border border-border text-[11px] font-semibold">
+      <div className="border-b border-border/50 bg-card/95 text-xs backdrop-blur-md sticky top-0 z-30">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2 sm:px-6">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="hidden md:inline text-muted-foreground font-medium">শেখ ফার্মা ইকোসিস্টেম:</span>
+            <div className="inline-flex items-center rounded-full bg-muted/70 p-0.5 border border-border text-[11px] font-semibold">
               <Link
                 to="/"
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-card transition"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-card transition whitespace-nowrap"
               >
-                <ShoppingCart className="h-3 w-3 text-emerald-500" />
-                <span>পিওএস (Sell)</span>
+                <ShoppingCart className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span>পিওএস <span className="hidden xs:inline">(Sell)</span></span>
               </Link>
               <Link
                 to="/rx"
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-card transition"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-card transition whitespace-nowrap"
               >
-                <Stethoscope className="h-3 w-3 text-teal-500" />
-                <span>ডাক্তার (Rx)</span>
+                <Stethoscope className="h-3 w-3 text-teal-600 shrink-0" />
+                <span>ডাক্তার <span className="hidden xs:inline">(Rx)</span></span>
               </Link>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-primary-foreground font-bold shadow-sm">
-                <Users className="h-3 w-3" />
-                <span>রোগী সেবা (Pt)</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-primary-foreground font-semibold shadow-xs whitespace-nowrap">
+                <Users className="h-3 w-3 shrink-0" />
+                <span>রোগী সেবা <span className="hidden xs:inline">(Pt)</span></span>
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2 text-xs">
             <a
               href={`tel:${SHEIKH_PHARMA_DETAILS.phonesRaw[0]}`}
-              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-foreground hover:bg-primary/15 transition whitespace-nowrap"
             >
-              <Phone className="h-3 w-3 text-primary" />
-              <span className="hidden xs:inline">হেল্পলাইন:</span>
+              <Phone className="h-3 w-3 text-primary shrink-0" />
+              <span className="hidden sm:inline text-muted-foreground">হেল্পলাইন:</span>
               <span className="font-bold text-foreground">{SHEIKH_PHARMA_DETAILS.phonesRaw[0]}</span>
             </a>
           </div>
@@ -564,51 +564,44 @@ function Login({
       </div>
 
       {/* ================= TOP NAVIGATION BAR ================= */}
-      <header className="w-full border-b border-border/40 bg-card/75 backdrop-blur-md sticky top-[41px] z-20">
+      <header className="w-full border-b border-border/40 bg-card/85 backdrop-blur-md sticky top-[41px] z-20">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Brand Logo & Name */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-primary/30 bg-card shadow-md shadow-primary/10 transition-transform duration-300 hover:scale-105">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="relative flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/30 bg-card p-1 shadow-xs">
               <img
                 src={SHEIKH_PHARMA_LOGO_BASE64}
                 alt="Sheikh Pharma Logo"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain rounded-lg"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold tracking-tight text-foreground text-base sm:text-lg">
+                <span className="font-bold tracking-tight text-foreground text-base sm:text-lg truncate">
                   {curr.brandName}
                 </span>
-                <span className="hidden sm:inline-flex rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                  PORTAL
+                <span className="hidden xs:inline-flex rounded-md bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary whitespace-nowrap">
+                  PATIENT PORTAL
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">
+              <p className="text-[11px] text-muted-foreground truncate">
                 {curr.brandSubtitle}
               </p>
             </div>
           </div>
 
           {/* Right Header: Fast Book Button, Helpline & Language Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Button
               size="sm"
               variant="outline"
               onClick={() => handleOpenBooking()}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border-primary/30 text-primary hover:bg-primary/10 font-semibold text-xs cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10 font-semibold text-xs cursor-pointer"
             >
               <Calendar className="h-3.5 w-3.5" />
               <span>{curr.quickBookHeroBtn}</span>
             </Button>
 
-            <a
-              href={`tel:${SHEIKH_PHARMA_DETAILS.phonesRaw[0]}`}
-              className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-secondary/80 px-3 py-1 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
-            >
-              <Phone className="h-3.5 w-3.5 text-primary" />
-              <span>{SHEIKH_PHARMA_DETAILS.phonesRaw[0]}</span>
-            </a>
             <LanguageToggle lang={lang} onToggle={onLangToggle} />
           </div>
         </div>
