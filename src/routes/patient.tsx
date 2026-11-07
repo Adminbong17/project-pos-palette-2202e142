@@ -1089,17 +1089,31 @@ function Dashboard({
   );
 
   // Filter lists by selected family member / patient UID
-  const filteredAppointments = selectedPatientUid === "all"
-    ? d.appointments
-    : d.appointments.filter((a: any) => (a.patient_code === selectedPatientUid) || (a.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+  const selectedPatientProfile =
+    selectedPatientUid === "all"
+      ? null
+      : (d.patients ?? []).find((p: any) => p.uid === selectedPatientUid);
 
-  const filteredPrescriptions = selectedPatientUid === "all"
-    ? d.prescriptions
-    : d.prescriptions.filter((r: any) => (r.patient_code === selectedPatientUid) || (r.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+  const matchesSelectedPatient = (item: any) => {
+    if (selectedPatientUid === "all" || (d.patients ?? []).length <= 1) return true;
+    const targetLower = selectedPatientUid.toLowerCase();
+    if (item.patient_code && String(item.patient_code).toLowerCase() === targetLower) return true;
+    if (item.rx_no && String(item.rx_no).toLowerCase() === targetLower) return true;
+    if (item.sample_no && String(item.sample_no).toLowerCase() === targetLower) return true;
+    if (item.patient_name && String(item.patient_name).trim().toLowerCase() === targetLower) return true;
+    if (
+      selectedPatientProfile?.name &&
+      item.patient_name &&
+      String(item.patient_name).trim().toLowerCase() === selectedPatientProfile.name.trim().toLowerCase()
+    ) {
+      return true;
+    }
+    return false;
+  };
 
-  const filteredLabReports = selectedPatientUid === "all"
-    ? d.labReports
-    : d.labReports.filter((l: any) => (l.patient_code === selectedPatientUid) || (l.patient_name?.toLowerCase() === selectedPatientUid.toLowerCase()));
+  const filteredAppointments = d.appointments.filter(matchesSelectedPatient);
+  const filteredPrescriptions = d.prescriptions.filter(matchesSelectedPatient);
+  const filteredLabReports = d.labReports.filter(matchesSelectedPatient);
 
   const stats = [
     {

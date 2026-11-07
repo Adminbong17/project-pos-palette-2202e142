@@ -23,10 +23,16 @@ export function extractPidSearchTerms(rawPid: string): string[] {
   const terms = new Set<string>();
   terms.add(clean);
 
-  // Strip prefixes like PID-, PAT-, MRS-, MR-, MD-, MS-, RX-
-  const stripped = clean.replace(/^(PID|PAT|MRS|MR|MD|MS|RX)[\-_]?/i, "");
-  if (stripped && stripped.length >= 3) {
-    terms.add(stripped);
+  // Strip one prefix like PID-
+  const once = clean.replace(/^(PID|PAT|MRS|MR|MD|MS|RX)[\-_]?/i, "");
+  if (once && once.length >= 3) {
+    terms.add(once);
+  }
+
+  // Strip stacked prefixes like PID-RX- or PID-PAT-
+  const multi = clean.replace(/^(?:(?:PID|PAT|MRS|MR|MD|MS|RX)[\-_]?)+/i, "");
+  if (multi && multi.length >= 3) {
+    terms.add(multi);
   }
 
   // Pure digits if >= 4 digits
@@ -156,7 +162,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       const planOr = pidTerms.map((t) => `patient_code.ilike.%${t}%`).join(",");
 
       rxPromise = db.from("prescriptions")
-        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
+        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, patient_phone, patient_type, fee_amount, doctor_id, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, notes, vitals, business_id")
         .or(rxOr)
         .order("rx_date", { ascending: false })
         .limit(100);
@@ -196,7 +202,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
         : "";
 
       rxPromise = db.from("prescriptions")
-        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, vitals, business_id")
+        .select("id, rx_no, rx_date, patient_name, patient_code, patient_age, patient_gender, patient_phone, patient_type, fee_amount, doctor_id, doctor_name, doctor_qualification, diagnosis, advice, investigation, next_visit, notes, vitals, business_id")
         .or(`patient_phone.ilike.${like}${pidRxClause}`)
         .order("rx_date", { ascending: false })
         .limit(100);
@@ -237,7 +243,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
     const rxIds = (rx.data ?? []).map((r) => r.id);
     const lines = rxIds.length
       ? (await db.from("prescription_lines")
-          .select("prescription_id, medicine_name, dose, frequency, duration, instructions, sort_order")
+          .select("prescription_id, medicine_name, dose, frequency, duration, instructions, quantity, sort_order")
           .in("prescription_id", rxIds).order("sort_order")).data ?? []
       : [];
 
@@ -245,12 +251,18 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       ...(rx.data ?? []), ...(labs.data ?? []), ...(appts.data ?? []), ...(sales.data ?? []), ...(plans.data ?? []),
     ].map((r: any) => r.business_id)));
     const businesses = bizIds.length
-      ? (await db.from("businesses").select("id, name").in("id", bizIds)).data ?? []
+      ? (await db.from("businesses").select("id, name, address").in("id", bizIds)).data ?? []
       : [];
     const bizName: Record<string, string> = Object.fromEntries(businesses.map((b: any) => [b.id, b.name]));
 
-    // Query doctor profiles and chambers for appointment enrichment
-    const docIds = Array.from(new Set((appts.data ?? []).map((a: any) => a.doctor_id).filter(Boolean)));
+    // Query doctor profiles and chambers for appointment & prescription enrichment
+    const docIds = Array.from(
+      new Set(
+        [...(appts.data ?? []), ...(rx.data ?? [])]
+          .map((item: any) => item.doctor_id)
+          .filter(Boolean)
+      )
+    );
     const chamberIds = Array.from(new Set((appts.data ?? []).map((a: any) => a.chamber_id).filter(Boolean)));
 
     const [docProfiles, chRows] = await Promise.all([
@@ -290,10 +302,29 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       count: number;
     }>();
 
-    const registerPatient = (code?: string | null, pName?: string | null, age?: string | null, gender?: string | null) => {
+    const registerPatient = (
+      code?: string | null,
+      pName?: string | null,
+      age?: string | null,
+      gender?: string | null,
+      fallbackId?: string | null
+    ) => {
       const trimmedName = (pName || "").trim();
       if (!trimmedName) return;
       const trimmedCode = (code || "").trim();
+
+      // If no explicit patient_code is on this row, check if a profile with the same name already exists
+      if (!trimmedCode) {
+        for (const existing of patientMap.values()) {
+          if (existing.name.toLowerCase() === trimmedName.toLowerCase()) {
+            existing.count += 1;
+            if (!existing.age && age) existing.age = String(age);
+            if (!existing.gender && gender) existing.gender = String(gender);
+            return;
+          }
+        }
+      }
+
       const key = (trimmedCode || trimmedName).toLowerCase();
       const existing = patientMap.get(key);
       if (existing) {
@@ -303,7 +334,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
         if (!existing.uid && trimmedCode) existing.uid = trimmedCode;
       } else {
         patientMap.set(key, {
-          uid: trimmedCode || `PAT-${Math.floor(100000 + Math.random() * 900000)}`,
+          uid: trimmedCode || (fallbackId || "").trim() || trimmedName,
           name: trimmedName,
           age: age ? String(age) : undefined,
           gender: gender ? String(gender) : undefined,
@@ -316,15 +347,14 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       registerPatient(a.patient_code, a.patient_name, (a as any).patient_age, (a as any).patient_gender);
     }
     for (const r of (rx.data ?? []) as any[]) {
-      registerPatient(r.patient_code, r.patient_name, (r as any).patient_age, (r as any).patient_gender);
+      registerPatient(r.patient_code, r.patient_name, (r as any).patient_age, (r as any).patient_gender, r.rx_no);
     }
     for (const l of (labs.data ?? []) as any[]) {
-      registerPatient(l.patient_code, l.patient_name, (l as any).age, (l as any).gender);
+      registerPatient(l.patient_code, l.patient_name, (l as any).age, (l as any).gender, l.sample_no);
     }
 
     const enrichedAppointments = (appts.data ?? []).map((a: any) => {
       const rawDoc = (docNameMap[a.doctor_id] || "").trim();
-      // Clean doctor name - do not add redundant "ডা." or "Dr."
       const doctor_name = rawDoc && rawDoc !== "ডাক্তার" ? rawDoc : "চিকিৎসক";
       return {
         ...a,
@@ -357,7 +387,8 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       patients: Array.from(patientMap.values()),
       prescriptions: withBiz(rx.data as any).map((r: any) => ({
         ...r,
-        doctor_name: (r.doctor_name || "").trim() || "চিকিৎসক",
+        doctor_name: (r.doctor_name || docNameMap[r.doctor_id] || "").trim() || "চিকিৎসক",
+        doctor_qualification: (r.doctor_qualification || docQualMap[r.doctor_id] || "").trim(),
         lines: enrichedLines.filter((l: any) => l.prescription_id === r.id),
       })),
       labReports: withBiz(labs.data as any),
@@ -402,7 +433,7 @@ export const loginPatient = createServerFn({ method: "POST" })
 
       const [rxHit, apptHit, labHit] = await Promise.all([
         db.from("prescriptions")
-          .select("patient_phone, patient_code, patient_name")
+          .select("patient_phone, patient_code, rx_no, patient_name")
           .or(rxOr)
           .order("rx_date", { ascending: false })
           .limit(5),
@@ -412,7 +443,7 @@ export const loginPatient = createServerFn({ method: "POST" })
           .order("appt_date", { ascending: false })
           .limit(5),
         db.from("lab_reports")
-          .select("phone_no, patient_code, patient_name")
+          .select("phone_no, patient_code, sample_no, patient_name")
           .or(labOr)
           .order("created_at", { ascending: false })
           .limit(5),
@@ -428,7 +459,7 @@ export const loginPatient = createServerFn({ method: "POST" })
       }
 
       if (record) {
-        matchedCodeFromPid = record.patient_code || cleanPid;
+        matchedCodeFromPid = record.patient_code || (record as any).rx_no || (record as any).sample_no || cleanPid;
         const candidatePhone = foundRx?.patient_phone || foundAppt?.patient_phone || foundLab?.phone_no;
         matchedPhoneFromPid = localPhone(candidatePhone || "");
       }

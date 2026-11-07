@@ -240,15 +240,21 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
   const [activeSubTab, setActiveSubTab] = useState<"summary" | "full" | "easy" | "compare">("summary");
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null);
 
-  const hasRealRows = Array.isArray(report?.rows) && report.rows.length > 0;
-  const exp: LabReportExplanation = hasRealRows && report
+  const isRealReport = Boolean(report && report.id);
+  const exp: LabReportExplanation | null = isRealReport && report
     ? explainLabReport(report)
-    : (null as any);
+    : null;
 
   // Active metrics
-  const testName = report?.test_name || DEFAULT_PDF_LAB.test_name;
-  const reportDate = report?.reported_at_text || (report?.created_at ? formatDate(report.created_at) : DEFAULT_PDF_LAB.date_text);
-  const labName = report?.clinic || DEFAULT_PDF_LAB.clinic;
+  const testName = isRealReport
+    ? (report?.test_name || "ল্যাবরেটরি টেস্ট রিপোর্ট")
+    : DEFAULT_PDF_LAB.test_name;
+  const reportDate = isRealReport
+    ? (report?.reported_at_text || (report?.created_at ? formatDate(report.created_at) : "—"))
+    : DEFAULT_PDF_LAB.date_text;
+  const labName = isRealReport
+    ? (report?.clinic || "শেখ ফার্মা ও ডায়াগনস্টিক")
+    : DEFAULT_PDF_LAB.clinic;
 
   const totalParams = exp ? exp.totalParameters : DEFAULT_PDF_LAB.total_params;
   const normalCount = exp ? exp.normalCount : DEFAULT_PDF_LAB.normal_count;
@@ -268,13 +274,14 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
         status: p.status,
         statusText: p.statusText,
         explanation: p.banglaMeaning,
+        clinicalNote: p.clinicalNote || "",
       }))
     : DEFAULT_PDF_LAB.parameters;
 
   const mildDetails = exp
     ? exp.parameters
         .filter((p) => p.status !== "normal")
-        .map((p) => `${p.name} (${p.result}${p.unit ? ` ${p.unit}` : ""})`)
+        .map((p) => `${p.name}: ${p.result}${p.unit ? ` ${p.unit}` : ""} (${p.statusText})`)
     : DEFAULT_PDF_LAB.summaryCards.mild.details;
 
   const patientTips = exp ? exp.patientTips : DEFAULT_PDF_LAB.patientTips;
@@ -327,8 +334,8 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
   };
 
   // Donut chart calculations
-  const normalPercent = (normalCount / (totalParams || 1)) * 100;
-  const mildPercent = ((mildCount + abnormalCount) / (totalParams || 1)) * 100;
+  const normalPercent = totalParams > 0 ? (normalCount / totalParams) * 100 : 100;
+  const mildPercent = totalParams > 0 ? ((mildCount + abnormalCount) / totalParams) * 100 : 0;
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4 font-sans text-slate-900 dark:text-slate-100">
@@ -344,16 +351,22 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
               <FileText className="h-4 w-4 text-primary" />
               <span>{testName}</span>
             </div>
+            {report?.department && (
+              <div className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                বিভাগ: {report.department}
+              </div>
+            )}
             <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
               রিপোর্ট তারিখ: {reportDate}
             </div>
             <div className="text-xs text-slate-500 font-medium">
               ল্যাব: {labName}
+              {report?.sample_no ? ` • স্যাম্পল: ${report.sample_no}` : ""}
             </div>
             <div className="pt-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/20">
                 <Check className="h-3 w-3" />
-                <span>{DEFAULT_PDF_LAB.status_badge}</span>
+                <span>রিপোর্ট বিশ্লেষণ সম্পন্ন</span>
               </span>
             </div>
           </div>
@@ -366,6 +379,12 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             <p className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
               সহজ ভাষায় রিপোর্ট বিশ্লেষণ
             </p>
+            {report?.patient_name && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                রোগী: <strong className="text-slate-700 dark:text-slate-300">{report.patient_name}</strong>
+                {report.age ? ` (${report.age}${report.gender ? ` · ${report.gender}` : ""})` : ""}
+              </p>
+            )}
           </div>
 
           {/* Right Action Buttons: অডিও শুনুন / শেয়ার করুন */}
@@ -403,7 +422,6 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             {/* SVG Donut Circle */}
             <div className="relative flex items-center justify-center h-28 w-28 shrink-0">
               <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-                {/* Background Ring */}
                 <path
                   className="text-slate-100 dark:text-slate-800"
                   strokeWidth="3.5"
@@ -411,7 +429,6 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                   fill="none"
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
-                {/* Normal Segment (Green) */}
                 <path
                   className="text-emerald-500"
                   strokeDasharray={`${normalPercent}, 100`}
@@ -421,7 +438,6 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                   fill="none"
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
-                {/* Mild Segment (Orange) */}
                 <path
                   className="text-amber-500"
                   strokeDasharray={`${mildPercent}, 100`}
@@ -499,7 +515,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             }`}
           >
             <FileText className="h-3.5 w-3.5" />
-            <span>সম্পূর্ণ রিপোর্ট</span>
+            <span>সম্পূর্ণ রিপোর্ট ({realParameters.length})</span>
           </button>
 
           <button
@@ -529,65 +545,163 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
           </button>
         </div>
 
-        {/* ================= 4. RESULTS TABLE ================= */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-3.5 shadow-2xs">
-          <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-            <FileText className="h-4 w-4 text-emerald-600" />
-            <span>টেস্টের ফলাফল ({testName})</span>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full text-xs text-left border-collapse min-w-[650px]">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                  <th className="p-3 font-bold w-1/4">প্যারামিটার</th>
-                  <th className="p-3 font-bold">ফলাফল</th>
-                  <th className="p-3 font-bold">স্বাভাবিক সীমা</th>
-                  <th className="p-3 font-bold text-center">অবস্থা</th>
-                  <th className="p-3 font-bold w-1/3">ব্যাখ্যা</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {realParameters.map((param, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                    <td className="p-3 font-bold text-slate-900 dark:text-white">
-                      {param.no} {param.name}
-                    </td>
-                    <td className="p-3 font-bold text-slate-800 dark:text-slate-200">
-                      {param.result} <span className="text-[11px] font-normal text-slate-500">{param.unit}</span>
-                    </td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400">
-                      {param.range}
-                    </td>
-                    <td className="p-3 text-center">
-                      {param.status === "normal" ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 text-[11px] font-bold border border-emerald-200 dark:border-emerald-800">
-                          {param.statusText}
-                        </span>
-                      ) : param.status === "abnormal" ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] font-bold border border-rose-200 dark:border-rose-800">
-                          {param.statusText}
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 text-[11px] font-bold border border-amber-200 dark:border-amber-800">
-                          {param.statusText}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400 text-[11px]">
-                      {param.explanation}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {report?.comment && (
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3 text-xs">
-              <strong className="text-slate-900 dark:text-white">মন্তব্য (Comment):</strong> {report.comment}
+        {/* ================= 4. SUB-TAB CONTENT VIEWS ================= */}
+        {(activeSubTab === "summary" || activeSubTab === "full") && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-3.5 shadow-2xs">
+            <div className="flex items-center justify-between gap-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                <span>টেস্টের ফলাফল ({testName})</span>
+              </div>
+              {report?.sample_no && (
+                <span className="text-xs font-mono text-slate-500">ID: {report.sample_no}</span>
+              )}
             </div>
-          )}
-        </div>
+
+            {realParameters.length > 0 ? (
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                <table className="w-full text-xs text-left border-collapse min-w-[650px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                      <th className="p-3 font-bold w-1/4">প্যারামিটার</th>
+                      <th className="p-3 font-bold">ফলাফল</th>
+                      <th className="p-3 font-bold">স্বাভাবিক সীমা</th>
+                      <th className="p-3 font-bold text-center">অবস্থা</th>
+                      <th className="p-3 font-bold w-1/3">ব্যাখ্যা</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                    {realParameters.map((param: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                        <td className="p-3 font-bold text-slate-900 dark:text-white">
+                          {param.no} {param.name}
+                        </td>
+                        <td className="p-3 font-bold text-slate-800 dark:text-slate-200">
+                          {param.result} <span className="text-[11px] font-normal text-slate-500">{param.unit}</span>
+                        </td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400">
+                          {param.range}
+                        </td>
+                        <td className="p-3 text-center">
+                          {param.status === "normal" ? (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 text-[11px] font-bold border border-emerald-200 dark:border-emerald-800">
+                              {param.statusText}
+                            </span>
+                          ) : param.status === "abnormal" ? (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] font-bold border border-rose-200 dark:border-rose-800">
+                              {param.statusText}
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 text-[11px] font-bold border border-amber-200 dark:border-amber-800">
+                              {param.statusText}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400 text-[11px]">
+                          {param.explanation}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 p-4 text-xs text-slate-600 dark:text-slate-300">
+                {report?.comment
+                  ? `ল্যাবরেটরি ফলাফল ও মন্তব্য: ${report.comment}`
+                  : "এই রিপোর্টে বিস্তারিত টেবিল রো সংযুক্ত করা হয়নি।"}
+              </div>
+            )}
+
+            {report?.comment && realParameters.length > 0 && (
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3 text-xs">
+                <strong className="text-slate-900 dark:text-white">মন্তব্য (Comment):</strong> {report.comment}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSubTab === "easy" && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-3 shadow-2xs">
+            <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <span>প্রতিটি উপাদানের সহজ বাংলা ব্যাখ্যা</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {realParameters.map((param: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 p-3.5 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      {param.no} {param.name}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        param.status === "normal"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : param.status === "abnormal"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {param.result} {param.unit} • {param.statusText}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
+                    <strong>কাজ:</strong> {param.explanation}
+                  </p>
+                  {param.clinicalNote && (
+                    <p className="text-[11px] text-teal-800 dark:text-teal-300">
+                      <strong>বিশ্লেষণ:</strong> {param.clinicalNote} (স্বাভাবিক সীমা: {param.range})
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "compare" && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-3 shadow-2xs">
+            <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+              <ArrowRightLeft className="h-4 w-4 text-emerald-600" />
+              <span>স্বাভাবিক সীমার সাথে আপনার ফলাফলের তুলনা</span>
+            </div>
+            <div className="space-y-2.5">
+              {realParameters.map((param: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-xs"
+                >
+                  <div className="font-bold text-slate-900 dark:text-white sm:w-1/3">
+                    {param.no} {param.name}
+                  </div>
+                  <div className="flex items-center gap-3 sm:w-2/3 justify-between sm:justify-end">
+                    <div className="text-slate-500">
+                      স্বাভাবিক সীমা: <strong className="text-slate-700 dark:text-slate-300">{param.range}</strong>
+                    </div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      আপনার মান: <span className="text-primary">{param.result} {param.unit}</span>
+                    </div>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                        param.status === "normal"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : param.status === "abnormal"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {param.statusText}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ================= 5. THREE SUMMARY CARDS ================= */}
         <div className="space-y-2">
@@ -606,7 +720,9 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                 {normalCount} টি
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                {DEFAULT_PDF_LAB.summaryCards.normal.note}
+                {normalCount === totalParams && totalParams > 0
+                  ? "পরীক্ষিত সবগুলো উপাদানই স্বাভাবিক সীমায় রয়েছে"
+                  : "অধিকাংশ উপাদান স্বাভাবিক সীমায় রয়েছে"}
               </p>
             </div>
 
@@ -619,16 +735,17 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
               <div className="text-2xl font-black text-amber-700 dark:text-amber-400">
                 {mildCount + abnormalCount} টি
               </div>
-              {mildDetails.length > 0 && (
+              {mildDetails.length > 0 ? (
                 <div className="text-xs space-y-0.5 text-slate-800 dark:text-slate-200 font-bold">
                   {mildDetails.map((d, i) => (
                     <div key={i}>{d}</div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  কোনো উপাদানে অস্বাভাবিক তারতম্য পাওয়া যায়নি
+                </p>
               )}
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                {DEFAULT_PDF_LAB.summaryCards.mild.note}
-              </p>
             </div>
 
             {/* ৩. ঝুঁকির স্তর */}

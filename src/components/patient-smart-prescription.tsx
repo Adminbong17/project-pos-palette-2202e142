@@ -238,6 +238,7 @@ export function PatientSmartPrescription({
           noon: m.noonDose,
           night: m.nightDose,
           duration: m.durationText,
+          quantityText: m.quantityText || "",
           instructions: rawLine?.instructions || "",
           rawFrequency: rawLine?.frequency || rawLine?.dose || "",
         };
@@ -245,7 +246,10 @@ export function PatientSmartPrescription({
     : DEFAULT_PDF_RX.schedule;
 
   const realScheduleSummary = exp
-    ? exp.medicines.map((m) => `${m.originalName}: ${m.summaryFrequency} (${m.durationText})`)
+    ? exp.medicines.map(
+        (m) =>
+          `${m.originalName}: ${m.summaryFrequency} (${m.durationText}${m.quantityText ? ` · ${m.quantityText}` : ""})`
+      )
     : DEFAULT_PDF_RX.scheduleSummary;
 
   const realMedicinesDetailed = exp
@@ -260,7 +264,7 @@ export function PatientSmartPrescription({
           doseParts.push(`নিয়ম: ${rawLine.instructions}`);
         }
         if (m.durationText) {
-          doseParts.push(`মেয়াদ: ${m.durationText}`);
+          doseParts.push(`মেয়াদ: ${m.durationText}${m.quantityText ? ` (${m.quantityText})` : ""}`);
         }
 
         const isAntibiotic = m.category.includes("অ্যান্টিবায়োটিক");
@@ -290,10 +294,26 @@ export function PatientSmartPrescription({
   const interactionTitle = exp
     ? exp.drugInteraction.message
     : DEFAULT_PDF_RX.drugInteraction.title;
+  const interactionSub1 = exp
+    ? exp.drugInteraction.sub1
+    : DEFAULT_PDF_RX.drugInteraction.sub1;
+  const interactionSub2 = exp
+    ? exp.drugInteraction.sub2
+    : DEFAULT_PDF_RX.drugInteraction.sub2;
+  const interactionIsCaution = exp?.drugInteraction.status === "caution";
 
   const adviceList = exp
     ? exp.lifestyleAdvice
     : DEFAULT_PDF_RX.adviceList;
+
+  const actionCards = exp && exp.actionCards?.length
+    ? exp.actionCards
+    : [
+        { icon: "💧", text: "পর্যাপ্ত বিশুদ্ধ পানি পান করুন" },
+        { icon: "⏰", text: "নির্ধারিত সময় মেনে ওষুধ খান" },
+        { icon: "🥗", text: "পুষ্টিকর খাবার ও বিশ্রাম নিন" },
+        { icon: "🗓️", text: nextVisitText ? `ফলো-আপ: ${nextVisitText}` : "প্রয়োজনে ফলো-আপ ভিজিট করুন" },
+      ];
 
   const dangerSigns = exp
     ? exp.dangerSigns
@@ -302,7 +322,7 @@ export function PatientSmartPrescription({
   // Primary treatment duration badge
   const primaryDuration = exp && exp.medicines.length > 0
     ? exp.medicines[0].durationText
-    : "৭ দিন";
+    : "ডাক্তারের পরামর্শ অনুযায়ী";
 
   // Bengali Voice Audio handler
   const handleToggleAudio = () => {
@@ -748,7 +768,12 @@ export function PatientSmartPrescription({
                       )}
                     </td>
                     <td className="p-3 text-right font-bold text-slate-700 dark:text-slate-300">
-                      {row.duration}
+                      <div>{row.duration}</div>
+                      {row.quantityText && (
+                        <div className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                          {row.quantityText}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -859,19 +884,37 @@ export function PatientSmartPrescription({
               ওষুধগুলো একসাথে খাওয়া যাবে?
             </div>
 
-            <div className="rounded-2xl border border-[#a3e4d7] dark:border-emerald-800/60 bg-[#eafaf1] dark:bg-emerald-950/25 p-4 space-y-3 shadow-2xs">
+            <div
+              className={`rounded-2xl border p-4 space-y-3 shadow-2xs ${
+                interactionIsCaution
+                  ? "border-amber-300 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/25"
+                  : "border-[#a3e4d7] dark:border-emerald-800/60 bg-[#eafaf1] dark:bg-emerald-950/25"
+              }`}
+            >
               <div className="space-y-1.5 text-center">
-                <div className="font-bold text-xs sm:text-sm text-emerald-950 dark:text-emerald-200 leading-snug">
+                <div
+                  className={`font-bold text-xs sm:text-sm leading-snug ${
+                    interactionIsCaution
+                      ? "text-amber-950 dark:text-amber-200"
+                      : "text-emerald-950 dark:text-emerald-200"
+                  }`}
+                >
                   {interactionTitle}
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-xs text-center text-emerald-800 dark:text-emerald-300 font-bold">
-                {DEFAULT_PDF_RX.drugInteraction.sub1}
+              <div
+                className={`rounded-xl bg-white/80 dark:bg-slate-900/80 border p-2.5 text-xs text-center font-bold ${
+                  interactionIsCaution
+                    ? "border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300"
+                    : "border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300"
+                }`}
+              >
+                {interactionSub1}
               </div>
 
               <p className="text-[11px] text-slate-600 dark:text-slate-400 text-center leading-relaxed font-normal">
-                {DEFAULT_PDF_RX.drugInteraction.sub2}
+                {interactionSub2}
               </p>
             </div>
           </div>
@@ -895,32 +938,19 @@ export function PatientSmartPrescription({
               ))}
             </ul>
 
-            {/* 4 Action Mini Cards Row */}
+            {/* 4 Action Mini Cards Row (Dynamic based on prescription) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-              <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-center flex flex-col items-center justify-between">
-                <span className="text-xl">💧</span>
-                <span className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-                  পর্যাপ্ত বিশুদ্ধ পানি পান করুন
-                </span>
-              </div>
-              <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-center flex flex-col items-center justify-between">
-                <span className="text-xl">⏰</span>
-                <span className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-                  নির্ধারিত সময় মেনে ওষুধ খান
-                </span>
-              </div>
-              <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-center flex flex-col items-center justify-between">
-                <span className="text-xl">🥗</span>
-                <span className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-                  পুষ্টিকর খাবার ও বিশ্রাম নিন
-                </span>
-              </div>
-              <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-center flex flex-col items-center justify-between">
-                <span className="text-xl">🗓️</span>
-                <span className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-                  {nextVisitText ? `ফলো-আপ: ${nextVisitText}` : "প্রয়োজনে ফলো-আপ ভিজিট করুন"}
-                </span>
-              </div>
+              {actionCards.map((card, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-800/40 p-2.5 text-center flex flex-col items-center justify-between"
+                >
+                  <span className="text-xl">{card.icon}</span>
+                  <span className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
+                    {card.text}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
