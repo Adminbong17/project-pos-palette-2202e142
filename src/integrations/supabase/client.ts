@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
+import { sanitizeJsonBodyString } from '@/lib/unicode-sanitize';
 
 const SUPABASE_URL = "https://fmjzfzvbswkbxsrwcknu.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtanpmenZic3drYnhzcndja251Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzQwOTUsImV4cCI6MjA5NzU1MDA5NX0.Ck2sXgAYwggdKxePWSTJ5l0_dq3TWmrcO-uR787gdT0";
@@ -14,5 +15,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: brokeredPreviewStorage(),
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: {
+    fetch: (input, init) => {
+      if (init && typeof init.body === "string") {
+        init = { ...init, body: sanitizeJsonBodyString(init.body) };
+      }
+      return fetch(input, init);
+    },
+  },
 });

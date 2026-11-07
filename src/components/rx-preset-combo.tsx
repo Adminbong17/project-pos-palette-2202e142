@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { sanitizeUnicodeText } from "@/lib/unicode-sanitize";
 import {
   Command,
   CommandEmpty,
@@ -46,9 +47,10 @@ export function RxPresetCombo({
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const query = q.trim();
+  const query = sanitizeUnicodeText(q).trim();
 
   const matches = useMemo(() => {
+    if (!open) return [];
     const s = query.toLowerCase();
     if (!s) return options;
     const starts: ComboOption[] = [];
@@ -60,26 +62,28 @@ export function RxPresetCombo({
       else if (i > 0) rest.push(o);
     }
     return [...starts, ...rest];
-  }, [options, query]);
+  }, [open, options, query]);
 
-  const filtered = matches.slice(0, MAX_RESULTS);
-  const hidden = matches.length - filtered.length;
-  const exists = options.some((o) => o.name.toLowerCase() === query.toLowerCase());
+  const filtered = open ? matches.slice(0, MAX_RESULTS) : [];
+  const hidden = open ? matches.length - filtered.length : 0;
+  const exists = open && query ? options.some((o) => o.name.toLowerCase() === query.toLowerCase()) : false;
 
   const pick = (name: string, isNew: boolean) => {
-    if (isNew && onAdd) onAdd(name);
-    onPick(name);
+    const clean = sanitizeUnicodeText(name).trim();
+    if (!clean) return;
+    if (isNew && onAdd) onAdd(clean);
+    onPick(clean);
     setQ("");
     setOpen(false);
   };
 
-  const body = (
+  const renderBody = () => (
     <Command shouldFilter={false} className="bg-transparent">
       <div className="relative">
         <CommandInput
           placeholder={placeholder ?? "Search or type…"}
           value={q}
-          onValueChange={setQ}
+          onValueChange={(v) => setQ(sanitizeUnicodeText(v))}
           className={isMobile ? "h-12 text-base" : undefined}
           onKeyDown={(e) => {
             if (e.key === "Enter" && query && !exists && filtered.length === 0 && onAdd) {
@@ -167,7 +171,7 @@ export function RxPresetCombo({
             <DialogHeader className="px-4 pt-4">
               <DialogTitle className="text-base">{triggerLabel}</DialogTitle>
             </DialogHeader>
-            {body}
+            {open ? renderBody() : null}
           </DialogContent>
         </Dialog>
       </>
@@ -178,7 +182,7 @@ export function RxPresetCombo({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="p-0" style={{ width }} align="end">
-        {body}
+        {open ? renderBody() : null}
       </PopoverContent>
     </Popover>
   );

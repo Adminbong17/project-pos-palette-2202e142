@@ -1,6 +1,6 @@
 import { FloatingSearch } from "@/components/floating-search";
 import { createFileRoute } from "@tanstack/react-router";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useAutosaveDraft } from "@/hooks/use-autosave-draft";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import {
   searchMedicinesSync,
   matchMedicineSync,
 } from "@/lib/medicines-db";
+import { sanitizePayloadDeep, sanitizeUnicodeText } from "@/lib/unicode-sanitize";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -846,46 +847,51 @@ function PrescriptionsPage() {
   const save = useMutation({
     mutationFn: async () => {
       if (!businessId) throw new Error("No business");
-      if (!form.patient_name.trim()) throw new Error("Patient name required");
-      const valid = lines.filter((l) => l.medicine_name.trim());
+      const cleanPatientName = sanitizeUnicodeText(form.patient_name).trim();
+      if (!cleanPatientName) throw new Error("Patient name required");
+      const valid = lines.filter((l) => sanitizeUnicodeText(l.medicine_name).trim());
       if (!valid.length) throw new Error("Add at least one medicine");
 
-      const payload = {
+      const payload = sanitizePayloadDeep({
         business_id: businessId,
-        rx_no: form.rx_no.trim() || genRxNo(),
+        rx_no: sanitizeUnicodeText(form.rx_no).trim() || genRxNo(),
         rx_date: dhakaInputToIso(form.rx_date),
-        patient_name: form.patient_name.trim(),
-        patient_age: form.patient_age.trim() || null,
-        patient_gender: form.patient_gender || null,
-        patient_phone: form.patient_phone.trim() || null,
-        patient_code: form.patient_code.trim() || null,
-        patient_type: form.patient_type || "new",
+        patient_name: cleanPatientName,
+        patient_age: sanitizeUnicodeText(form.patient_age).trim() || null,
+        patient_gender: sanitizeUnicodeText(form.patient_gender) || null,
+        patient_phone: sanitizeUnicodeText(form.patient_phone).trim() || null,
+        patient_code: sanitizeUnicodeText(form.patient_code).trim() || null,
+        patient_type: sanitizeUnicodeText(form.patient_type) || "new",
         fee_amount: form.fee_amount.trim() === "" ? null : Number(form.fee_amount),
         contact_id: form.contact_id || null,
-        doctor_name: formatDoctorDisplayName(form.doctor_name || me.data?.doctor_name || "") || null,
-        doctor_qualification: (form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
+        doctor_name:
+          sanitizeUnicodeText(formatDoctorDisplayName(form.doctor_name || me.data?.doctor_name || "")).trim() || null,
+        doctor_qualification:
+          sanitizeUnicodeText(form.doctor_qualification || me.data?.doctor_qualification || "").trim() || null,
 
-        diagnosis: composeCc(cc) || null,
-        vitals: composeVitals(vitals, extraVitals) || null,
-        investigation: form.investigation.trim() || null,
-        advice: form.advice.trim() || null,
+        diagnosis: sanitizeUnicodeText(composeCc(cc)).trim() || null,
+        vitals: sanitizeUnicodeText(composeVitals(vitals, extraVitals)).trim() || null,
+        investigation: sanitizeUnicodeText(form.investigation).trim() || null,
+        advice: sanitizeUnicodeText(form.advice).trim() || null,
         next_visit: nextVisitDate || null,
-        notes: form.notes.trim() || null,
-      };
+        notes: sanitizeUnicodeText(form.notes).trim() || null,
+      });
 
       // Save qualification & formatted doctor name to profile if entered
       try {
         const { data: authData } = await supabase.auth.getUser();
         if (authData?.user?.id) {
-          const qTrim = (form.doctor_qualification || "").trim();
-          const nTrim = (form.doctor_name || "").trim();
+          const qTrim = sanitizeUnicodeText(form.doctor_qualification || "").trim();
+          const nTrim = sanitizeUnicodeText(form.doctor_name || "").trim();
           if (qTrim && (!me.data?.doctor_qualification || qTrim !== me.data?.doctor_qualification)) {
             await supabase
               .from("profiles")
-              .update({
-                doctor_qualification: qTrim,
-                ...(nTrim ? { doctor_name: formatDoctorDisplayName(nTrim) } : {}),
-              } as any)
+              .update(
+                sanitizePayloadDeep({
+                  doctor_qualification: qTrim,
+                  ...(nTrim ? { doctor_name: formatDoctorDisplayName(nTrim) } : {}),
+                }) as any,
+              )
               .eq("id", authData.user.id);
             qc.invalidateQueries({ queryKey: ["my-doctor-profile"] });
           }
@@ -902,18 +908,20 @@ function PrescriptionsPage() {
         if (error) throw error;
         rxId = data.id;
       }
-      const lineRows = valid.map((l, idx) => ({
-        prescription_id: rxId!,
-        product_id: l.product_id,
-        variation_id: l.variation_id,
-        medicine_name: l.medicine_name.trim(),
-        dose: null,
-        frequency: l.frequency.trim() || null,
-        duration: l.duration.trim() || null,
-        instructions: l.instructions.trim() || null,
-        quantity: Number(l.quantity) || 0,
-        sort_order: idx,
-      }));
+      const lineRows = sanitizePayloadDeep(
+        valid.map((l, idx) => ({
+          prescription_id: rxId!,
+          product_id: l.product_id,
+          variation_id: l.variation_id,
+          medicine_name: sanitizeUnicodeText(l.medicine_name).trim(),
+          dose: null,
+          frequency: sanitizeUnicodeText(l.frequency).trim() || null,
+          duration: sanitizeUnicodeText(l.duration).trim() || null,
+          instructions: sanitizeUnicodeText(l.instructions).trim() || null,
+          quantity: Number(l.quantity) || 0,
+          sort_order: idx,
+        })),
+      );
       if (lineRows.length) {
         const { error } = await supabase.from("prescription_lines").insert(lineRows);
         if (error) throw error;
@@ -1529,46 +1537,25 @@ function PrescriptionsPage() {
 
 
 
-  const updateLine = (i: number, patch: Partial<Line>) =>
-    setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const updateLine = useCallback(
+    (i: number, patch: Partial<Line>) =>
+      setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l))),
+    [],
+  );
+  const removeLine = useCallback(
+    (i: number) => setLines((prev) => prev.filter((_, idx) => idx !== i)),
+    [],
+  );
+  const emptyProducts = useMemo<ProductOpt[]>(() => [], []);
+  const myVitalOptions = useMemo(
+    () => myVitals.items.map((o) => ({ id: o.id, name: o.name, removable: true })),
+    [myVitals.items],
+  );
 
-  return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2"><FileText className="h-6 w-6" /> Prescriptions</h1>
-          <p className="text-sm text-muted-foreground">Create, manage, and print patient prescriptions.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-md border px-3 py-1.5">
-            <Switch id="own-pad" checked={ownPad} onCheckedChange={toggleOwnPad} />
-            <Label htmlFor="own-pad" className="text-xs leading-tight">
-              Own pad
-              <span className="block text-[10px] text-muted-foreground">
-                {ownPad ? "2 inch top space, no header" : "Default header"}
-              </span>
-            </Label>
-          </div>
-          <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search patient / Rx no / phone / patient ID…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
-            </div>
-          </FloatingSearch>
-          <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
-          <Button
-            variant="outline"
-            onClick={() => setDoctorProfileModalOpen(true)}
-            className="h-9 gap-1.5 border-teal-300 text-teal-700 bg-teal-50/50 hover:bg-teal-100 hover:text-teal-800 transition shadow-2xs font-medium cursor-pointer"
-            title="প্রেসক্রিপশনে প্রদর্শিত ডাক্তারের নাম, পদবি ও ডিগ্রি সাজান"
-          >
-            <Stethoscope className="h-4 w-4 text-teal-600" />
-            <span>ডাক্তার ও পদবি সাজান</span>
-          </Button>
-          <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
-        </div>
-      </div>
-
+  // Memoize the background table so typing inside the New/Edit Prescription
+  // modal never re-renders up to 500 table rows on every keystroke.
+  const prescriptionsTable = useMemo(
+    () => (
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -1639,6 +1626,49 @@ function PrescriptionsPage() {
           </TableBody>
         </Table>
       </div>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [list.isLoading, list.data],
+  );
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2"><FileText className="h-6 w-6" /> Prescriptions</h1>
+          <p className="text-sm text-muted-foreground">Create, manage, and print patient prescriptions.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border px-3 py-1.5">
+            <Switch id="own-pad" checked={ownPad} onCheckedChange={toggleOwnPad} />
+            <Label htmlFor="own-pad" className="text-xs leading-tight">
+              Own pad
+              <span className="block text-[10px] text-muted-foreground">
+                {ownPad ? "2 inch top space, no header" : "Default header"}
+              </span>
+            </Label>
+          </div>
+          <FloatingSearch spacer={44} className="max-w-[calc(100vw-24px)]">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search patient / Rx no / phone / patient ID…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 w-full" />
+            </div>
+          </FloatingSearch>
+          <BluetoothStatusButton businessName={business?.name || "Sheikh Pharma"} />
+          <Button
+            variant="outline"
+            onClick={() => setDoctorProfileModalOpen(true)}
+            className="h-9 gap-1.5 border-teal-300 text-teal-700 bg-teal-50/50 hover:bg-teal-100 hover:text-teal-800 transition shadow-2xs font-medium cursor-pointer"
+            title="প্রেসক্রিপশনে প্রদর্শিত ডাক্তারের নাম, পদবি ও ডিগ্রি সাজান"
+          >
+            <Stethoscope className="h-4 w-4 text-teal-600" />
+            <span>ডাক্তার ও পদবি সাজান</span>
+          </Button>
+          <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" /> New Prescription</Button>
+        </div>
+      </div>
+
+      {prescriptionsTable}
 
       <Dialog open={open} onOpenChange={(o) => { if (o) setOpen(true); else closeForm(); }}>
         <DialogContent ref={dialogScrollRef} className="max-w-4xl max-h-[92vh] overflow-y-auto overscroll-contain">
@@ -1653,7 +1683,7 @@ function PrescriptionsPage() {
             </div>
             <div>
               <Label>Date (BD time)</Label>
-              <Input type="datetime-local" value={form.rx_date} onChange={(e) => setForm({ ...form, rx_date: e.target.value })} />
+              <Input type="datetime-local" value={form.rx_date} onChange={(e) => setForm((prev) => ({ ...prev, rx_date: e.target.value }))} />
             </div>
             <div>
               <div className="flex items-center justify-between">
@@ -1682,7 +1712,7 @@ function PrescriptionsPage() {
               </div>
               <Input
                 value={form.doctor_name}
-                onChange={(e) => setForm({ ...form, doctor_name: e.target.value })}
+                onChange={(e) => setForm((prev) => ({ ...prev, doctor_name: e.target.value }))}
                 placeholder={me.isLoading ? "Loading…" : "e.g. Dr. Mehedi Hasan"}
                 className="mt-1 h-9 text-xs"
               />
@@ -1692,8 +1722,11 @@ function PrescriptionsPage() {
               <Input
                 value={splitDoctorQualification(form.doctor_qualification).degree}
                 onChange={(e) => {
-                  const { designation } = splitDoctorQualification(form.doctor_qualification);
-                  setForm({ ...form, doctor_qualification: combineDoctorQualification(e.target.value, designation) });
+                  const val = e.target.value;
+                  setForm((prev) => {
+                    const { designation } = splitDoctorQualification(prev.doctor_qualification);
+                    return { ...prev, doctor_qualification: combineDoctorQualification(val, designation) };
+                  });
                 }}
                 placeholder="e.g. MBBS, FCPS, MD, BCS"
                 className="mt-1 h-9 text-xs"
@@ -1707,8 +1740,11 @@ function PrescriptionsPage() {
               <Input
                 value={splitDoctorQualification(form.doctor_qualification).designation}
                 onChange={(e) => {
-                  const { degree } = splitDoctorQualification(form.doctor_qualification);
-                  setForm({ ...form, doctor_qualification: combineDoctorQualification(degree, e.target.value) });
+                  const val = e.target.value;
+                  setForm((prev) => {
+                    const { degree } = splitDoctorQualification(prev.doctor_qualification);
+                    return { ...prev, doctor_qualification: combineDoctorQualification(degree, val) };
+                  });
                 }}
                 placeholder="e.g. সহকারী অধ্যাপক ও কনসালট্যান্ট, মেডিসিন বিশেষজ্ঞ"
                 className="mt-1 h-9 text-xs"
@@ -1732,15 +1768,15 @@ function PrescriptionsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
             <div className="md:col-span-2">
               <Label>Patient Name *</Label>
-              <Input value={form.patient_name} onChange={(e) => setForm({ ...form, patient_name: e.target.value })} />
+              <Input value={form.patient_name} onChange={(e) => setForm((prev) => ({ ...prev, patient_name: e.target.value }))} />
             </div>
             <div>
               <Label>Age</Label>
-              <Input value={form.patient_age} onChange={(e) => setForm({ ...form, patient_age: e.target.value })} placeholder="e.g. 32 yr" />
+              <Input value={form.patient_age} onChange={(e) => setForm((prev) => ({ ...prev, patient_age: e.target.value }))} placeholder="e.g. 32 yr" />
             </div>
             <div>
               <Label>Gender</Label>
-              <Select value={form.patient_gender || undefined} onValueChange={(v) => setForm({ ...form, patient_gender: v })}>
+              <Select value={form.patient_gender || undefined} onValueChange={(v) => setForm((prev) => ({ ...prev, patient_gender: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Male">Male</SelectItem>
@@ -1751,14 +1787,14 @@ function PrescriptionsPage() {
             </div>
             <div>
               <Label>Phone</Label>
-              <Input value={form.patient_phone} onChange={(e) => setForm({ ...form, patient_phone: e.target.value })} />
+              <Input value={form.patient_phone} onChange={(e) => setForm((prev) => ({ ...prev, patient_phone: e.target.value }))} />
             </div>
             <div>
               <Label>Patient ID</Label>
               <Input
                 className="font-mono"
                 value={form.patient_code}
-                onChange={(e) => setForm({ ...form, patient_code: e.target.value.toUpperCase() })}
+                onChange={(e) => setForm((prev) => ({ ...prev, patient_code: e.target.value.toUpperCase() }))}
                 placeholder="Auto-generated if left blank"
               />
             </div>
@@ -1766,7 +1802,7 @@ function PrescriptionsPage() {
               <Label>Patient type</Label>
               <Select
                 value={form.patient_type || "new"}
-                onValueChange={(v) => setForm({ ...form, patient_type: v })}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, patient_type: v }))}
               >
                 <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
@@ -1781,7 +1817,7 @@ function PrescriptionsPage() {
               <Input
                 inputMode="numeric"
                 value={form.fee_amount}
-                onChange={(e) => setForm({ ...form, fee_amount: e.target.value.replace(/[^0-9.]/g, "") })}
+                onChange={(e) => setForm((prev) => ({ ...prev, fee_amount: e.target.value.replace(/[^0-9.]/g, "") }))}
                 placeholder="From location fee setup"
               />
             </div>
@@ -1812,12 +1848,13 @@ function PrescriptionsPage() {
               <RxPresetCombo
                 triggerLabel="Add my vital"
                 placeholder="Search or type a vital name…"
-                options={myVitals.items.map((o) => ({ id: o.id, name: o.name, removable: true }))}
+                options={myVitalOptions}
                 onAdd={(n) => myVitals.add(n)}
                 onRemove={(id) => myVitals.remove(id)}
                 onPick={(n) => {
-                  if (!extraVitals.some((e) => e.name.toLowerCase() === n.toLowerCase()))
-                    setExtraVitals([...extraVitals, { name: n, value: "" }]);
+                  setExtraVitals((prev) =>
+                    prev.some((e) => e.name.toLowerCase() === n.toLowerCase()) ? prev : [...prev, { name: n, value: "" }],
+                  );
                 }}
               />
             </div>
@@ -1831,7 +1868,10 @@ function PrescriptionsPage() {
                       inputMode={f.key === "bp" ? "text" : "decimal"}
                       placeholder={f.placeholder}
                       value={vitals[f.key]}
-                      onChange={(e) => setVitals({ ...vitals, [f.key]: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVitals((prev) => ({ ...prev, [f.key]: val }));
+                      }}
                     />
                     <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                       {f.unit}
@@ -1855,7 +1895,7 @@ function PrescriptionsPage() {
                     <button
                       type="button"
                       className="text-destructive"
-                      onClick={() => setExtraVitals(extraVitals.filter((_, ix) => ix !== i))}
+                      onClick={() => setExtraVitals((prev) => prev.filter((_, ix) => ix !== i))}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1863,9 +1903,10 @@ function PrescriptionsPage() {
                   <Input
                     placeholder="Value"
                     value={e.value}
-                    onChange={(ev) =>
-                      setExtraVitals(extraVitals.map((x, ix) => (ix === i ? { ...x, value: ev.target.value } : x)))
-                    }
+                    onChange={(ev) => {
+                      const val = ev.target.value;
+                      setExtraVitals((prev) => prev.map((x, ix) => (ix === i ? { ...x, value: val } : x)));
+                    }}
                   />
                 </div>
               ))}
@@ -1895,7 +1936,10 @@ function PrescriptionsPage() {
                       className="flex-1"
                       value={c.name}
                       placeholder="Complaint"
-                      onChange={(e) => setCc(cc.map((x, ix) => (ix === i ? { ...x, name: e.target.value } : x)))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCc((prev) => prev.map((x, ix) => (ix === i ? { ...x, name: val } : x)));
+                      }}
                     />
                     <div className="relative w-32">
                       <Input
@@ -1903,15 +1947,16 @@ function PrescriptionsPage() {
                         inputMode="numeric"
                         placeholder="Since"
                         value={c.days}
-                        onChange={(e) =>
-                          setCc(cc.map((x, ix) => (ix === i ? { ...x, days: e.target.value.replace(/\D/g, "") } : x)))
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setCc((prev) => prev.map((x, ix) => (ix === i ? { ...x, days: val } : x)));
+                        }}
                       />
                       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                         days
                       </span>
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => setCc(cc.filter((_, ix) => ix !== i))}>
+                    <Button size="icon" variant="ghost" onClick={() => setCc((prev) => prev.filter((_, ix) => ix !== i))}>
                       <X className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -1943,7 +1988,7 @@ function PrescriptionsPage() {
               rows={3}
               placeholder="CBC, X-ray chest P/A view…"
               value={form.investigation}
-              onChange={(e) => setForm({ ...form, investigation: e.target.value })}
+              onChange={(e) => setForm((prev) => ({ ...prev, investigation: e.target.value }))}
             />
           </div>
 
@@ -2008,7 +2053,7 @@ function PrescriptionsPage() {
                   <Baby className="h-3.5 w-3.5" />
                   <span>শিশু ডোজ ক্যালকুলেটর</span>
                 </Button>
-                <Button size="sm" type="button" variant="outline" onClick={() => setLines([...lines, emptyLine()])}>
+                <Button size="sm" type="button" variant="outline" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
                   <Plus className="h-4 w-4 mr-1" /> Add Row
                 </Button>
               </div>
@@ -2017,15 +2062,16 @@ function PrescriptionsPage() {
               {lines.map((l, i) => (
                 <MedicineRow
                   key={i}
+                  index={i}
                   line={l}
-                  products={products.data ?? []}
+                  products={products.data ?? emptyProducts}
                   myMedicines={myMedicines}
                   myFreqs={myFreqs}
                   freqOptions={freqPickList}
                   myInstructions={myInstructions}
                   instrOptions={instrPickList}
-                  onChange={(patch) => updateLine(i, patch)}
-                  onRemove={() => setLines(lines.filter((_, idx) => idx !== i))}
+                  onUpdateLine={updateLine}
+                  onRemoveLine={removeLine}
                 />
               ))}
             </div>
@@ -2047,11 +2093,11 @@ function PrescriptionsPage() {
                   }
                 />
               </div>
-              <Textarea rows={3} value={form.advice} onChange={(e) => setForm({ ...form, advice: e.target.value })} placeholder="Diet / lifestyle advice…" />
+              <Textarea rows={3} value={form.advice} onChange={(e) => setForm((prev) => ({ ...prev, advice: e.target.value }))} placeholder="Diet / lifestyle advice…" />
             </div>
             <div>
               <Label>Notes</Label>
-              <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Textarea rows={3} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
             </div>
           </div>
 
@@ -2218,16 +2264,38 @@ type PresetApi = {
   remove: (id: string) => void;
 };
 
-function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInstructions, instrOptions, onChange, onRemove }: {
-  line: Line; products: ProductOpt[];
-  myMedicines: PresetApi; myFreqs: PresetApi; myInstructions: PresetApi;
+const MedicineRow = memo(function MedicineRow({
+  index,
+  line,
+  products,
+  myMedicines,
+  myFreqs,
+  freqOptions,
+  myInstructions,
+  instrOptions,
+  onUpdateLine,
+  onRemoveLine,
+}: {
+  index: number;
+  line: Line;
+  products: ProductOpt[];
+  myMedicines: PresetApi;
+  myFreqs: PresetApi;
+  myInstructions: PresetApi;
   freqOptions: { id: string; name: string; removable?: boolean }[];
   instrOptions: { id: string; name: string; removable?: boolean }[];
-  onChange: (p: Partial<Line>) => void; onRemove: () => void;
+  onUpdateLine: (index: number, p: Partial<Line>) => void;
+  onRemoveLine: (index: number) => void;
 }) {
   const dbReady = useMedicinesDbReady();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const onChange = useCallback(
+    (patch: Partial<Line>) => onUpdateLine(index, patch),
+    [index, onUpdateLine],
+  );
+  const onRemove = useCallback(() => onRemoveLine(index), [index, onRemoveLine]);
 
   // Close dropdown on outside click — only listen while the dropdown is open,
   // so N medicine rows don't keep N permanent document listeners.
@@ -2245,27 +2313,30 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   const query = (line.medicine_name || "").trim();
   const deferredSearch = useDeferredValue(query);
 
-  // Query master medicine options for 2+ typed characters
+  // Query master medicine options ONLY when dropdown is open and 2+ characters are typed
   const remote = useQuery({
     queryKey: ["rx-master-medicine-search", deferredSearch.toLowerCase()],
-    enabled: deferredSearch.length >= 2,
+    enabled: isOpen && deferredSearch.length >= 2,
     staleTime: 60_000,
     queryFn: () => fetchMasterOptions("medicine", 100, deferredSearch),
   });
 
   const matchedCurrent = useMemo(
     () => (query.length >= 2 ? matchMedicineSync(query) : null),
-    [query, dbReady]
+    [query, dbReady],
   );
 
   // Intelligent clinical similarity scoring (merged with 25,534-medicine clinical DB)
+  // Computed ONLY when the dropdown is actually open (`isOpen === true`) so closed
+  // medicine rows cost zero CPU while typing anywhere in the prescription form!
   const suggestions = useMemo(() => {
+    if (!isOpen) return [];
     const q = deferredSearch.toLowerCase().trim();
 
     // If query is empty or 1 character, NEVER dump random store items or devices!
     if (q.length < 2) {
       if (myMedicines.items.length > 0) {
-        return myMedicines.items.map((m) => {
+        return myMedicines.items.slice(0, 35).map((m) => {
           const matched = matchMedicineSync(m.name);
           return {
             id: `my:${m.id}`,
@@ -2291,18 +2362,15 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
     }[] = [];
     const seen = new Set<string>();
 
-    // 1. Doctor's saved / starred medicines
+    // 1. Doctor's saved / starred medicines (filtered by query first)
     for (const m of myMedicines.items) {
       const k = m.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
+      if (!k.includes(q)) continue;
       seen.add(k);
-      const matched = matchMedicineSync(m.name);
       combined.push({
         id: `my:${m.id}`,
         name: m.name,
-        genericName: matched?.genericName,
-        dosageForm: matched?.dosageForm,
-        indications: matched?.indications,
         isSaved: true,
       });
     }
@@ -2328,28 +2396,24 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       const k = r.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
       seen.add(k);
-      const matched = matchMedicineSync(r.name);
       combined.push({
         id: r.id,
         name: r.name,
-        genericName: matched?.genericName,
-        dosageForm: matched?.dosageForm,
-        indications: matched?.indications,
       });
     }
 
-    // 4. Local catalog
-    for (const p of products) {
+    // 4. Local catalog — filter by substring match FIRST and cap at 40 items
+    // instead of scanning and matching all 20,000 products on every keystroke!
+    let localMatches = 0;
+    for (let i = 0; i < products.length && localMatches < 40; i++) {
+      const p = products[i];
       const k = p.name.trim().toLowerCase();
-      if (!k || seen.has(k)) continue;
+      if (!k || !k.includes(q) || seen.has(k)) continue;
       seen.add(k);
-      const matched = matchMedicineSync(p.name);
+      localMatches++;
       combined.push({
         id: p.id,
         name: p.name,
-        genericName: matched?.genericName,
-        dosageForm: matched?.dosageForm,
-        indications: matched?.indications,
       });
     }
 
@@ -2401,12 +2465,25 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
         return { ...item, score };
       })
       .filter((x) => x.score > -1500)
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 35);
 
-    return scored.slice(0, 35);
-  }, [deferredSearch, myMedicines.items, remote.data, products, dbReady]);
+    // Enrich only the top 35 results with generic/dosageForm if not already set
+    return scored.map((item) => {
+      if (item.genericName) return item;
+      const matched = matchMedicineSync(item.name);
+      return matched
+        ? {
+            ...item,
+            genericName: matched.genericName,
+            dosageForm: matched.dosageForm,
+            indications: matched.indications,
+          }
+        : item;
+    });
+  }, [isOpen, deferredSearch, myMedicines.items, remote.data, products, dbReady]);
 
-  const exactExists = suggestions.some((s) => s.name.toLowerCase() === query.toLowerCase());
+  const exactExists = isOpen && suggestions.some((s) => s.name.toLowerCase() === query.toLowerCase());
 
   return (
     <div className="rounded-md border p-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-start bg-muted/30">
@@ -2579,4 +2656,4 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       </div>
     </div>
   );
-}
+});

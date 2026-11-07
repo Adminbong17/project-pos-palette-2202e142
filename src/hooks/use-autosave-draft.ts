@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { sanitizePayloadDeep } from "@/lib/unicode-sanitize";
 
 const PREFIX = "draft:";
 const VERSION = 2;
@@ -18,7 +19,7 @@ type Options<T> = {
  * Keeps in-progress form data in localStorage so an unexpected power cut /
  * browser crash / accidental tab close does not lose the work.
  *
- * - writes are debounced (300ms) and also flushed on pagehide / tab hide
+ * - writes are debounced (600ms) and also flushed on pagehide / tab hide
  * - the draft is restored automatically the next time the form mounts
  * - call clearDraft() after a successful save
  */
@@ -72,7 +73,7 @@ export function useAutosaveDraft<T>(
     if (!storageKey || typeof window === "undefined" || !readyRef.current) return;
     if (Date.now() < blockUntilRef.current) return;
     try {
-      const current = dataRef.current;
+      const current = sanitizePayloadDeep(dataRef.current);
       const signature = getSignature(current);
       if (isEmptyRef.current?.(current)) {
         clearedSignatureRef.current = null;
@@ -124,7 +125,8 @@ export function useAutosaveDraft<T>(
           lastWrittenRef.current = null;
           window.localStorage.removeItem(storageKey);
         } else if (parsed?.data !== undefined && Date.now() - (parsed.at ?? 0) < MAX_AGE_MS) {
-          restoreRef.current(parsed.data);
+          const cleanDraft = sanitizePayloadDeep(parsed.data);
+          restoreRef.current(cleanDraft);
           toast.info(restoreMessage);
         } else {
           lastWrittenRef.current = null;
@@ -151,7 +153,7 @@ export function useAutosaveDraft<T>(
       }
       return;
     }
-    const t = setTimeout(flush, 300);
+    const t = setTimeout(flush, 600);
     return () => clearTimeout(t);
   }, [storageKey, enabled, flush, data]);
 

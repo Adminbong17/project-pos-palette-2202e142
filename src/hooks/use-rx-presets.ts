@@ -1,5 +1,7 @@
+import { useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeUnicodeText } from "@/lib/unicode-sanitize";
 import { toast } from "sonner";
 
 export type PresetKind =
@@ -12,6 +14,8 @@ export type PresetKind =
   | "medicine";
 
 export type Preset = { id: string; name: string };
+
+const EMPTY_PRESETS: Preset[] = [];
 
 /**
  * Per-doctor personal lists (C/C, vitals, investigations, frequencies,
@@ -46,7 +50,7 @@ export function useRxPresets(kind: PresetKind, businessId: string | undefined) {
 
   const add = useMutation({
     mutationFn: async (name: string) => {
-      const n = name.trim();
+      const n = sanitizeUnicodeText(name).trim();
       if (!n) return;
       if (!uid || !businessId) throw new Error("Not ready");
       if ((list.data ?? []).some((p) => p.name.toLowerCase() === n.toLowerCase())) return;
@@ -68,10 +72,17 @@ export function useRxPresets(kind: PresetKind, businessId: string | undefined) {
     onError: (e: any) => toast.error(e.message ?? "Could not remove"),
   });
 
-  return {
-    items: list.data ?? [],
-    isLoading: list.isLoading,
-    add: (name: string) => add.mutate(name),
-    remove: (id: string) => remove.mutate(id),
-  };
+  const items = list.data ?? EMPTY_PRESETS;
+  const addFn = useCallback((name: string) => add.mutate(name), [add]);
+  const removeFn = useCallback((id: string) => remove.mutate(id), [remove]);
+
+  return useMemo(
+    () => ({
+      items,
+      isLoading: list.isLoading,
+      add: addFn,
+      remove: removeFn,
+    }),
+    [items, list.isLoading, addFn, removeFn],
+  );
 }
