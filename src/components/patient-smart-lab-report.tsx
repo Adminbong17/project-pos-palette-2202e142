@@ -255,7 +255,31 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
   const mildCount = exp ? exp.mildCount : DEFAULT_PDF_LAB.mild_count;
   const abnormalCount = exp ? exp.abnormalCount : DEFAULT_PDF_LAB.abnormal_count;
 
+  const goodNewsTitle = exp ? exp.reassuranceTitle : DEFAULT_PDF_LAB.good_news_title;
   const goodNewsText = exp ? exp.reassuranceMessage : DEFAULT_PDF_LAB.good_news;
+
+  const realParameters = exp
+    ? exp.parameters.map((p, idx) => ({
+        no: `${idx + 1}.`,
+        name: p.name,
+        result: p.result,
+        unit: p.unit,
+        range: p.refRange,
+        status: p.status,
+        statusText: p.statusText,
+        explanation: p.banglaMeaning,
+      }))
+    : DEFAULT_PDF_LAB.parameters;
+
+  const mildDetails = exp
+    ? exp.parameters
+        .filter((p) => p.status !== "normal")
+        .map((p) => `${p.name} (${p.result}${p.unit ? ` ${p.unit}` : ""})`)
+    : DEFAULT_PDF_LAB.summaryCards.mild.details;
+
+  const patientTips = exp ? exp.patientTips : DEFAULT_PDF_LAB.patientTips;
+  const dangerSigns = exp ? exp.dangerSigns : DEFAULT_PDF_LAB.dangerSigns;
+  const faqsList = exp ? exp.faqs : DEFAULT_PDF_LAB.faqs;
 
   // Bengali Voice Audio handler
   const handleToggleAudio = () => {
@@ -270,7 +294,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
       return;
     }
 
-    const speechText = `আমার রিপোর্ট বিশ্লেষণ। টেস্টের নাম: ${testName}। মোট ১২টি প্যারামিটারের মধ্যে ১০টি মান স্বাভাবিক সীমায় রয়েছে। ${goodNewsText}`;
+    const speechText = `আমার রিপোর্ট বিশ্লেষণ। টেস্টের নাম: ${testName}। মোট ${totalParams}টি প্যারামিটারের মধ্যে ${normalCount}টি মান স্বাভাবিক সীমায় রয়েছে। ${goodNewsText}`;
     const utterance = new SpeechSynthesisUtterance(speechText);
     utterance.lang = "bn-BD";
     utterance.rate = 0.95;
@@ -293,7 +317,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
     if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({
         title: "আমার ল্যাব রিপোর্ট — শেখ ফার্মা",
-        text: `টেস্ট: ${testName} | ফলাফল: স্বাভাবিক ১০টি, সামান্য তারতম্য ২টি।`,
+        text: `টেস্ট: ${testName} | ফলাফল: স্বাভাবিক ${normalCount}টি, তারতম্য ${mildCount + abnormalCount}টি।`,
         url: window.location.href,
       }).catch(() => {});
     } else {
@@ -302,10 +326,9 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
     }
   };
 
-  // Donut chart calculations (12 total: 10 normal = 83.3%, 2 mild = 16.7%)
+  // Donut chart calculations
   const normalPercent = (normalCount / (totalParams || 1)) * 100;
-  const mildPercent = (mildCount / (totalParams || 1)) * 100;
-  const strokeDashoffsetMild = 100 - normalPercent;
+  const mildPercent = ((mildCount + abnormalCount) / (totalParams || 1)) * 100;
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4 font-sans text-slate-900 dark:text-slate-100">
@@ -315,7 +338,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
         
         {/* ================= 1. TOP HEADER ROW ================= */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center border-b border-slate-100 dark:border-slate-800/80 pb-5">
-          {/* Left Card: CBC + ESR / Date / Lab / Upload status */}
+          {/* Left Card: Test Name / Date / Lab / Upload status */}
           <div className="md:col-span-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-3.5 space-y-1 shadow-2xs">
             <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
               <FileText className="h-4 w-4 text-primary" />
@@ -337,9 +360,9 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
 
           {/* Center Heading: আমার রিপোর্ট / সহজ ভাষায় রিপোর্ট বিশ্লেষণ */}
           <div className="md:col-span-5 text-center flex flex-col justify-center">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               আমার রিপোর্ট
-            </h1>
+            </h2>
             <p className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
               সহজ ভাষায় রিপোর্ট বিশ্লেষণ
             </p>
@@ -412,7 +435,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
               </svg>
               <div className="absolute flex flex-col items-center justify-center text-center">
                 <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">
-                  ১২
+                  {totalParams}
                 </span>
                 <span className="text-[10px] text-slate-500 font-semibold mt-0.5">
                   মোট প্যারামিটার
@@ -425,27 +448,27 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
                 <span className="text-slate-600 dark:text-slate-300">স্বাভাবিক</span>
-                <span className="font-bold text-slate-900 dark:text-white ml-auto">১০</span>
+                <span className="font-bold text-slate-900 dark:text-white ml-auto">{normalCount}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
                 <span className="text-slate-600 dark:text-slate-300">সামান্য তারতম্য</span>
-                <span className="font-bold text-slate-900 dark:text-white ml-auto">২</span>
+                <span className="font-bold text-slate-900 dark:text-white ml-auto">{mildCount}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shrink-0" />
                 <span className="text-slate-600 dark:text-slate-300">অস্বাভাবিক</span>
-                <span className="font-bold text-slate-900 dark:text-white ml-auto">০</span>
+                <span className="font-bold text-slate-900 dark:text-white ml-auto">{abnormalCount}</span>
               </div>
             </div>
           </div>
 
           {/* Right: ভালো খবর! Green Card (8 Cols) */}
           <div className="md:col-span-8 rounded-2xl border border-[#a3e4d7] dark:border-emerald-800/60 bg-[#eafaf1] dark:bg-emerald-950/25 p-4 sm:p-5 flex flex-col justify-center space-y-1.5 shadow-2xs">
-            <h2 className="text-base sm:text-lg font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-emerald-600" />
-              <span>{DEFAULT_PDF_LAB.good_news_title}</span>
-            </h2>
+              <span>{goodNewsTitle}</span>
+            </h3>
             <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
               {goodNewsText}
             </p>
@@ -506,7 +529,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
           </button>
         </div>
 
-        {/* ================= 4. RESULTS TABLE (CBC + ESR) ================= */}
+        {/* ================= 4. RESULTS TABLE ================= */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-3.5 shadow-2xs">
           <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
             <FileText className="h-4 w-4 text-emerald-600" />
@@ -525,7 +548,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {DEFAULT_PDF_LAB.parameters.map((param, idx) => (
+                {realParameters.map((param, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                     <td className="p-3 font-bold text-slate-900 dark:text-white">
                       {param.no} {param.name}
@@ -539,6 +562,10 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                     <td className="p-3 text-center">
                       {param.status === "normal" ? (
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 text-[11px] font-bold border border-emerald-200 dark:border-emerald-800">
+                          {param.statusText}
+                        </span>
+                      ) : param.status === "abnormal" ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-[11px] font-bold border border-rose-200 dark:border-rose-800">
                           {param.statusText}
                         </span>
                       ) : (
@@ -555,6 +582,11 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
               </tbody>
             </table>
           </div>
+          {report?.comment && (
+            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3 text-xs">
+              <strong className="text-slate-900 dark:text-white">মন্তব্য (Comment):</strong> {report.comment}
+            </div>
+          )}
         </div>
 
         {/* ================= 5. THREE SUMMARY CARDS ================= */}
@@ -571,7 +603,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
                 <span>স্বাভাবিক ফলাফল</span>
               </div>
               <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400">
-                {DEFAULT_PDF_LAB.summaryCards.normal.count}
+                {normalCount} টি
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
                 {DEFAULT_PDF_LAB.summaryCards.normal.note}
@@ -582,15 +614,18 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             <div className="rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/25 p-4 space-y-2 shadow-2xs">
               <div className="flex items-center gap-2 font-bold text-xs text-amber-900 dark:text-amber-300">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span>সামান্য তারতম্য</span>
+                <span>তারতম্যযুক্ত মান</span>
               </div>
               <div className="text-2xl font-black text-amber-700 dark:text-amber-400">
-                {DEFAULT_PDF_LAB.summaryCards.mild.count}
+                {mildCount + abnormalCount} টি
               </div>
-              <div className="text-xs space-y-0.5 text-slate-800 dark:text-slate-200 font-bold">
-                <div>Eosinophils (6%)</div>
-                <div>ESR (28 mm/hr)</div>
-              </div>
+              {mildDetails.length > 0 && (
+                <div className="text-xs space-y-0.5 text-slate-800 dark:text-slate-200 font-bold">
+                  {mildDetails.map((d, i) => (
+                    <div key={i}>{d}</div>
+                  ))}
+                </div>
+              )}
               <p className="text-[11px] text-slate-600 dark:text-slate-400">
                 {DEFAULT_PDF_LAB.summaryCards.mild.note}
               </p>
@@ -600,11 +635,11 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             <div className="rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/70 dark:bg-blue-950/25 p-4 space-y-2 flex flex-col justify-between shadow-2xs">
               <div className="flex items-center gap-2 font-bold text-xs text-blue-900 dark:text-blue-300">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
-                <span>ঝুঁকির স্তর</span>
+                <span>ঝুঁকির স্তর: {exp ? exp.riskLevel : "ঝুঁকিমুক্ত"}</span>
               </div>
               <div className="my-auto py-2">
                 <p className="text-xs text-blue-950 dark:text-blue-200 font-semibold leading-relaxed">
-                  {DEFAULT_PDF_LAB.summaryCards.risk.note}
+                  {exp ? exp.reassuranceMessage : DEFAULT_PDF_LAB.summaryCards.risk.note}
                 </p>
               </div>
               <div className="text-[10px] text-blue-700/80 font-medium">
@@ -624,7 +659,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             </div>
 
             <ul className="text-xs space-y-1.5 text-slate-800 dark:text-slate-200 font-medium">
-              {DEFAULT_PDF_LAB.patientTips.map((tip, idx) => (
+              {patientTips.map((tip, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold mt-0.5">✓</span>
                   <span>{tip}</span>
@@ -641,7 +676,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
             </div>
 
             <ul className="text-xs space-y-2 text-rose-950 dark:text-rose-200 font-medium">
-              {DEFAULT_PDF_LAB.dangerSigns.map((ds, idx) => (
+              {dangerSigns.map((ds, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-red-600 font-bold">•</span>
                   <span>{ds}</span>
@@ -658,7 +693,7 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {DEFAULT_PDF_LAB.faqs.map((faq, idx) => (
+            {faqsList.map((faq, idx) => (
               <button
                 key={idx}
                 type="button"
@@ -676,14 +711,14 @@ export function PatientSmartLabReport({ report }: PatientSmartLabReportProps) {
           </div>
 
           {/* Expanded FAQ Answer Modal / Card */}
-          {selectedFaq !== null && (
+          {selectedFaq !== null && faqsList[selectedFaq] && (
             <div className="p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-foreground space-y-1 animate-in fade-in duration-200">
               <div className="font-bold text-primary flex items-center gap-1.5">
                 <HelpCircle className="h-3.5 w-3.5" />
-                <span>{DEFAULT_PDF_LAB.faqs[selectedFaq].question}</span>
+                <span>{faqsList[selectedFaq].question}</span>
               </div>
               <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
-                {DEFAULT_PDF_LAB.faqs[selectedFaq].answer}
+                {faqsList[selectedFaq].answer}
               </p>
             </div>
           )}

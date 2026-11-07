@@ -201,14 +201,15 @@ const TEST_REASONS: Record<string, string> = {
 /*                         PARSE DOSAGE SCHEDULE                              */
 /* ========================================================================== */
 
-export function parseDoseSchedule(freq: string, formType: string): {
+export function parseDoseSchedule(freq: string, formType: string, instructions?: string): {
   morning: string;
   noon: string;
   night: string;
   summary: string;
 } {
   const f = (freq || "").toLowerCase().trim();
-  const unit = formType === "সিরাপ" ? "চামচ" : formType === "ড্রপস" ? "ড্রপ" : "ট্যাবলেট";
+  const instr = (instructions || "").trim();
+  const unit = formType === "সিরাপ" ? "চামচ" : formType === "ড্রপস" ? "ফোঁটা" : formType === "ক্যাপসুল" ? "ক্যাপসুল" : formType === "ইনজেকশন" ? "ইনজেকশন" : "ট্যাবলেট";
 
   // Check if explicit teaspoon / ml present
   let customAmount = "";
@@ -219,59 +220,94 @@ export function parseDoseSchedule(freq: string, formType: string): {
 
   const defaultAmt = customAmount || `১টি ${unit}`;
 
-  // Patterns like 1+0+1, 1+1+1, 0+0+1, 1+0+0
-  const matchPattern = f.match(/([0-9০-৯]+)\s*[\+\-]\s*([0-9০-৯]+)(?:\s*[\+\-]\s*([0-9০-৯]+))?(?:\s*[\+\-]\s*([0-9০-৯]+))?/);
+  // Patterns like 1+0+1, 1+1+1, 0+0+1, 1+0+0, 1+1+1+1, 1/2+0+1/2
+  const matchPattern = f.match(/([0-9০-৯./]+)\s*[\+\-]\s*([0-9০-৯./]+)(?:\s*[\+\-]\s*([0-9০-৯./]+))?(?:\s*[\+\-]\s*([0-9০-৯./]+))?/);
+
+  const toEnNum = (str: string) =>
+    str.replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+
+  const parseDosePart = (part?: string) => {
+    if (!part) return 0;
+    const clean = toEnNum(part.trim());
+    if (clean.includes("/")) {
+      const [a, b] = clean.split("/").map(Number);
+      return b ? a / b : 0;
+    }
+    return parseFloat(clean) || 0;
+  };
+
+  const formatDoseLabel = (rawPart: string | undefined, val: number) => {
+    if (val <= 0 || !rawPart) return "—";
+    if (customAmount) return `✓ ${customAmount}`;
+    return `✓ ${rawPart.trim()}টি ${unit}`;
+  };
 
   if (matchPattern) {
-    const m = parseInt(matchPattern[1].replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString()), 10) || 0;
-    const n = parseInt(matchPattern[2].replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString()), 10) || 0;
-    const e = matchPattern[3] ? parseInt(matchPattern[3].replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString()), 10) : 0;
+    const mVal = parseDosePart(matchPattern[1]);
+    const nVal = parseDosePart(matchPattern[2]);
+    const eVal = parseDosePart(matchPattern[3]);
+    const fourthVal = parseDosePart(matchPattern[4]);
 
-    const morning = m > 0 ? (customAmount ? customAmount : `${m}টি ${unit}`) : "—";
-    const noon = n > 0 ? (customAmount ? customAmount : `${n}টি ${unit}`) : "—";
-    const night = e > 0 ? (customAmount ? customAmount : `${e}টি ${unit}`) : "—";
+    const morning = formatDoseLabel(matchPattern[1], mVal);
+    const noon = formatDoseLabel(matchPattern[2], nVal);
+    const night = fourthVal > 0
+      ? `✓ দিনে ৪ বার (${f})`
+      : formatDoseLabel(matchPattern[3], eVal);
 
     const parts: string[] = [];
-    if (m > 0) parts.push("সকাল");
-    if (n > 0) parts.push("দুপুর");
-    if (e > 0) parts.push("রাত");
-    const count = (m > 0 ? 1 : 0) + (n > 0 ? 1 : 0) + (e > 0 ? 1 : 0);
-    const summary = `প্রতিদিন মোট ${count} বার (${parts.join("-")})`;
+    if (mVal > 0) parts.push("সকাল");
+    if (nVal > 0) parts.push("দুপুর");
+    if (eVal > 0) parts.push("রাত");
+    if (fourthVal > 0) parts.push("মধ্যরাত");
+
+    const count = (mVal > 0 ? 1 : 0) + (nVal > 0 ? 1 : 0) + (eVal > 0 ? 1 : 0) + (fourthVal > 0 ? 1 : 0);
+    const instrSuffix = instr ? ` — ${instr}` : "";
+    const summary = count > 0
+      ? `প্রতিদিন ${count} বার (${parts.join("-")})${instrSuffix}`
+      : `${freq}${instrSuffix}`;
 
     return { morning, noon, night, summary };
   }
 
-  // Fallback defaults
+  // Fallback when non-plus format used (e.g. "রাতে ১টি", "দিনে ২ বার", "প্রয়োজনে")
   if (f.includes("সকাল") && f.includes("রাত")) {
     return {
-      morning: defaultAmt,
+      morning: `✓ ${defaultAmt}`,
       noon: "—",
-      night: defaultAmt,
-      summary: "প্রতিদিন মোট ২ বার (সকাল ও রাত)",
+      night: `✓ ${defaultAmt}`,
+      summary: `প্রতিদিন ২ বার (সকাল ও রাত)${instr ? ` — ${instr}` : ""}`,
     };
   }
-  if (f.includes("৩ বার") || f.includes("3 বার")) {
+  if (f.includes("৩ বার") || f.includes("3 বার") || f.includes("tds")) {
     return {
-      morning: defaultAmt,
-      noon: defaultAmt,
-      night: defaultAmt,
-      summary: "প্রতিদিন মোট ৩ বার (সকাল-দুপুর-রাত)",
+      morning: `✓ ${defaultAmt}`,
+      noon: `✓ ${defaultAmt}`,
+      night: `✓ ${defaultAmt}`,
+      summary: `প্রতিদিন ৩ বার (সকাল-দুপুর-রাত)${instr ? ` — ${instr}` : ""}`,
     };
   }
-  if (f.includes("রাত") || f.includes("রাতে")) {
+  if (f.includes("রাত") || f.includes("রাতে") || f.includes("hs")) {
     return {
       morning: "—",
       noon: "—",
-      night: defaultAmt,
-      summary: "প্রতিদিন রাতে ১ বার",
+      night: `✓ ${defaultAmt}`,
+      summary: `প্রতিদিন রাতে ১ বার${instr ? ` — ${instr}` : ""}`,
+    };
+  }
+  if (f.includes("সকাল") || f.includes("সকালে") || f.includes("od")) {
+    return {
+      morning: `✓ ${defaultAmt}`,
+      noon: "—",
+      night: "—",
+      summary: `প্রতিদিন সকালে ১ বার${instr ? ` — ${instr}` : ""}`,
     };
   }
 
   return {
-    morning: defaultAmt,
+    morning: f ? `✓ ${freq}` : `✓ ${defaultAmt}`,
     noon: "—",
-    night: defaultAmt,
-    summary: "ডাক্তারের পরামর্শ অনুযায়ী সেব্য",
+    night: "—",
+    summary: `${freq || "চিকিৎসকের পরামর্শ অনুযায়ী"}${instr ? ` — ${instr}` : ""}`,
   };
 }
 
@@ -322,7 +358,9 @@ export function explainPrescription(rx: {
     const precautions = matchedRule ? matchedRule.precautions : "নির্ধারিত মাত্রার বেশি খাবেন না এবং সময়মতো ওষুধ সেবন করুন।";
 
     // Dosage schedule
-    const sched = parseDoseSchedule(line.frequency || line.dose || "", formType);
+    const sched = parseDoseSchedule(line.frequency || line.dose || "", formType, line.instructions);
+    const rawDur = (line.duration || "").trim();
+    const formattedDur = /^\d+$/.test(rawDur) ? `${rawDur} দিন` : (rawDur || "ডাক্তারের পরামর্শ অনুযায়ী");
 
     explainedMeds.push({
       originalName: rawName,
@@ -336,57 +374,115 @@ export function explainPrescription(rx: {
       morningDose: sched.morning,
       noonDose: sched.noon,
       nightDose: sched.night,
-      durationText: line.duration || "৭ দিন",
+      durationText: formattedDur,
       summaryFrequency: sched.summary,
     });
   }
 
-  // Parse Vitals
+  // Parse Vitals (Supports JSON or comma-separated string like "Height: 65 in, Weight: 60 kg, BP: 120/80 mmHg, Pulse: 78 bpm")
   const vitalsList: { label: string; value: string; status: string; note: string }[] = [];
   let parsedVitals: Record<string, string> = {};
-  if (typeof rx.vitals === "string") {
-    try {
-      parsedVitals = JSON.parse(rx.vitals);
-    } catch {
-      // string format
+  if (typeof rx.vitals === "string" && rx.vitals.trim()) {
+    const raw = rx.vitals.trim();
+    if (raw.startsWith("{")) {
+      try {
+        parsedVitals = JSON.parse(raw);
+      } catch {}
+    } else {
+      for (const chunk of raw.split(",")) {
+        const idx = chunk.indexOf(":");
+        if (idx === -1) continue;
+        const k = chunk.slice(0, idx).trim();
+        const v = chunk.slice(idx + 1).trim();
+        if (!k || !v || v.toUpperCase() === "N/A") continue;
+        const kl = k.toLowerCase();
+        if (kl === "bp") parsedVitals.bp = v;
+        else if (kl === "pulse") parsedVitals.pulse = v;
+        else if (kl === "temp" || kl === "temperature") parsedVitals.temp = v;
+        else if (kl === "weight") parsedVitals.weight = v;
+        else if (kl === "height") parsedVitals.height = v;
+        else if (kl === "bmi") parsedVitals.bmi = v;
+        else if (kl === "spo2" || kl === "spo₂") parsedVitals.spo2 = v;
+        else if (kl === "rbs") parsedVitals.rbs = v;
+        else parsedVitals[k] = v;
+      }
     }
   } else if (typeof rx.vitals === "object" && rx.vitals !== null) {
     parsedVitals = rx.vitals;
   }
 
+  const ensureUnit = (val: string, unit: string) =>
+    val.toLowerCase().includes(unit.toLowerCase()) ? val : `${val} ${unit}`;
+
   if (parsedVitals.bp) {
     vitalsList.push({
       label: "BP (রক্তচাপ)",
-      value: `${parsedVitals.bp} mmHg`,
-      status: "মোটামুটি স্বাভাবিক",
-      note: "রক্তচাপ স্বাভাবিক সীমায় রয়েছে।",
+      value: ensureUnit(parsedVitals.bp, "mmHg"),
+      status: "পরীক্ষিত মান",
+      note: "রক্তচাপের নথিবদ্ধ মাত্রা।",
     });
   }
   if (parsedVitals.pulse) {
     vitalsList.push({
       label: "Pulse (নাড়ির গতি)",
-      value: `${parsedVitals.pulse} bpm`,
-      status: "স্বাভাবিক",
-      note: "হৃদস্পন্দনের গতি স্বাভাবিক আছে।",
+      value: ensureUnit(parsedVitals.pulse, "bpm"),
+      status: "পরীক্ষিত মান",
+      note: "হৃদস্পন্দনের নথিবদ্ধ গতি।",
     });
   }
   if (parsedVitals.temp) {
     const tVal = parseFloat(parsedVitals.temp);
-    const isFever = !isNaN(tVal) && tVal >= 99;
+    const isFever = !isNaN(tVal) && ((tVal >= 99 && tVal <= 110) || (tVal >= 37.5 && tVal <= 43));
     vitalsList.push({
-      label: "Temp (শরীরের তাপমাত্রা)",
-      value: `${parsedVitals.temp}° F`,
+      label: "Temp (তাপমাত্রা)",
+      value: parsedVitals.temp.includes("°") ? parsedVitals.temp : `${parsedVitals.temp}°`,
       status: isFever ? "জ্বর নির্দেশ করে" : "স্বাভাবিক",
-      note: isFever ? "শরীরে হালকা থেকে মাঝারি জ্বর রয়েছে।" : "শরীরের তাপমাত্রা স্বাভাবিক।",
+      note: isFever ? "শরীরে জ্বর রয়েছে।" : "শরীরের তাপমাত্রা স্বাভাবিক।",
     });
   }
   if (parsedVitals.weight) {
     vitalsList.push({
       label: "Weight (ওজন)",
-      value: `${parsedVitals.weight} kg`,
+      value: ensureUnit(parsedVitals.weight, "kg"),
       status: "নথিবদ্ধ",
-      note: "শারীরিক ওজন অনুযায়ী ওষুধের মাত্রা নির্ধারিত।",
+      note: parsedVitals.bmi ? `BMI: ${parsedVitals.bmi}` : "শারীরিক ওজন নথিবদ্ধ।",
     });
+  }
+  if (parsedVitals.height) {
+    vitalsList.push({
+      label: "Height (উচ্চতা)",
+      value: ensureUnit(parsedVitals.height, "in"),
+      status: "নথিবদ্ধ",
+      note: "শারীরিক উচ্চতা।",
+    });
+  }
+  if (parsedVitals.spo2) {
+    vitalsList.push({
+      label: "SpO₂ (অক্সিজেন)",
+      value: ensureUnit(parsedVitals.spo2, "%"),
+      status: "পরীক্ষিত মান",
+      note: "রক্তে অক্সিজেনের মাত্রা।",
+    });
+  }
+  if (parsedVitals.rbs) {
+    vitalsList.push({
+      label: "RBS (ব্লাড সুগার)",
+      value: ensureUnit(parsedVitals.rbs, "mmol/L"),
+      status: "পরীক্ষিত মান",
+      note: "রক্তে শর্করার তাৎক্ষণিক মাত্রা।",
+    });
+  }
+  // Any custom vitals entered by doctor
+  const stdKeys = new Set(["bp", "pulse", "temp", "weight", "height", "bmi", "spo2", "rbs"]);
+  for (const [k, v] of Object.entries(parsedVitals)) {
+    if (!stdKeys.has(k.toLowerCase()) && v) {
+      vitalsList.push({
+        label: k,
+        value: String(v),
+        status: "নথিবদ্ধ",
+        note: "চিকিৎসক কর্তৃক নথিবদ্ধ মান।",
+      });
+    }
   }
 
   // Parse Investigations
@@ -416,49 +512,57 @@ export function explainPrescription(rx: {
   if (diag.includes("pain") || diag.includes("ব্যথা") || explainedMeds.some((m) => m.category.includes("ব্যথা"))) {
     goals.push("ব্যথা ও শারীরিক অস্বস্তি কমানো");
   }
+  if (explainedMeds.some((m) => m.category.includes("গ্যাস্ট্রিক"))) {
+    goals.push("এসিডিটি ও পেটের অস্বস্তি নিয়ন্ত্রণ করা");
+  }
+  if (explainedMeds.some((m) => m.category.includes("পুষ্টি") || m.category.includes("ভিটামিন"))) {
+    goals.push("শরীরের পুষ্টি ও শক্তির ঘাটতি পূরণ করা");
+  }
   goals.push("রোগ প্রতিরোধ ক্ষমতা বাড়ানো ও শরীরকে দ্রুত সুস্থ হতে সাহায্য করা");
 
   // Overall Condition Reassurance
   let overallCondition = "চিকিৎসক আপনার শারীরিক সমস্যাগুলো পর্যালোচনা করে এই ব্যবস্থাপত্র দিয়েছেন। ";
   if (rx.diagnosis) {
-    overallCondition += `আপনার লক্ষণগুলো প্রধানত '${rx.diagnosis}'-এর সঙ্গে সম্পর্কিত। `;
+    overallCondition += `উল্লেখিত সমস্যা: ${rx.diagnosis}। `;
   }
-  overallCondition += "নির্ধারিত ওষুধগুলো সময়মতো গ্রহণ করুন, পর্যাপ্ত পানি ও পুষ্টিকর খাবার খান এবং প্রয়োজনীয় টেস্টগুলো দ্রুত সম্পন্ন করে চিকিৎসকের পরামর্শ অনুযায়ী সুস্থ থাকুন।";
+  if (explainedMeds.length > 0) {
+    overallCondition += `মোট ${explainedMeds.length}টি ওষুধ নির্ধারণ করা হয়েছে। `;
+  }
+  overallCondition += "নির্ধারিত ওষুধগুলো সময়মতো গ্রহণ করুন এবং চিকিৎসকের পরামর্শ মেনে চলুন।";
 
-  // Drug-Drug Interaction
-  const hasParacetamol = explainedMeds.some((m) => /paracetamol|napa|ace|fast/i.test(m.cleanName));
-  const hasCipro = explainedMeds.some((m) => /cipro/i.test(m.cleanName));
-  const hasPpi = explainedMeds.some((m) => /pantonix|sergel|seclo|esomeprazole/i.test(m.cleanName));
-  const hasNsaid = explainedMeds.some((m) => /flexi|aceclo|ketorolac|rolac/i.test(m.cleanName));
+  // Drug-Drug Interaction (Dynamic based on actual prescribed medicines)
+  const medNamesList = explainedMeds.map((m) => m.cleanName).join(", ");
+  const hasPpi = explainedMeds.some((m) => /pantonix|sergel|seclo|maxpro|esomeprazole|omeprazole|rabeprazole|pantoprazole/i.test(m.cleanName));
+  const hasNsaid = explainedMeds.some((m) => /flexi|aceclo|ketorolac|rolac|naproxen|ibuprofen/i.test(m.cleanName));
 
-  let interactionMessage = "এই প্রেসক্রিপশনের ওষুধগুলোর মধ্যে কোনো মারাত্মক Drug-Drug Interaction পাওয়া যায়নি। ওষুধগুলো একসাথে নিয়ম মেনে খাওয়া নিরাপদ।";
-  if (hasParacetamol && hasCipro) {
-    interactionMessage = "Ciprofloxacin এবং Paracetamol-এর মধ্যে কোনো ক্ষতিকর Drug-Drug Interaction নেই। দুটি ওষুধ সাধারণত একসাথে নিরাপদে খাওয়া যায়।";
-  } else if (hasPpi && hasNsaid) {
-    interactionMessage = "ব্যথানাশক ওষুধের সাথে গ্যাস্ট্রিকের ওষুধ পেটের প্রদাহ ও আলসার রোধে অত্যন্ত কার্যকর ও নিরাপদ কম্বিনেশন।";
+  let interactionMessage = explainedMeds.length > 1
+    ? `প্রেসক্রিপশনে দেওয়া ওষুধগুলোর (${medNamesList}) মধ্যে কোনো ক্ষতিকর Drug-Drug Interaction পাওয়া যায়নি। চিকিৎসকের নির্দেশিত সময় অনুযায়ী ওষুধগুলো নিরাপদে সেবন করা যাবে।`
+    : "প্রেসক্রিপশনে প্রদত্ত ওষুধটি চিকিৎসকের নির্দেশিত নিয়ম ও সময় মেনে সেবন করুন।";
+  if (hasPpi && hasNsaid) {
+    interactionMessage = "ব্যথানাশক ওষুধের সাথে গ্যাস্ট্রিকের ওষুধ দেওয়া হয়েছে যা পেটের এসিডিটি রোধে নিরাপদ ও কার্যকর কম্বিনেশন।";
   }
 
-  // Lifestyle advice
-  const lifestyleAdvice: string[] = [
-    "প্রতিদিন পর্যাপ্ত (৮–১০ গ্লাস) বিশুদ্ধ পানি পান করুন।",
-    "ওষুধ সবসময় নির্ধারিত সময়ের মধ্যে এবং খাবারের পর নিয়ম মেনে খান।",
-  ];
-  if (parsedVitals.temp || diag.includes("জ্বর")) {
-    lifestyleAdvice.push("জ্বর বেশি থাকলে শরীর ভেজা কাপড় দিয়ে ভালো করে মুছে দিন এবং তাপমাত্রা পর্যবেক্ষণ করুন।");
+  // Doctor's Actual Advice + Helpful General Advice
+  const doctorAdviceLines = (rx.advice || "")
+    .split(/\r?\n|,|;/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const lifestyleAdvice: string[] = [...doctorAdviceLines];
+  if (lifestyleAdvice.length === 0) {
+    lifestyleAdvice.push("প্রতিদিন পর্যাপ্ত (৮–১০ গ্লাস) বিশুদ্ধ পানি পান করুন।");
+    lifestyleAdvice.push("ওষুধ সবসময় নির্ধারিত সময়ের মধ্যে এবং নিয়ম মেনে সেবন করুন।");
   }
   if (rx.next_visit) {
-    lifestyleAdvice.push(`ফলো-আপ: ${rx.next_visit} পর অথবা প্রয়োজনে চিকিৎসকের সাথে আবার যোগাযোগ করুন।`);
-  } else {
-    lifestyleAdvice.push("চিকিৎসার নির্ধারিত মেয়াদ (৭ দিন) শেষে প্রয়োজনবোধে আবার ডাক্তারকে দেখান।");
+    lifestyleAdvice.push(`পরবর্তী সাক্ষাৎ (Follow-up): ${rx.next_visit}`);
   }
 
   // Red Flags
   const dangerSigns: string[] = [
-    "জ্বর ১০২° ফারেনহাইটের বেশি হলে বা না কমলে",
-    "তীব্র শ্বাসকষ্ট বা বুকে ব্যথা হলে",
-    "অতিরিক্ত বমি বা ডায়রিয়া হলে",
-    "অ্যালার্জির তীব্র লক্ষণ দেখা দিলে (যেমন: গায়ে লাল র‍্যাশ, চুলকানি, মুখ বা ঠোঁট ফুলে যাওয়া)",
-    "প্রস্রাবে রক্ত দেখা দিলে বা তীব্র তলপেট ব্যথা হলে",
+    "জ্বর ১০২° ফারেনহাইটের বেশি হলে বা দীর্ঘদিন না কমলে",
+    "তীব্র শ্বাসকষ্ট বা বুকে ব্যথা অনুভূত হলে",
+    "অতিরিক্ত বমি বা ডায়রিয়া শুরু হলে",
+    "ওষুধ খাওয়ার পর শরীরে র‍্যাশ, চুলকানি বা অ্যালার্জির লক্ষণ দেখা দিলে",
   ];
 
   return {

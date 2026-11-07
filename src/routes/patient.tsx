@@ -1514,22 +1514,23 @@ function Dashboard({
         {/* PRESCRIPTIONS TAB (আমার প্রেসক্রিপশন - সহজ ভাষায় বিশ্লেষণ) */}
         <TabsContent value="rx" className="mt-4 space-y-4">
           {filteredPrescriptions.length === 0 ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:text-emerald-300 font-medium flex flex-wrap items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                  <span>এটি প্রেসক্রিপশন বিশ্লেষণের একটি পূর্ণাঙ্গ নমুনা (ডাক্তার নতুন প্রেসক্রিপশন দিলে এখানে স্বয়ংক্রিয়ভাবে দেখাবে)</span>
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenBooking()}
-                  className="h-7 text-xs font-bold border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
-                >
-                  ডাক্তারের সিরিয়াল নিন
-                </Button>
-              </div>
-              <PatientSmartPrescription prescription={null} />
+            <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-border/80 bg-card/60">
+              <FileText className="mx-auto h-10 w-10 text-muted-foreground/40 mb-2" />
+              <p className="text-sm font-semibold text-foreground">
+                {lang === "bn" ? "কোনো প্রেসক্রিপশন রেকর্ড পাওয়া যায়নি" : "No prescription records found"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {lang === "bn"
+                  ? "ডাক্তার আপনাকে প্রেসক্রিপশন দিলে তা স্বয়ংক্রিয়ভাবে এখানে যুক্ত হবে।"
+                  : "Once your doctor issues a prescription, it will automatically appear here."}
+              </p>
+              <Button
+                onClick={() => handleOpenBooking()}
+                className="mt-4 rounded-xl font-bold gap-1.5 shadow-sm shadow-primary/20 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{curr.newSerialBtn}</span>
+              </Button>
             </div>
           ) : (
             filteredPrescriptions.map((r: any) => (
@@ -1541,17 +1542,16 @@ function Dashboard({
         {/* LAB REPORTS TAB (আমার রিপোর্ট - সহজ ভাষায় বিশ্লেষণ) */}
         <TabsContent value="lab" className="mt-4 space-y-4">
           {filteredLabReports.length === 0 ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-teal-500/25 bg-teal-500/10 p-3 text-xs text-teal-900 dark:text-teal-300 font-medium flex flex-wrap items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-teal-600 shrink-0" />
-                  <span>এটি ল্যাব রিপোর্ট বিশ্লেষণের একটি পূর্ণাঙ্গ নমুনা (ল্যাব টেস্ট সম্পন্ন হলে আপনার আসল রিপোর্ট এখানে যুক্ত হবে)</span>
-                </span>
-                <Badge variant="outline" className="border-teal-500/30 text-teal-700 dark:text-teal-300 font-semibold">
-                  CBC + ESR ডেমো
-                </Badge>
-              </div>
-              <PatientSmartLabReport report={null} />
+            <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-border/80 bg-card/60">
+              <FlaskConical className="mx-auto h-10 w-10 text-muted-foreground/40 mb-2" />
+              <p className="text-sm font-semibold text-foreground">
+                {lang === "bn" ? "কোনো ল্যাব টেস্ট রিপোর্ট পাওয়া যায়নি" : "No lab test reports found"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {lang === "bn"
+                  ? "ল্যাবরেটরিতে আপনার টেস্ট সম্পন্ন হলে রিপোর্ট এখানে স্বয়ংক্রিয়ভাবে যুক্ত হবে।"
+                  : "Once your diagnostic tests are completed, the reports will automatically appear here."}
+              </p>
             </div>
           ) : (
             filteredLabReports.map((r: any) => (
