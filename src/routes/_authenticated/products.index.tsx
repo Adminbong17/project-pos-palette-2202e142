@@ -146,7 +146,9 @@ function ProductsList() {
       out.push(cur);
       return out.map((s) => s.trim());
     };
-    const headers = parseLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, "_"));
+    const headers = parseLine(lines[0]).map((h) =>
+      h.replace(/^\uFEFF/, "").toLowerCase().replace(/\s*\([^)]*\)/g, "").trim().replace(/\s+/g, "_")
+    );
     return lines.slice(1).map((l) => {
       const cells = parseLine(l);
       const row: Record<string, string> = {};
@@ -218,9 +220,6 @@ function ProductsList() {
         return data.id;
       }
 
-
-
-
       // Preload all existing SKUs for this business so we can skip duplicates
       async function fetchAllSkus() {
         const set = new Set<string>();
@@ -241,59 +240,128 @@ function ProductsList() {
       const skuSet = await fetchAllSkus();
 
       let ok = 0, fail = 0, skipped = 0;
-      for (const r of rows) {
-        try {
-          const name = r.name || r.product_name;
-          const sku = r.sku;
-          if (!name || !sku) { fail++; continue; }
-          const skuKey = String(sku).trim().toLowerCase();
-          if (skuSet.has(skuKey)) { skipped++; continue; }
-          const type = (r.type || "single").toLowerCase() === "variable" ? "variable" : "single";
-          const brand_id = await getBrandId(r.brand || "");
-          const category_id = await getCategoryId(r.category || r.catagory || "");
-          const purchase = Number(r.purchase_price || r.purchase || 0);
-          const mrp = Number(r.mrp || 0);
-          const stock = Number(r.stock || 0);
+      const BATCH_SIZE = 200;
 
-          const { data: prod, error: pErr } = await supabase.from("products").insert({
-            business_id: business.id,
-            name, sku, type,
-            brand_id, category_id,
-            enable_stock: true,
-            default_purchase_price: purchase,
-            default_sell_price: mrp,
-            mrp,
-          }).select("id").single();
-          if (pErr) throw pErr;
+      for (let bStart = 0; bStart < rows.length; bStart += BATCH_SIZE) {
+        const chunk = rows.slice(bStart, bStart + BATCH_SIZE);
+        const prepared: {
+          name: string;
+          sku: string;
+          type: "single" | "variable";
+          brand_id: string | null;
+          category_id: string | null;
+          purchase: number;
+          mrp: number;
+          stock: number;
+        }[] = [];
 
-          const { data: variation, error: vErr } = await supabase.from("variations").insert({
-            product_id: prod.id,
-            name: "DUMMY",
-            sub_sku: sku,
-            default_purchase_price: purchase,
-            dpp_inc_tax: purchase,
-            default_sell_price: mrp,
-            sell_price_inc_tax: mrp,
-            mrp,
-            profit_percent: purchase > 0 ? ((mrp - purchase) / purchase) * 100 : 0,
-          }).select("id").single();
-          if (vErr) throw vErr;
-
-          if (stock > 0 && locationId) {
-            await supabase.from("variation_location_details").insert({
-              product_id: prod.id,
-              variation_id: variation.id,
-              location_id: locationId,
-              qty_available: stock,
-            });
+        for (let i = 0; i < chunk.length; i++) {
+          const r = chunk[i];
+          const name = (r.name || r.product_name || "").trim();
+          const autoSku = name
+            ? `MED-${(bStart + i + 1).toString().padStart(5, "0")}-${name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase()}`
+            : "";
+          const sku = (r.sku || autoSku).trim();
+          if (!name || !sku) {
+            fail++;
+            continue;
+          }
+          const skuKey = sku.toLowerCase();
+          if (skuSet.has(skuKey)) {
+            skipped++;
+            continue;
           }
           skuSet.add(skuKey);
-          ok++;
-        } catch (e: any) {
-          console.error("Row import failed", r, e);
-          fail++;
+
+          try {
+            const type = (r.type || "single").toLowerCase() === "variable" ? "variable" : "single";
+            const brand_id = await getBrandId(r.brand || r.generic_name || "");
+            const category_id = await getCategoryId(r.category || r.catagory || r.dosage_form || "");
+            const purchase = Number(r.purchase_price || r.purchase || 0);
+            const mrp = Number(r.mrp || 0);
+            const stock = Number(r.stock || 0);
+            prepared.push({ name, sku, type, brand_id, category_id, purchase, mrp, stock });
+          } catch (e) {
+            fail++;
+          }
         }
-        setProgress({ done: ok + fail + skipped, ok, fail, total: rows.length });
+
+        if (prepared.length > 0) {
+          try {
+            const prodPayloads = prepared.map((p) => ({
+              business_id: business.id,
+              name: p.name,
+              sku: p.sku,
+              type: p.type,
+              brand_id: p.brand_id,
+              category_id: p.category_id,
+              enable_stock: true,
+              default_purchase_price: p.purchase,
+              default_sell_price: p.mrp,
+              mrp: p.mrp,
+            }));
+
+            const { data: insertedProds, error: pErr } = await supabase
+              .from("products")
+              .insert(prodPayloads)
+              .select("id, sku");
+            if (pErr) throw pErr;
+
+            const prodBySku = new Map((insertedProds ?? []).map((p: any) => [String(p.sku).toLowerCase(), p.id]));
+            const varPayloads = prepared
+              .map((p) => {
+                const pid = prodBySku.get(p.sku.toLowerCase());
+                if (!pid) return null;
+                return {
+                  product_id: pid,
+                  name: "DUMMY",
+                  sub_sku: p.sku,
+                  default_purchase_price: p.purchase,
+                  dpp_inc_tax: p.purchase,
+                  default_sell_price: p.mrp,
+                  sell_price_inc_tax: p.mrp,
+                  mrp: p.mrp,
+                  profit_percent: p.purchase > 0 ? ((p.mrp - p.purchase) / p.purchase) * 100 : 0,
+                };
+              })
+              .filter(Boolean) as any[];
+
+            const { data: insertedVars, error: vErr } = await supabase
+              .from("variations")
+              .insert(varPayloads)
+              .select("id, product_id");
+            if (vErr) throw vErr;
+
+            if (locationId) {
+              const varByProd = new Map((insertedVars ?? []).map((v: any) => [v.product_id, v.id]));
+              const stockPayloads = prepared
+                .filter((p) => p.stock > 0)
+                .map((p) => {
+                  const pid = prodBySku.get(p.sku.toLowerCase());
+                  const vid = pid ? varByProd.get(pid) : null;
+                  if (!pid || !vid) return null;
+                  return {
+                    product_id: pid,
+                    variation_id: vid,
+                    location_id: locationId,
+                    qty_available: p.stock,
+                  };
+                })
+                .filter(Boolean) as any[];
+
+              if (stockPayloads.length > 0) {
+                await supabase.from("variation_location_details").insert(stockPayloads);
+              }
+            }
+
+            ok += prepared.length;
+          } catch (batchErr) {
+            console.error("Batch import failed", batchErr);
+            fail += prepared.length;
+          }
+        }
+
+        setProgress({ done: Math.min(rows.length, bStart + chunk.length), ok, fail, total: rows.length });
       }
       toast.success(
         `Imported ${ok}${skipped ? `, ${skipped} duplicate(s) skipped` : ""}${fail ? `, ${fail} failed` : ""}`

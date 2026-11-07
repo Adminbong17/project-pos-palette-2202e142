@@ -22,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { fmtDate as formatDate } from "@/lib/format-date";
 import { explainPrescription, type PrescriptionExplanation } from "@/lib/patient-explainer";
 import { splitDoctorQualification } from "@/lib/doctor-format";
+import { useMedicinesDbReady } from "@/lib/medicines-db";
 import { toast } from "sonner";
 
 export const DEFAULT_PDF_RX = {
@@ -151,6 +152,11 @@ export interface PatientSmartPrescriptionProps {
       duration?: string;
       instructions?: string;
       quantity?: number;
+      generic_name?: string | null;
+      dosage_form?: string | null;
+      indications?: string | null;
+      mode_of_action?: string | null;
+      side_effects?: string | null;
     }[];
   } | null;
   onDownloadJpg?: () => void;
@@ -159,6 +165,7 @@ export interface PatientSmartPrescriptionProps {
 export function PatientSmartPrescription({
   prescription,
 }: PatientSmartPrescriptionProps) {
+  useMedicinesDbReady();
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -225,6 +232,8 @@ export function PatientSmartPrescription({
         const rawLine = prescription?.lines?.[idx];
         return {
           name: m.originalName,
+          genericName: m.genericName || "",
+          dosageForm: m.dosageFormEn || m.formType || "",
           morning: m.morningDose,
           noon: m.noonDose,
           night: m.nightDose,
@@ -264,6 +273,9 @@ export function PatientSmartPrescription({
 
         return {
           name: m.originalName,
+          genericName: m.genericName || "",
+          dosageForm: m.dosageFormEn || m.formType || "",
+          modeOfAction: m.modeOfAction || "",
           badge: m.category,
           badgeColor,
           whyGiven: m.purpose,
@@ -696,6 +708,12 @@ export function PatientSmartPrescription({
                       <div className="font-bold text-slate-900 dark:text-white">
                         {idx + 1}. {row.name}
                       </div>
+                      {row.genericName && (
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                          জেনেরিক: {row.genericName}
+                          {row.dosageForm ? ` · ${row.dosageForm}` : ""}
+                        </div>
+                      )}
                       {row.instructions && (
                         <div className="text-[11px] text-teal-700 dark:text-teal-400 font-normal mt-0.5">
                           নিয়ম: {row.instructions}
@@ -762,15 +780,23 @@ export function PatientSmartPrescription({
             </div>
 
             <div className="space-y-3">
-              {realMedicinesDetailed.map((med, idx) => (
+              {realMedicinesDetailed.map((med: any, idx: number) => (
                 <div
                   key={idx}
                   className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-2xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                    <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                      {idx + 1}. {med.name}
-                    </h3>
+                    <div>
+                      <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                        {idx + 1}. {med.name}
+                      </h3>
+                      {med.genericName && (
+                        <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-0.5">
+                          জেনেরিক নাম: {med.genericName}
+                          {med.dosageForm ? ` • ডোজেজ ফর্ম: ${med.dosageForm}` : ""}
+                        </div>
+                      )}
+                    </div>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${med.badgeColor}`}>
                       {med.badge}
                     </span>
@@ -779,7 +805,7 @@ export function PatientSmartPrescription({
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
                     {/* কেন দেওয়া হয়েছে? */}
                     <div className="space-y-1">
-                      <div className="text-[11px] font-bold text-slate-500">কেন দেওয়া হয়েছে?</div>
+                      <div className="text-[11px] font-bold text-slate-500">কেন দেওয়া হয়েছে? (কাজ)</div>
                       <p className="text-slate-800 dark:text-slate-200 text-[11px] leading-snug font-normal">
                         {med.whyGiven}
                       </p>
@@ -789,7 +815,7 @@ export function PatientSmartPrescription({
                     <div className="space-y-1">
                       <div className="text-[11px] font-bold text-slate-500">কীভাবে খাবেন?</div>
                       <ul className="text-slate-800 dark:text-slate-200 text-[11px] space-y-0.5 leading-snug font-medium">
-                        {med.howToTake.map((h, i) => (
+                        {med.howToTake.map((h: string, i: number) => (
                           <li key={i}>• {h}</li>
                         ))}
                       </ul>
@@ -799,7 +825,7 @@ export function PatientSmartPrescription({
                     <div className="space-y-1">
                       <div className="text-[11px] font-bold text-slate-500">সাধারণ পার্শ্ব প্রতিক্রিয়া</div>
                       <ul className="text-slate-600 dark:text-slate-400 text-[11px] space-y-0.5 leading-snug font-normal">
-                        {med.sideEffects.map((se, i) => (
+                        {med.sideEffects.map((se: string, i: number) => (
                           <li key={i}>• {se}</li>
                         ))}
                       </ul>
@@ -809,12 +835,19 @@ export function PatientSmartPrescription({
                     <div className="space-y-1">
                       <div className="text-[11px] font-bold text-slate-500">সতর্কতা</div>
                       <ul className="text-amber-800 dark:text-amber-300 text-[11px] space-y-0.5 leading-snug font-medium">
-                        {med.precautions.map((p, i) => (
+                        {med.precautions.map((p: string, i: number) => (
                           <li key={i}>• {p}</li>
                         ))}
                       </ul>
                     </div>
                   </div>
+
+                  {med.modeOfAction && (
+                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 p-2.5 text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+                      <span className="font-bold text-slate-700 dark:text-slate-200">মোড অফ অ্যাকশন (কীভাবে কাজ করে): </span>
+                      {med.modeOfAction}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

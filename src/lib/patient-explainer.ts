@@ -6,10 +6,17 @@
  * 2. Lab Reports (Summary metrics, parameter explanations, status detection, reassuring advice)
  */
 
+import { matchMedicineSync, toBengaliDosageForm } from "@/lib/medicines-db";
+
 export interface ExplainedMedicine {
   originalName: string;
   cleanName: string;
   formType: "ট্যাবলেট" | "ক্যাপসুল" | "সিরাপ" | "ইনজেকশন" | "ড্রপস" | "মলম" | "ওষুধ";
+  genericName?: string;
+  dosageFormEn?: string;
+  indicationsEn?: string;
+  modeOfAction?: string;
+  sideEffectsEn?: string;
   category: string;
   purpose: string;
   howToTake: string;
@@ -78,102 +85,194 @@ interface DrugRule {
 
 const DRUG_RULES: DrugRule[] = [
   {
-    pattern: /\b(paracetamol|napa|ace|fast|reset|pyrex|renova|tamol)\b/i,
-    category: "জ্বর ও ব্যথানাশক ওষুধ",
+    pattern: /\b(paracetamol|acetaminophen|napa|ace|fast|reset|pyrex|renova|tamol)\b/i,
+    category: "জ্বর ও ব্যথানাশক ওষুধ (Analgesic & Antipyretic)",
     purpose: "জ্বর, মাথাব্যথা, গা ব্যথা ও যেকোনো মৃদু থেকে মাঝারি শারীরিক অস্বস্তি উপশম করে।",
     howToTake: "খাবারের পরে সেব্য। দিনে সর্বোচ্চ ৩-৪ বার, প্রয়োজনের অতিরিক্ত খাবেন না।",
     sideEffects: "বমি বমি ভাব, সামান্য পেটের অস্বস্তি (অ্যালার্জি খুব বিরল)।",
     precautions: "২৪ ঘণ্টায় ৪ গ্রামের (৮টি ৫০০ মিলিগ্রাম ট্যাবলেটের) বেশি খাবেন না। লিভার রোগ থাকলে ডাক্তারের পরামর্শ নিন।",
   },
   {
-    pattern: /\b(ciprofloxacin|ciprocin|neofloxin|cpro|ciflocin|flontin)\b/i,
-    category: "অ্যান্টিবায়োটিক (ব্যাকটেরিয়া প্রতিরোধী)",
+    pattern: /\b(ciprofloxacin|levofloxacin|moxifloxacin|ofloxacin|gemifloxacin|ciprocin|neofloxin|cpro|ciflocin|flontin)\b/i,
+    category: "অ্যান্টিবায়োটিক (Fluoroquinolone Antibiotic)",
     purpose: "মূত্রনালির ইনফেকশন (UTI), ডায়রিয়া, টাইফয়েড ও অন্যান্য ব্যাকটেরিয়াজনিত সংক্রমণ দূর করতে সাহায্য করে।",
-    howToTake: "খাবারের আগে বা পরে খাওয়া যায়। ৭ দিন বা চিকিৎসকের নির্ধারিত পূর্ণ মেয়াদে খেতে হবে।",
+    howToTake: "খাবারের আগে বা পরে খাওয়া যায়। চিকিৎসকের নির্ধারিত পূর্ণ মেয়াদে খেতে হবে।",
     sideEffects: "বমি বমি ভাব, পেট খারাপ/ডায়রিয়া, মাথা ঘোরার অনুভূতি।",
-    precautions: "লক্ষণ কমে গেলেও অ্যান্টিবায়োটিকের পূর্ণ কোর্স শেষ করবেন না। প্রচুর পানি পান করুন।",
+    precautions: "লক্ষণ কমে গেলেও অ্যান্টিবায়োটিকের পূর্ণ কোর্স শেষ করবেন। প্রচুর পানি পান করুন।",
   },
   {
-    pattern: /\b(amoxicillin|moxacil|flemoxin|clavamox|augpen|moxaclav|tyclav)\b/i,
-    category: "অ্যান্টিবায়োটিক",
-    purpose: "কান, গলা, দাঁত, বুক ও শ্বাসতন্ত্রের ব্যাকটেরিয়াল সংক্রমণ নিয়ন্ত্রণে সহায়তা করে।",
-    howToTake: "খাবারের সাথে বা পরে পূর্ণ মেয়াদ পর্যন্ত খেতে হবে।",
-    sideEffects: "ডায়রিয়া, পেটে গ্যাস বা হালকা র‍্যাশ।",
+    pattern: /\b(amoxicillin|flucloxacillin|ampicillin|cloxacillin|phenoxymethylpenicillin|piperacillin|moxacil|flemoxin|clavamox|augpen|moxaclav|tyclav|adflox|phylex)\b/i,
+    category: "পেনিসিলিন গ্রুপের অ্যান্টিবায়োটিক (Penicillin Antibiotic)",
+    purpose: "ত্বক, কান, গলা, দাঁত, বুক ও শ্বাসতন্ত্রের ব্যাকটেরিয়াল সংক্রমণ নিয়ন্ত্রণে সহায়তা করে।",
+    howToTake: "খাবারের সাথে বা নির্ধারিত নিয়মে পূর্ণ মেয়াদ পর্যন্ত খেতে হবে।",
+    sideEffects: "ডায়রিয়া, পেটে গ্যাস, বমি ভাব বা হালকা র‍্যাশ।",
     precautions: "পেনিসিলিনে অ্যালার্জি থাকলে ডাক্তারকে জানান। মাঝপথে ওষুধ বন্ধ করবেন না।",
   },
   {
-    pattern: /\b(azithromycin|zimax|azith|tritex|azex|odaz)\b/i,
-    category: "অ্যান্টিবায়োটিক (ম্যাক্রোলাইড)",
-    purpose: "গলা ব্যথা, টনসিল, ফুসফুসের ইনফেকশন ও টাইফয়েড নিরাময়ে কাজ করে।",
-    howToTake: "প্রতিদিন একবার, নির্দিষ্ট সময়ে। খাবারের ১ ঘণ্টা আগে বা ২ ঘণ্টা পরে খাওয়া উত্তম।",
-    sideEffects: "হালকা পেটে ব্যথা বা লুজ মোশন।",
-    precautions: "অ্যান্টাসিড বা ক্যালসিয়াম ওষুধের সাথে খাবেন না (কমপক্ষে ২ ঘণ্টার ব্যবধান রাখুন)।",
+    pattern: /\b(azithromycin|clarithromycin|erythromycin|roxithromycin|zimax|azith|tritex|azex|odaz|odazyth|klabex)\b/i,
+    category: "অ্যান্টিবায়োটিক (Macrolide Antibiotic)",
+    purpose: "গলা ব্যথা, টনসিল, ফুসফুসের ইনফেকশন, ত্বকের সংক্রমণ ও টাইফয়েড নিরাময়ে কাজ করে।",
+    howToTake: "প্রতিদিন নির্দিষ্ট সময়ে খাবারের ১ ঘণ্টা আগে বা ২ ঘণ্টা পরে খাওয়া উত্তম।",
+    sideEffects: "হালকা পেটে ব্যথা, বমি ভাব বা লুজ মোশন।",
+    precautions: "অ্যান্টাসিড বা ক্যালসিয়াম ওষুধের সাথে একসাথে খাবেন না (কমপক্ষে ২ ঘণ্টার ব্যবধান রাখুন)।",
   },
   {
-    pattern: /\b(cefixime|cef-3|triocim|denvar|ceftid|cefrox|cefuroxime|kilbac|furocef|cerox)\b/i,
-    category: "শক্তিশালী সেফালোস্পোরিন অ্যান্টিবায়োটিক",
-    purpose: "মূত্রনালি, ফুসফুস ও জটিল ব্যাকটেরিয়াল ইনফেকশন সারাতে সাহায্য করে।",
-    howToTake: "খাবারের পরে নিয়মিত নির্দিষ্ট সময়ে দিনে ১-২ বার খান।",
-    sideEffects: "হালকা ডায়রিয়া, বমি ভাব।",
-    precautions: "পূর্ণ মেয়াদ সম্পন্ন করতে হবে। কোনো ডোজ মিস করবেন না।",
+    pattern: /\b(cefixime|ceftriaxone|cefuroxime|cefradine|cephalexin|cefpodoxime|cefotaxime|ceftazidime|cefepime|cef-3|triocim|denvar|ceftid|cefrox|kilbac|furocef|cerox|trizon|parcef|oracef)\b/i,
+    category: "সেফালোস্পোরিন অ্যান্টিবায়োটিক (Cephalosporin Antibiotic)",
+    purpose: "মূত্রনালি, ফুসফুস, ত্বক, কান ও জটিল ব্যাকটেরিয়াল ইনফেকশন সারাতে সাহায্য করে।",
+    howToTake: "চিকিৎসকের পরামর্শ অনুযায়ী নির্দিষ্ট সময়ে নিয়মিত গ্রহণ করুন।",
+    sideEffects: "হালকা ডায়রিয়া, পেটের অস্বস্তি বা বমি ভাব।",
+    precautions: "অ্যান্টিবায়োটিকের পূর্ণ কোর্স সম্পন্ন করতে হবে। কোনো ডোজ মিস করবেন না।",
   },
   {
-    pattern: /\b(metronidazole|filmet|amodi|flamet|flagyl)\b/i,
-    category: "অ্যামিবানাশক ও অ্যান্টিবায়োটিক",
-    purpose: "পেটের আমাশয়, ডায়রিয়া, দাঁতের মাড়ির ইনফেকশন ও পরজীবী ধ্বংসে কাজ করে।",
+    pattern: /\b(metronidazole|tinidazole|secnidazole|nitazoxanide|albendazole|mebendazole|ivermectin|filmet|amodi|flamet|flagyl)\b/i,
+    category: "অ্যামিবা ও পরজীবীনাশক (Antiprotozoal / Antihelmintic)",
+    purpose: "পেটের আমাশয়, ডায়রিয়া, দাঁতের মাড়ির ইনফেকশন ও পরজীবী সংক্রমণ ধ্বংসে কাজ করে।",
     howToTake: "অবশ্যই ভরা পেটে এক গ্লাস পানির সাথে খাবেন।",
-    sideEffects: "মুখে মেটালিক বা তেতো স্বাদ, বমি ভাব।",
-    precautions: "ওষুধ চলাকালীন মদ্যপান বা অ্যালকোহল সম্পূর্ণ নিষিদ্ধ।",
+    sideEffects: "মুখে মেটালিক বা তেতো স্বাদ, বমি ভাব, পেটের অস্বস্তি।",
+    precautions: "চিকিৎসকের নির্ধারিত ডোজ ও মেয়াদ মেনে চলুন।",
   },
   {
-    pattern: /\b(esomeprazole|pantoprazole|omeprazole|rabeprazole|sergel|pantonix|seclo|maxpro|nexum|finix|acifix)\b/i,
-    category: "গ্যাস্ট্রিক ও এসিডিটি নিরামক (PPI)",
+    pattern: /\b(esomeprazole|pantoprazole|omeprazole|rabeprazole|lansoprazole|dexlansoprazole|famotidine|ranitidine|sergel|pantonix|seclo|maxpro|nexum|finix|acifix|losectil|peptid)\b/i,
+    category: "গ্যাস্ট্রিক ও এসিডিটি নিরামক (Anti-ulcerant / PPI)",
     purpose: "পেটের অতিরিক্ত এসিড কমায়, গ্যাস্ট্রিকের জ্বালাপোড়া, বুকজ্বালা ও আলসার প্রতিরোধ করে।",
     howToTake: "সকালে ও রাতে খাবারের ২০-৩০ মিনিট আগে এক গ্লাস পানির সাথে খাবেন।",
     sideEffects: "মাথাব্যথা, পেট ফাঁপা বা কোষ্ঠকাঠিন্য (খুবই কম হয়)।",
-    precautions: "ক্যাপসুল চিবিয়ে খাবেন না, আস্ত গিলে ফেলবেন।",
+    precautions: "ক্যাপসুল বা ট্যাবলেট চিবিয়ে খাবেন না, আস্ত গিলে ফেলবেন।",
   },
   {
-    pattern: /\b(domperidone|motigut|deflux|omidon|ondansetron|ofran|emistat)\b/i,
-    category: "বমি ও গ্যাস নিরোধক (Prokinetic / Antiemetic)",
-    purpose: "বমি বমি ভাব, অস্বস্তি দূর করে এবং খাবার সহজে হজম হতে সাহায্য করে।",
+    pattern: /\b(domperidone|ondansetron|metoclopramide|palonosetron|itopride|motigut|deflux|omidon|ofran|emistat|doridon)\b/i,
+    category: "বমি ও গ্যাস নিরোধক (Antiemetic & Prokinetic)",
+    purpose: "বমি বমি ভাব, পেট ফাঁপা ও অস্বস্তি দূর করে এবং খাবার সহজে হজম হতে সাহায্য করে।",
     howToTake: "খাবারের ১৫-৩০ মিনিট আগে খাওয়া সবচেয়ে কার্যকর।",
     sideEffects: "মুখ শুকিয়ে যাওয়া, হালকা মাথা ঝিমঝিম।",
-    precautions: "হৃদরোগ থাকলে অতিরিক্ত মাত্রায় খাওয়া পরিহার করুন।",
+    precautions: "চিকিৎসকের নির্ধারিত মাত্রার অতিরিক্ত সেবন পরিহার করুন।",
   },
   {
-    pattern: /\b(cetirizine|alatrol|atrizin|fexofenadine|fexo|fexod|bilastine|bilaben|bilaid|desloratadine|deslor|rupatadine)\b/i,
+    pattern: /\b(cetirizine|levocetirizine|fexofenadine|bilastine|desloratadine|loratadine|rupatadine|chlorpheniramine|ebastine|ketotifen|alatrol|atrizin|fexo|fexod|fenaxo|bilaben|bilaid|deslor)\b/i,
     category: "অ্যান্টিহিস্টামিন (অ্যালার্জি ও সর্দি নিরোধক)",
-    purpose: "সর্দি, হাঁচি, নাক বা চোখ দিয়ে পানি পড়া এবং ত্বকের চুলকানি দূর করে।",
+    purpose: "সর্দি, হাঁচি, নাক বা চোখ দিয়ে পানি পড়া এবং ত্বকের অ্যালার্জি ও চুলকানি দূর করে।",
     howToTake: "প্রতিদিন ১ বার (সাধারণত রাতে ঘুমানোর আগে বা খাবারের পরে)।",
-    sideEffects: "হালকা ঘুম ঘুম ভাব হতে পারে।",
-    precautions: "ওষুধ খাওয়ার পর অতিরিক্ত মনোযোগের ভারী কাজ বা গাড়ি চালানো এড়িয়ে চলুন।",
+    sideEffects: "হালকা ঘুম ঘুম ভাব বা মুখ শুকিয়ে যাওয়া হতে পারে।",
+    precautions: "ওষুধ খাওয়ার পর তন্দ্রাভাব হলে ভারী কাজ বা গাড়ি চালানো এড়িয়ে চলুন।",
   },
   {
-    pattern: /\b(montelukast|montene|provair|monas|odmon|m-kast)\b/i,
-    category: "অ্যাজমা ও অ্যালার্জি প্রতিরোধক",
-    purpose: "শ্বাসনালির ফোলা ও সংকোচন দূর করে হাঁপানি, শ্বাসকষ্ট ও দীর্ঘমেয়াদি কাশি প্রতিরোধ করে।",
-    howToTake: "প্রতিদিন রাতে শোবার সময় ১টি ট্যাবলেট নিয়মিত খেতে হয়।",
-    sideEffects: "মাথাব্যথা বা হালকা পেটের সমস্যা।",
-    precautions: "হঠাৎ তীব্র শ্বাসকষ্টের সময় ইনহেলার ব্যবহার করতে হবে।",
+    pattern: /\b(montelukast|salbutamol|levosalbutamol|budesonide|formoterol|salmeterol|fluticasone|beclomethasone|ipratropium|tiotropium|doxofylline|aminophylline|theophylline|ambroxol|bromhexine|dextromethorphan|guaifenesin|montene|provair|monas|odmon|m-kast|monalast|montex|kufflin)\b/i,
+    category: "শ্বাসকষ্ট, কাশি ও অ্যাজমা নিরামক (Respiratory Care)",
+    purpose: "শ্বাসনালির ফোলা ও সংকোচন দূর করে কাশি, কফ, হাঁপানি ও শ্বাসকষ্ট উপশম করে।",
+    howToTake: "চিকিৎসকের নির্দেশিত সময় ও মাত্রা অনুযায়ী নিয়মিত সেবন করুন।",
+    sideEffects: "হালকা বুক ধড়ফড়, মাথাব্যথা বা গলা শুকিয়ে যাওয়া।",
+    precautions: "ঠান্ডা ও ধুলাবালি এড়িয়ে চলুন এবং কুসুম গরম পানি পান করুন।",
   },
   {
-    pattern: /\b(aceclofenac|flexi|zerodol|naproxen|anaflex|xenapro|ketorolac|rolac|torax|ibuprofen|flamyd)\b/i,
-    category: "তীব্র ব্যথানাশক ও প্রদাহবিরোধী (NSAID)",
-    purpose: "হাড়, মাংসপেশি, দাঁতের ব্যথা বা শরীরের প্রদাহ কমাতে সাহায্য করে।",
+    pattern: /\b(aceclofenac|diclofenac|naproxen|ketorolac|ibuprofen|etoricoxib|celecoxib|meloxicam|indomethacin|tolfenamic|mefenamic|tramadol|flexi|zerodol|anaflex|xenapro|rolac|torax|doloket|flamyd|a-fenac)\b/i,
+    category: "ব্যথানাশক ও প্রদাহবিরোধী (NSAID / Analgesic)",
+    purpose: "হাড়, মাংসপেশি, জয়েন্ট, দাঁতের ব্যথা বা শরীরের তীব্র ব্যথা ও প্রদাহ কমাতে সাহায্য করে।",
     howToTake: "অবশ্যই ভরা পেটে খাবেন এবং সাথে গ্যাস্ট্রিকের ওষুধ খাওয়া উচিত।",
-    sideEffects: "পেট জ্বালাপোড়া বা গ্যাস্ট্রিকের অস্বস্তি।",
+    sideEffects: "পেট জ্বালাপোড়া, এসিডিটি বা গ্যাস্ট্রিকের অস্বস্তি।",
     precautions: "খালি পেটে কখনো খাবেন না। কিডনি রোগ বা আলসার থাকলে ডাক্তারের পরামর্শ ছাড়া খাবেন না।",
   },
   {
-    pattern: /\b(calcium|coralcal|calbo|d-rise|osteocal|zinc|babyzinc|b-50|neuro-b|folic)\b/i,
-    category: "পুষ্টি ও ভিটামিন সাপ্লিমেন্ট",
-    purpose: "হাড়, পেশি ও স্নায়ুকে শক্তিশালী করে এবং শরীরে রোগ প্রতিরোধ ক্ষমতা বাড়ায়।",
-    howToTake: "দুপুরে বা রাতে খাবারের পর পর্যাপ্ত পানির সাথে সেব্য।",
+    pattern: /\b(amlodipine|losartan|telmisartan|olmesartan|valsartan|irbesartan|bisoprolol|metoprolol|atenolol|nebivolol|carvedilol|propranolol|ramipril|enalapril|lisinopril|hydrochlorothiazide|furosemide|spironolactone|indapamide|prazosin|cilnidipine|nifedipine|diltiazem|verapamil|abetis|telnor|trofurit|bizoran|camlodin|osartil)\b/i,
+    category: "উচ্চ রক্তচাপ ও হৃদরোগ নিয়ন্ত্রক (Antihypertensive / Cardiac)",
+    purpose: "রক্তচাপ (Blood Pressure) স্বাভাবিক রাখে এবং হৃদযন্ত্র ও রক্তনালির সুরক্ষা নিশ্চিত করে।",
+    howToTake: "প্রতিদিন একই সময়ে নিয়মিত সেবন করুন।",
+    sideEffects: "হালকা মাথা ঘোরা, ক্লান্তি বা গোড়ালি ফোলা।",
+    precautions: "ডাক্তারের পরামর্শ ছাড়া হঠাৎ রক্তচাপের ওষুধ বন্ধ করবেন না। নিয়মিত প্রেশার মাপুন।",
+  },
+  {
+    pattern: /\b(rosuvastatin|atorvastatin|simvastatin|fenofibrate|ezetimibe|aspirin|clopidogrel|prasugrel|ticagrelor|trimetazidine|nitroglycerin|rosustat|atorva|lipicon|ecosprin|clopid)\b/i,
+    category: "কোলেস্টেরল ও হৃদরোগ প্রতিরোধক (Lipid Lowering / Antiplatelet)",
+    purpose: "রক্তের ক্ষতিকর কোলেস্টেরল (LDL ও Triglyceride) কমায় এবং হার্ট অ্যাটাক ও স্ট্রোকের ঝুঁকি রোধ করে।",
+    howToTake: "সাধারণত রাতে খাবারের পরে বা চিকিৎসকের নির্দেশিত সময়ে প্রতিদিন ১ বার।",
+    sideEffects: "মাংসপেশিতে হালকা ব্যথা বা দুর্বলতা, সামান্য পেটের অস্বস্তি।",
+    precautions: "চর্বিযুক্ত ও ভাজাপোড়া খাবার এড়িয়ে চলুন এবং নিয়মিত হাঁটাচলা করুন।",
+  },
+  {
+    pattern: /\b(metformin|glimepiride|gliclazide|glipizide|sitagliptin|vildagliptin|linagliptin|empagliflozin|dapagliflozin|pioglitazone|acarbose|repaglinide|insulin|insulet|comet|secrin|diamicron|linatab|jardiance)\b/i,
+    category: "ডায়াবেটিস ও রক্তের শর্করা নিয়ন্ত্রক (Antidiabetic)",
+    purpose: "রক্তের গ্লুকোজ বা সুগারের মাত্রা নিয়ন্ত্রণে রেখে ডায়াবেটিসজনিত জটিলতা প্রতিরোধ করে।",
+    howToTake: "খাবারের ঠিক আগে বা পরে চিকিৎসকের নির্দেশিত সময়ে নিয়মিত গ্রহণ করুন।",
+    sideEffects: "রক্তে সুগার কমে যাওয়া (হাইপোগ্লাইসেমিয়া), হালকা বমি ভাব বা পেটের অস্বস্তি।",
+    precautions: "ওষুধ নেওয়ার পর খাবার বাদ দেবেন না। মাথা ঘোরা বা অতিরিক্ত ঘাম হলে দ্রুত মিষ্টি জাতীয় কিছু খান।",
+  },
+  {
+    pattern: /\b(pregabalin|gabapentin|amitriptyline|nortriptyline|duloxetine|clonazepam|alprazolam|diazepam|bromazepam|escitalopram|sertraline|fluoxetine|paroxetine|flupentixol|melitracen|memantine|donepezil|pregaben|algaba|neurolin|rivotril|frenxit)\b/i,
+    category: "স্নায়ুজনিত ব্যথা ও স্নায়ুতন্ত্রের ওষুধ (Neuropathic / CNS Care)",
+    purpose: "স্নায়ুর ব্যথা (হাত-পা ঝিনঝিন বা জ্বালাপোড়া), দুশ্চিন্তা, ঘুমের সমস্যা বা স্নায়বিক জটিলতা উপশম করে।",
+    howToTake: "চিকিৎসকের পরামর্শ অনুযায়ী নির্দিষ্ট সময়ে (প্রায়ই রাতে) সেবন করুন।",
+    sideEffects: "ঘুম ঘুম ভাব, মাথা ঝিমঝিম বা মুখ শুকিয়ে যাওয়া।",
+    precautions: "ডাক্তারের পরামর্শ ছাড়া হঠাৎ ডোজ বাড়াবেন বা বন্ধ করবেন না।",
+  },
+  {
+    pattern: /\b(calcium|cholecalciferol|vitamin|multivitamin|ascorbic|zinc|iron|ferrous|folic|cyanocobalamin|mecobalamin|thiamine|pyridoxine|riboflavin|coralcal|calbo|d-rise|osteocal|babyzinc|b-50|neuro-b|max d|c-vitera)\b/i,
+    category: "পুষ্টি, ক্যালসিয়াম ও ভিটামিন সাপ্লিমেন্ট",
+    purpose: "হাড়, পেশি ও স্নায়ুকে শক্তিশালী করে, রক্তস্বল্পতা দূর করে এবং শরীরে রোগ প্রতিরোধ ক্ষমতা বাড়ায়।",
+    howToTake: "দুপুরে বা রাতে ভরা পেটে পর্যাপ্ত পানির সাথে সেব্য।",
     sideEffects: "হালকা কোষ্ঠকাঠিন্য বা পেট ভারী লাগা।",
-    precautions: "অ্যান্টিবায়োটিকের কমপক্ষে ২ ঘণ্টা আগে বা পরে খাবেন।",
+    precautions: "অ্যান্টিবায়োটিকের সাথে কমপক্ষে ২ ঘণ্টার ব্যবধান রেখে খাবেন।",
   },
 ];
+
+function deriveCategoryAndPurposeFromGeneric(
+  genericName: string,
+  indications: string,
+  sideEffectsEn: string
+): {
+  category: string;
+  purpose: string;
+  sideEffects: string;
+  precautions: string;
+} {
+  const combined = `${genericName} ${indications}`.toLowerCase();
+
+  let category = genericName ? `চিকিৎসকের নির্ধারিত ওষুধ (${genericName})` : "প্রেসক্রিপশন অনুযায়ী প্রয়োজনীয় ওষুধ";
+  let purpose = "চিকিৎসক রোগীর শারীরিক অবস্থা অনুযায়ী এই ওষুধটি নির্ধারণ করেছেন।";
+
+  if (/\b(infection|bacterial|antibiotic|septicemia|pneumonia|bronchitis|tonsillitis|otitis|uti|urinary tract)\b/.test(combined)) {
+    category = `অ্যান্টিবায়োটিক ও সংক্রমণ রোধক (${genericName})`;
+    purpose = "শরীরের ব্যাকটেরিয়াজনিত ইনফেকশন বা সংক্রমণ দূর করতে এই ওষুধটি দেওয়া হয়েছে।";
+  } else if (/\b(hypertension|blood pressure|angina|heart failure|arrhythmia)\b/.test(combined)) {
+    category = `রক্তচাপ ও হৃদরোগ নিয়ন্ত্রক (${genericName})`;
+    purpose = "উচ্চ রক্তচাপ নিয়ন্ত্রণে রাখা এবং হৃদযন্ত্রের স্বাভাবিক কার্যকারিতা বজায় রাখতে সাহায্য করে।";
+  } else if (/\b(diabetes|hyperglycemia|glycemic|blood glucose)\b/.test(combined)) {
+    category = `ডায়াবেটিস নিয়ন্ত্রক (${genericName})`;
+    purpose = "রক্তের শর্করা (সুগার) নিয়ন্ত্রণে রাখতে সাহায্য করে।";
+  } else if (/\b(ulcer|gastroesophageal|reflux|gerd|acidity|heartburn|dyspepsia)\b/.test(combined)) {
+    category = `গ্যাস্ট্রিক ও এসিডিটি নিরামক (${genericName})`;
+    purpose = "পেটের অতিরিক্ত এসিড, বুকজ্বালা ও গ্যাস্ট্রিকের সমস্যা দূর করতে কাজ করে।";
+  } else if (/\b(pain|analgesic|inflammation|arthritis|osteoarthritis|rheumatoid|toothache|migraine|headache|fever)\b/.test(combined)) {
+    category = `ব্যথা ও প্রদাহ উপশমকারী (${genericName})`;
+    purpose = "শরীরের ব্যথা, ফোলা, প্রদাহ বা জ্বর কমাতে সাহায্য করে।";
+  } else if (/\b(asthma|copd|bronchospasm|cough|rhinitis|allergic|urticaria|pruritus|allergy)\b/.test(combined)) {
+    category = `অ্যালার্জি, সর্দি-কাশি ও শ্বাসতন্ত্রের ওষুধ (${genericName})`;
+    purpose = "অ্যালার্জি, সর্দি, কাশি বা শ্বাসকষ্ট উপশমে কাজ করে।";
+  } else if (/\b(hyperlipidemia|dyslipidemia|cholesterol|triglyceride)\b/.test(combined)) {
+    category = `কোলেস্টেরল নিয়ন্ত্রক (${genericName})`;
+    purpose = "রক্তের অতিরিক্ত চর্বি ও কোলেস্টেরল কমিয়ে হৃদরোগের ঝুঁকি কমায়।";
+  } else if (/\b(fungal|candidiasis|tinea|dermatitis|eczema|psoriasis|scabies|acne)\b/.test(combined)) {
+    category = `চর্মরোগ ও ছত্রাকনাশক ওষুধ (${genericName})`;
+    purpose = "ত্বকের সংক্রমণ, চুলকানি, র‍্যাশ বা ফাঙ্গাল ইনফেকশন দূর করতে সাহায্য করে।";
+  } else if (/\b(rehydration|diarrhoea|diarrhea|electrolyte)\b/.test(combined)) {
+    category = `পানিশূন্যতা ও লবণ ঘাটতি পূরণকারী (${genericName})`;
+    purpose = "ডায়রিয়া, বমি বা দুর্বলতায় শরীরের পানি ও লবণের ঘাটতি পূরণ করে।";
+  }
+
+  if (indications) {
+    purpose = `${purpose} (কাজ: ${indications})`;
+  }
+
+  const sideEffects = sideEffectsEn
+    ? `সাধারণত সহনশীল। সম্ভাব্য পার্শ্বপ্রতিক্রিয়া: ${sideEffectsEn}`
+    : "সাধারণত সহনশীল, তবে কোনো অসুবিধা দেখা দিলে চিকিৎসককে জানান।";
+
+  return {
+    category,
+    purpose,
+    sideEffects,
+    precautions: "নির্ধারিত মাত্রার বেশি খাবেন না এবং চিকিৎসকের পরামর্শ অনুযায়ী নিয়ম মেনে সেবন করুন।",
+  };
+}
 
 /* ========================================================================== */
 /*                           TESTS KNOWLEDGE BASE                             */
@@ -326,7 +425,18 @@ export function explainPrescription(rx: {
   investigation?: string | null;
   next_visit?: string | null;
   vitals?: any;
-  lines?: { medicine_name: string; dose?: string; frequency?: string; duration?: string; instructions?: string }[];
+  lines?: {
+    medicine_name: string;
+    dose?: string;
+    frequency?: string;
+    duration?: string;
+    instructions?: string;
+    generic_name?: string | null;
+    dosage_form?: string | null;
+    indications?: string | null;
+    mode_of_action?: string | null;
+    side_effects?: string | null;
+  }[];
 }): PrescriptionExplanation {
   const lines = rx.lines || [];
   const explainedMeds: ExplainedMedicine[] = [];
@@ -335,27 +445,60 @@ export function explainPrescription(rx: {
     const rawName = (line.medicine_name || "").trim();
     if (!rawName) continue;
 
-    // Detect form type
-    let formType: ExplainedMedicine["formType"] = "ট্যাবলেট";
-    if (/\b(syr\.|syrup|susp\.|suspension)\b/i.test(rawName)) formType = "সিরাপ";
-    else if (/\b(cap\.|capsule)\b/i.test(rawName)) formType = "ক্যাপসুল";
-    else if (/\b(inj\.|injection)\b/i.test(rawName)) formType = "ইনজেকশন";
-    else if (/\b(drop|drops)\b/i.test(rawName)) formType = "ড্রপস";
-    else if (/\b(ointment|cream|gel)\b/i.test(rawName)) formType = "মলম";
+    // Match against the 25,534-medicine database (either pre-enriched from server or client-side sync lookup)
+    const dbMatch = matchMedicineSync(rawName);
+    const genericName = (line.generic_name || dbMatch?.genericName || "").trim() || undefined;
+    const dosageFormEn = (line.dosage_form || dbMatch?.dosageForm || "").trim() || undefined;
+    const indicationsEn = (line.indications || dbMatch?.indications || "").trim() || undefined;
+    const modeOfAction = (line.mode_of_action || dbMatch?.modeOfAction || "").trim() || undefined;
+    const sideEffectsEn = (line.side_effects || dbMatch?.sideEffects || "").trim() || undefined;
+
+    // Detect form type using both Rx prefix and matched dosage form
+    const mappedBnForm = toBengaliDosageForm(dosageFormEn || "", rawName);
+    const formType: ExplainedMedicine["formType"] = mappedBnForm === "অন্যান্য" ? "ওষুধ" : mappedBnForm;
 
     // Clean brand name
-    const cleanName = rawName.replace(/^(tab\.|tab|cap\.|cap|syr\.|syr|inj\.|susp\.|drops?)\s*/i, "").trim();
+    const cleanName = rawName.replace(/^(tab\.|tab|cap\.|cap|syr\.|syr|inj\.|inj|susp\.|susp|drops?|supp\.|supp|cream|ointment|gel|inhaler|spray|powder|sol\.)\s*/i, "").trim();
 
-    // Match rule
-    const matchedRule = DRUG_RULES.find((r) => r.pattern.test(rawName) || r.pattern.test(cleanName));
+    // Match rule against rawName, cleanName, OR matched genericName from 25,534-medicine DB!
+    const matchedRule = DRUG_RULES.find(
+      (r) =>
+        r.pattern.test(rawName) ||
+        r.pattern.test(cleanName) ||
+        (genericName ? r.pattern.test(genericName) : false)
+    );
 
-    const category = matchedRule ? matchedRule.category : "প্রেসক্রিপশন অনুযায়ী প্রয়োজনীয় ওষুধ";
-    const purpose = matchedRule ? matchedRule.purpose : "চিকিৎসক রোগীর শারীরিক অবস্থা অনুযায়ী এই ওষুধটি নির্ধারণ করেছেন।";
+    const derived = deriveCategoryAndPurposeFromGeneric(
+      genericName || "",
+      indicationsEn || "",
+      sideEffectsEn || ""
+    );
+
+    const category = matchedRule
+      ? genericName
+        ? `${matchedRule.category} • ${genericName}`
+        : matchedRule.category
+      : derived.category;
+
+    const purpose = matchedRule
+      ? indicationsEn
+        ? `${matchedRule.purpose} (নির্দেশনা: ${indicationsEn})`
+        : matchedRule.purpose
+      : derived.purpose;
+
     const howToTake = matchedRule
       ? `${line.instructions ? `${line.instructions}। ` : ""}${matchedRule.howToTake}`
-      : (line.instructions || "চিকিৎসকের পরামর্শ অনুযায়ী নিয়ম মেনে সেব্য।");
-    const sideEffects = matchedRule ? matchedRule.sideEffects : "সাধারণত সহনশীল, তবে কোনো সমস্যা দেখা দিলে ডাক্তারকে জানান।";
-    const precautions = matchedRule ? matchedRule.precautions : "নির্ধারিত মাত্রার বেশি খাবেন না এবং সময়মতো ওষুধ সেবন করুন।";
+      : line.instructions
+      ? `${line.instructions} — চিকিৎসকের পরামর্শ অনুযায়ী নিয়ম মেনে সেবন করুন।`
+      : "চিকিৎসকের পরামর্শ অনুযায়ী নির্দিষ্ট সময়ে নিয়ম মেনে সেব্য।";
+
+    const sideEffects = matchedRule
+      ? sideEffectsEn
+        ? `${matchedRule.sideEffects} (${sideEffectsEn})`
+        : matchedRule.sideEffects
+      : derived.sideEffects;
+
+    const precautions = matchedRule ? matchedRule.precautions : derived.precautions;
 
     // Dosage schedule
     const sched = parseDoseSchedule(line.frequency || line.dose || "", formType, line.instructions);
@@ -366,6 +509,11 @@ export function explainPrescription(rx: {
       originalName: rawName,
       cleanName,
       formType,
+      genericName,
+      dosageFormEn,
+      indicationsEn,
+      modeOfAction,
+      sideEffectsEn,
       category,
       purpose,
       howToTake,

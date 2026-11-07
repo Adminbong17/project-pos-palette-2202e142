@@ -21,6 +21,11 @@ import {
   splitDoctorQualification,
   combineDoctorQualification,
 } from "@/lib/doctor-format";
+import {
+  useMedicinesDbReady,
+  searchMedicinesSync,
+  matchMedicineSync,
+} from "@/lib/medicines-db";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2220,6 +2225,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
   instrOptions: { id: string; name: string; removable?: boolean }[];
   onChange: (p: Partial<Line>) => void; onRemove: () => void;
 }) {
+  const dbReady = useMedicinesDbReady();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -2247,24 +2253,42 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
     queryFn: () => fetchMasterOptions("medicine", 100, deferredSearch),
   });
 
-  // Intelligent clinical similarity scoring
+  const matchedCurrent = useMemo(
+    () => (query.length >= 2 ? matchMedicineSync(query) : null),
+    [query, dbReady]
+  );
+
+  // Intelligent clinical similarity scoring (merged with 25,534-medicine clinical DB)
   const suggestions = useMemo(() => {
     const q = deferredSearch.toLowerCase().trim();
 
     // If query is empty or 1 character, NEVER dump random store items or devices!
     if (q.length < 2) {
       if (myMedicines.items.length > 0) {
-        return myMedicines.items.map((m) => ({
-          id: `my:${m.id}`,
-          name: m.name,
-          score: 100,
-          isSaved: true,
-        }));
+        return myMedicines.items.map((m) => {
+          const matched = matchMedicineSync(m.name);
+          return {
+            id: `my:${m.id}`,
+            name: m.name,
+            genericName: matched?.genericName || "",
+            dosageForm: matched?.dosageForm || "",
+            indications: matched?.indications || "",
+            score: 100,
+            isSaved: true,
+          };
+        });
       }
       return [];
     }
 
-    const combined: { id: string; name: string; isSaved?: boolean }[] = [];
+    const combined: {
+      id: string;
+      name: string;
+      genericName?: string;
+      dosageForm?: string;
+      indications?: string;
+      isSaved?: boolean;
+    }[] = [];
     const seen = new Set<string>();
 
     // 1. Doctor's saved / starred medicines
@@ -2272,36 +2296,75 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       const k = m.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
       seen.add(k);
-      combined.push({ id: `my:${m.id}`, name: m.name, isSaved: true });
+      const matched = matchMedicineSync(m.name);
+      combined.push({
+        id: `my:${m.id}`,
+        name: m.name,
+        genericName: matched?.genericName,
+        dosageForm: matched?.dosageForm,
+        indications: matched?.indications,
+        isSaved: true,
+      });
     }
 
-    // 2. Remote database matched medicines
+    // 2. 25,534-Medicine Clinical Database matches (searches both Brand & Generic Name!)
+    const dbHits = searchMedicinesSync(deferredSearch, 45);
+    for (let i = 0; i < dbHits.length; i++) {
+      const d = dbHits[i];
+      const k = d.rxName.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      combined.push({
+        id: `db:${i}:${k}`,
+        name: d.rxName,
+        genericName: d.genericName,
+        dosageForm: d.dosageForm,
+        indications: d.indications,
+      });
+    }
+
+    // 3. Remote database matched medicines
     for (const r of remote.data ?? []) {
       const k = r.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
       seen.add(k);
-      combined.push({ id: r.id, name: r.name });
+      const matched = matchMedicineSync(r.name);
+      combined.push({
+        id: r.id,
+        name: r.name,
+        genericName: matched?.genericName,
+        dosageForm: matched?.dosageForm,
+        indications: matched?.indications,
+      });
     }
 
-    // 3. Local catalog
+    // 4. Local catalog
     for (const p of products) {
       const k = p.name.trim().toLowerCase();
       if (!k || seen.has(k)) continue;
       seen.add(k);
-      combined.push({ id: p.id, name: p.name });
+      const matched = matchMedicineSync(p.name);
+      combined.push({
+        id: p.id,
+        name: p.name,
+        genericName: matched?.genericName,
+        dosageForm: matched?.dosageForm,
+        indications: matched?.indications,
+      });
     }
 
     // Score candidates: high scores for brand matches, severe penalty for hardware/devices
     const scored = combined
       .map((item) => {
         const name = item.name.toLowerCase();
+        const gen = (item.genericName || "").toLowerCase();
 
         // Severe penalty for devices, monitors, equipment so real pharmaceutical medicines rank first
         const isHardware = /\b(device|monitor|bp monitor|nebulizer|thermometer|strip|needle|syringe|gauge|pulse oximeter|scale|gloves|bandage|cotton|tape)\b/i.test(name);
         const hardwarePenalty = isHardware ? -3000 : 0;
 
         // Core medicine name stripped of dosage form prefix (Tab., Cap., Syr., etc.)
-        const core = name.replace(/^(tab\.|tab\s+|cap\.|cap\s+|syr\.|syr\s+|inj\.|susp\.|drops?\s+|ointment\.|cream\.|gel\.)\s*/i, "").trim();
+        const core = name.replace(/^(tab\.|tab\s+|cap\.|cap\s+|syr\.|syr\s+|inj\.|susp\.|drops?\s+|supp\.|ointment\.|cream\.|gel\.|inhaler\s+|spray\s+|powder\s+|sol\.)\s*/i, "").trim();
 
         let score = -9999;
         if (core === q || name === q) {
@@ -2310,6 +2373,8 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
           score = 800 + Math.max(0, 40 - core.length);
         } else if (name.startsWith(q)) {
           score = 700 + Math.max(0, 40 - name.length);
+        } else if (gen.startsWith(q)) {
+          score = 650;
         } else {
           const words = core.split(/[\s-]+/);
           const wIdx = words.findIndex((w) => w.startsWith(q));
@@ -2323,6 +2388,8 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
               const nIdx = name.indexOf(q);
               if (nIdx >= 0) {
                 score = 300 - nIdx * 10;
+              } else if (gen.includes(q)) {
+                score = 250;
               }
             }
           }
@@ -2336,8 +2403,8 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
       .filter((x) => x.score > -1500)
       .sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, 30);
-  }, [deferredSearch, myMedicines.items, remote.data, products]);
+    return scored.slice(0, 35);
+  }, [deferredSearch, myMedicines.items, remote.data, products, dbReady]);
 
   const exactExists = suggestions.some((s) => s.name.toLowerCase() === query.toLowerCase());
 
@@ -2348,7 +2415,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
         <div className="relative">
           <Input
             className="h-9 pr-8 font-medium bg-background"
-            placeholder="ঔষধের নাম লিখুন (e.g. Napa, Cef-3, Ace)…"
+            placeholder="ঔষধ বা জেনেরিক নাম লিখুন (e.g. Napa, Rosustat, Ceftriaxone)…"
             value={line.medicine_name}
             onChange={(e) => {
               onChange({ product_id: null, variation_id: null, medicine_name: e.target.value });
@@ -2379,13 +2446,28 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
           )}
         </div>
 
+        {/* Matched Generic Name & Clinical Info Badge */}
+        {matchedCurrent && matchedCurrent.genericName && (
+          <div
+            className="mt-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-700 dark:text-emerald-300 font-medium truncate"
+            title={
+              matchedCurrent.indications
+                ? `জেনেরিক: ${matchedCurrent.genericName}\nকাজ: ${matchedCurrent.indications}`
+                : matchedCurrent.genericName
+            }
+          >
+            ✓ {matchedCurrent.genericName}
+            {matchedCurrent.dosageForm ? ` · ${matchedCurrent.dosageForm}` : ""}
+          </div>
+        )}
+
         {/* Anchored Suggestions Dropdown (Never jumps to top of screen!) */}
         {isOpen && (query.length >= 2 || myMedicines.items.length > 0) && (
-          <div className="absolute left-0 top-full mt-1 w-full min-w-[320px] max-w-[420px] z-50 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95">
+          <div className="absolute left-0 top-full mt-1 w-full min-w-[320px] max-w-[440px] z-50 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95">
             <div className="p-2 border-b bg-muted/40 text-[11px] font-semibold text-muted-foreground flex justify-between items-center">
               <span>
                 {query.length >= 2
-                  ? `পরামর্শকৃত ওষুধ (${suggestions.length})`
+                  ? `পরামর্শকৃত ওষুধ (${suggestions.length}টি • ২৫,৫৩৪ ডাটাবেস সংযুক্ত)`
                   : "★ আপনার সংরক্ষিত ওষুধসমূহ"}
               </span>
               <button
@@ -2397,7 +2479,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
               </button>
             </div>
 
-            <div className="max-h-60 overflow-y-auto p-1 divide-y divide-border/20">
+            <div className="max-h-64 overflow-y-auto p-1 divide-y divide-border/20">
               {/* Add Custom Medicine Action */}
               {query.length >= 2 && !exactExists && (
                 <button
@@ -2421,8 +2503,8 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
               )}
 
               {suggestions.map((p) => {
-                const formMatch = p.name.match(/^(Tab\.|Tab|Cap\.|Cap|Syr\.|Syr|Inj\.|Inj|Susp\.|Susp|Drops?)\s+/i);
-                const formTag = formMatch ? formMatch[1].replace(".", "") : null;
+                const formMatch = p.name.match(/^(Tab\.|Tab|Cap\.|Cap|Syr\.|Syr|Inj\.|Inj|Susp\.|Susp|Drops?|Supp\.|Supp|Cream|Ointment|Gel|Inhaler|Spray|Powder|Sol\.)\s+/i);
+                const formTag = formMatch ? formMatch[1].replace(".", "") : (p.dosageForm || null);
                 const cleanName = formMatch ? p.name.slice(formMatch[0].length) : p.name;
 
                 return (
@@ -2437,7 +2519,7 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
                       });
                       setIsOpen(false);
                     }}
-                    className="w-full text-left p-2 rounded-lg text-xs hover:bg-muted flex items-center justify-between gap-2 transition cursor-pointer"
+                    className="w-full text-left p-2 rounded-lg text-xs hover:bg-muted flex flex-col gap-0.5 transition cursor-pointer"
                   >
                     <div className="flex items-center gap-2 truncate">
                       {p.isSaved && <span className="text-amber-500 font-bold shrink-0">★</span>}
@@ -2448,6 +2530,11 @@ function MedicineRow({ line, products, myMedicines, myFreqs, freqOptions, myInst
                       )}
                       <span className="font-semibold text-foreground truncate">{cleanName}</span>
                     </div>
+                    {p.genericName && (
+                      <div className="text-[10px] text-muted-foreground pl-1 truncate">
+                        জেনেরিক: <span className="font-medium text-foreground/80">{p.genericName}</span>
+                      </div>
+                    )}
                   </button>
                 );
               })}

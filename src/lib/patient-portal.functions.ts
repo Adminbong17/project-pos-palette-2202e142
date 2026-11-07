@@ -335,6 +335,21 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       };
     });
 
+    const { loadMedicinesDb, matchMedicineSync } = await import("@/lib/medicines-db");
+    await loadMedicinesDb();
+
+    const enrichedLines = lines.map((l: any) => {
+      const matched = matchMedicineSync(l.medicine_name || "");
+      return {
+        ...l,
+        generic_name: matched?.genericName || null,
+        dosage_form: matched?.dosageForm || null,
+        indications: matched?.indications || null,
+        mode_of_action: matched?.modeOfAction || null,
+        side_effects: matched?.sideEffects || null,
+      };
+    });
+
     return {
       phone: isPidOnly ? "" : phone,
       initialPid: targetPid || initialPid,
@@ -343,7 +358,7 @@ export const getPatientDashboard = createServerFn({ method: "POST" })
       prescriptions: withBiz(rx.data as any).map((r: any) => ({
         ...r,
         doctor_name: (r.doctor_name || "").trim() || "চিকিৎসক",
-        lines: lines.filter((l: any) => l.prescription_id === r.id),
+        lines: enrichedLines.filter((l: any) => l.prescription_id === r.id),
       })),
       labReports: withBiz(labs.data as any),
       appointments: enrichedAppointments,
